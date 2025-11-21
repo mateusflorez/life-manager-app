@@ -15,7 +15,7 @@ import { useSettings } from '@/contexts/settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { CurrencyInput, currencyToFloat } from '@/components/ui/currency-input';
-import { getCurrentMonthKey, translateCategory } from '@/types/finance';
+import { getNextMonthKey, getMonthOptions, formatMonthKey, translateCategory } from '@/types/finance';
 
 export default function RecurringScreen() {
   const {
@@ -38,8 +38,11 @@ export default function RecurringScreen() {
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
-  const [startMonth, setStartMonth] = useState(getCurrentMonthKey());
+  const [startMonth, setStartMonth] = useState(getNextMonthKey());
   const [note, setNote] = useState('');
+
+  // Month options for selector
+  const monthOptions = getMonthOptions(6);
 
   const translations = {
     en: {
@@ -383,20 +386,30 @@ export default function RecurringScreen() {
               <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
                 {t.startMonth}
               </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    color: isDark ? '#ECEDEE' : '#11181C',
-                    borderColor: isDark ? '#444' : '#E0E0E0',
-                  },
-                ]}
-                value={startMonth}
-                onChangeText={setStartMonth}
-                placeholder="YYYY-MM"
-                placeholderTextColor={isDark ? '#666' : '#999'}
-              />
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.monthList}>
+                {monthOptions.map((monthKey) => (
+                  <TouchableOpacity
+                    key={monthKey}
+                    style={[
+                      styles.monthChip,
+                      {
+                        backgroundColor: startMonth === monthKey ? '#007AFF' : isDark ? '#333' : '#F5F5F5',
+                        borderColor: startMonth === monthKey ? '#007AFF' : isDark ? '#444' : '#E0E0E0',
+                      },
+                    ]}
+                    onPress={() => setStartMonth(monthKey)}
+                  >
+                    <Text
+                      style={[
+                        styles.monthChipText,
+                        { color: startMonth === monthKey ? '#fff' : isDark ? '#ECEDEE' : '#11181C' },
+                      ]}
+                    >
+                      {formatMonthKey(monthKey, settings.language)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
 
               <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
                 {t.note}
@@ -612,6 +625,21 @@ const styles = StyleSheet.create({
   },
   categoryChipText: {
     fontSize: 14,
+  },
+  monthList: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  monthChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 8,
+  },
+  monthChipText: {
+    fontSize: 14,
+    textTransform: 'capitalize',
   },
   formButtons: {
     flexDirection: 'row',

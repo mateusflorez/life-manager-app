@@ -121,6 +121,37 @@ export function getCurrentMonthKey(): string {
   return `${year}-${month}`;
 }
 
+// Helper to get next month key (YYYY-MM)
+export function getNextMonthKey(): string {
+  const now = new Date();
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const year = nextMonth.getFullYear();
+  const month = String(nextMonth.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+// Helper to generate month options for selection (from current month to N months ahead)
+export function getMonthOptions(monthsAhead: number = 6): string[] {
+  const options: string[] = [];
+  const now = new Date();
+  for (let i = 0; i <= monthsAhead; i++) {
+    const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    options.push(`${year}-${month}`);
+  }
+  return options;
+}
+
+// Helper to add months to a month key (YYYY-MM)
+export function addMonthsToKey(monthKey: string, monthsToAdd: number): string {
+  const [year, month] = monthKey.split('-').map(Number);
+  const date = new Date(year, month - 1 + monthsToAdd, 1);
+  const newYear = date.getFullYear();
+  const newMonth = String(date.getMonth() + 1).padStart(2, '0');
+  return `${newYear}-${newMonth}`;
+}
+
 // Helper to format month key to display
 export function formatMonthKey(monthKey: string, language: 'en' | 'pt'): string {
   const [year, month] = monthKey.split('-');

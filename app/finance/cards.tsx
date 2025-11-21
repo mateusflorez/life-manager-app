@@ -15,7 +15,7 @@ import { useSettings } from '@/contexts/settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { CurrencyInput, currencyToFloat } from '@/components/ui/currency-input';
-import { CreditCard, CardCharge, getCurrentMonthKey, translateCategory } from '@/types/finance';
+import { CreditCard, CardCharge, getNextMonthKey, getMonthOptions, getCurrentMonthKey, formatMonthKey, addMonthsToKey, translateCategory } from '@/types/finance';
 
 export default function CardsScreen() {
   const {
@@ -25,6 +25,7 @@ export default function CardsScreen() {
     deleteCreditCard,
     getCardCharges,
     createCardCharge,
+    deleteCardCharge,
     getCardSummary,
     categories,
     refreshData,
@@ -35,7 +36,11 @@ export default function CardsScreen() {
 
   const [showNewCardModal, setShowNewCardModal] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
+  const [showChargesViewModal, setShowChargesViewModal] = useState(false);
   const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null);
+  const [viewingCard, setViewingCard] = useState<CreditCard | null>(null);
+  const [viewMonth, setViewMonth] = useState(getCurrentMonthKey());
+  const [cardCharges, setCardCharges] = useState<CardCharge[]>([]);
   const [cardSummaries, setCardSummaries] = useState<Map<string, { totalUsed: number }>>(
     new Map()
   );
@@ -50,8 +55,12 @@ export default function CardsScreen() {
   // New charge form
   const [chargeAmount, setChargeAmount] = useState('');
   const [chargeCategory, setChargeCategory] = useState('');
-  const [chargeMonth, setChargeMonth] = useState(getCurrentMonthKey());
+  const [chargeMonth, setChargeMonth] = useState(getNextMonthKey());
   const [chargeNote, setChargeNote] = useState('');
+  const [chargeInstallments, setChargeInstallments] = useState('1');
+
+  // Month options for selector
+  const monthOptions = getMonthOptions(12);
 
   const translations = {
     en: {
@@ -74,8 +83,13 @@ export default function CardsScreen() {
       category: 'Category',
       month: 'Statement month',
       note: 'Note (optional)',
+      installments: 'Installments',
       deleteCard: 'Delete',
       upcomingStatements: 'Upcoming',
+      viewCharges: 'View Charges',
+      charges: 'Charges',
+      noCharges: 'No charges this month',
+      total: 'Total',
     },
     pt: {
       noAccount: 'Selecione uma conta primeiro',
@@ -97,8 +111,13 @@ export default function CardsScreen() {
       category: 'Categoria',
       month: 'Mês da fatura',
       note: 'Nota (opcional)',
+      installments: 'Parcelas',
       deleteCard: 'Excluir',
       upcomingStatements: 'Próximas faturas',
+      viewCharges: 'Ver Gastos',
+      charges: 'Gastos',
+      noCharges: 'Nenhum gasto neste mês',
+      total: 'Total',
     },
   };
 
@@ -155,18 +174,27 @@ export default function CardsScreen() {
 
   const handleAddCharge = async () => {
     const amount = currencyToFloat(chargeAmount);
+    const installments = Math.max(1, parseInt(chargeInstallments) || 1);
     if (!selectedCard || amount <= 0 || !chargeCategory) return;
     try {
-      await createCardCharge(
-        selectedCard.id,
-        amount,
-        chargeCategory,
-        chargeMonth,
-        chargeNote.trim() || undefined
-      );
+      // Create charges for each installment
+      for (let i = 0; i < installments; i++) {
+        const month = addMonthsToKey(chargeMonth, i);
+        const note = installments > 1
+          ? `${chargeNote.trim() ? chargeNote.trim() + ' - ' : ''}${i + 1}/${installments}`
+          : chargeNote.trim() || undefined;
+        await createCardCharge(
+          selectedCard.id,
+          amount,
+          chargeCategory,
+          month,
+          note
+        );
+      }
       setChargeAmount('');
       setChargeCategory('');
       setChargeNote('');
+      setChargeInstallments('1');
       setShowChargeModal(false);
       await loadCardSummaries();
     } catch (error) {
@@ -184,9 +212,39 @@ export default function CardsScreen() {
 
   const openChargeModal = (card: CreditCard) => {
     setSelectedCard(card);
-    setChargeMonth(getCurrentMonthKey());
+    setChargeMonth(getNextMonthKey());
+    setChargeInstallments('1');
     setShowChargeModal(true);
   };
+
+  const openChargesViewModal = async (card: CreditCard) => {
+    setViewingCard(card);
+    setViewMonth(getCurrentMonthKey());
+    const charges = await getCardCharges(card.id);
+    setCardCharges(charges);
+    setShowChargesViewModal(true);
+  };
+
+  const handleViewMonthChange = async (monthKey: string) => {
+    setViewMonth(monthKey);
+  };
+
+  const handleDeleteCharge = async (chargeId: string) => {
+    try {
+      await deleteCardCharge(chargeId);
+      // Refresh the charges list
+      if (viewingCard) {
+        const charges = await getCardCharges(viewingCard.id);
+        setCardCharges(charges);
+      }
+      await loadCardSummaries();
+    } catch (error) {
+      console.error('Error deleting charge:', error);
+    }
+  };
+
+  const filteredCharges = cardCharges.filter((charge) => charge.statementMonth === viewMonth);
+  const filteredTotal = filteredCharges.reduce((sum, charge) => sum + charge.amount, 0);
 
   if (!activeBankAccount) {
     return (
@@ -228,7 +286,7 @@ export default function CardsScreen() {
               : 0;
 
             return (
-              <View
+              <TouchableOpacity
                 key={card.id}
                 style={[
                   styles.cardItem,
@@ -237,6 +295,8 @@ export default function CardsScreen() {
                     borderColor: isDark ? '#333' : '#E0E0E0',
                   },
                 ]}
+                onPress={() => openChargesViewModal(card)}
+                activeOpacity={0.7}
               >
                 <View style={styles.cardHeader}>
                   <View style={styles.cardTitleRow}>
@@ -288,7 +348,7 @@ export default function CardsScreen() {
                   <IconSymbol name="plus.circle.fill" size={20} color="#007AFF" />
                   <Text style={styles.addChargeText}>{t.addCharge}</Text>
                 </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             );
           })
         )}
@@ -479,6 +539,34 @@ export default function CardsScreen() {
               </View>
 
               <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
+                {t.installments}
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.installmentsList}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
+                  <TouchableOpacity
+                    key={num}
+                    style={[
+                      styles.installmentChip,
+                      {
+                        backgroundColor: chargeInstallments === String(num) ? '#007AFF' : isDark ? '#333' : '#F5F5F5',
+                        borderColor: chargeInstallments === String(num) ? '#007AFF' : isDark ? '#444' : '#E0E0E0',
+                      },
+                    ]}
+                    onPress={() => setChargeInstallments(String(num))}
+                  >
+                    <Text
+                      style={[
+                        styles.installmentChipText,
+                        { color: chargeInstallments === String(num) ? '#fff' : isDark ? '#ECEDEE' : '#11181C' },
+                      ]}
+                    >
+                      {num}x
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
                 {t.category}
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryList}>
@@ -509,20 +597,30 @@ export default function CardsScreen() {
               <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
                 {t.month}
               </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    color: isDark ? '#ECEDEE' : '#11181C',
-                    borderColor: isDark ? '#444' : '#E0E0E0',
-                  },
-                ]}
-                value={chargeMonth}
-                onChangeText={setChargeMonth}
-                placeholder="YYYY-MM"
-                placeholderTextColor={isDark ? '#666' : '#999'}
-              />
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.monthList}>
+                {monthOptions.map((monthKey) => (
+                  <TouchableOpacity
+                    key={monthKey}
+                    style={[
+                      styles.monthChip,
+                      {
+                        backgroundColor: chargeMonth === monthKey ? '#007AFF' : isDark ? '#333' : '#F5F5F5',
+                        borderColor: chargeMonth === monthKey ? '#007AFF' : isDark ? '#444' : '#E0E0E0',
+                      },
+                    ]}
+                    onPress={() => setChargeMonth(monthKey)}
+                  >
+                    <Text
+                      style={[
+                        styles.monthChipText,
+                        { color: chargeMonth === monthKey ? '#fff' : isDark ? '#ECEDEE' : '#11181C' },
+                      ]}
+                    >
+                      {formatMonthKey(monthKey, settings.language)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
 
               <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
                 {t.note}
@@ -563,6 +661,127 @@ export default function CardsScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* View Charges Modal */}
+      <Modal
+        visible={showChargesViewModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowChargesViewModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.chargesModalContent,
+              { backgroundColor: isDark ? '#1A1A1A' : '#fff' },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                {viewingCard?.name} - {t.charges}
+              </Text>
+              <TouchableOpacity onPress={() => setShowChargesViewModal(false)}>
+                <IconSymbol name="xmark" size={24} color={isDark ? '#999' : '#666'} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Month Selector */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.chargesMonthSelector}
+              contentContainerStyle={styles.chargesMonthSelectorContent}
+            >
+              {monthOptions.map((monthKey) => (
+                <TouchableOpacity
+                  key={monthKey}
+                  style={[
+                    styles.monthChip,
+                    {
+                      backgroundColor: viewMonth === monthKey ? '#007AFF' : isDark ? '#333' : '#F5F5F5',
+                      borderColor: viewMonth === monthKey ? '#007AFF' : isDark ? '#444' : '#E0E0E0',
+                    },
+                  ]}
+                  onPress={() => handleViewMonthChange(monthKey)}
+                >
+                  <Text
+                    style={[
+                      styles.monthChipText,
+                      { color: viewMonth === monthKey ? '#fff' : isDark ? '#ECEDEE' : '#11181C' },
+                    ]}
+                  >
+                    {formatMonthKey(monthKey, settings.language)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Total */}
+            {filteredCharges.length > 0 && (
+              <View style={[styles.chargesTotal, { borderColor: isDark ? '#333' : '#E0E0E0' }]}>
+                <Text style={[styles.chargesTotalLabel, { color: isDark ? '#999' : '#666' }]}>
+                  {t.total}
+                </Text>
+                <Text style={[styles.chargesTotalValue, { color: '#EF4444' }]}>
+                  {formatCurrency(filteredTotal)}
+                </Text>
+              </View>
+            )}
+
+            {/* Charges List */}
+            {filteredCharges.length === 0 ? (
+              <View style={styles.noChargesContainer}>
+                <IconSymbol name="doc.text" size={32} color={isDark ? '#666' : '#999'} />
+                <Text style={[styles.noChargesText, { color: isDark ? '#666' : '#999' }]}>
+                  {t.noCharges}
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                style={styles.chargesList}
+                contentContainerStyle={styles.chargesListContent}
+              >
+                {filteredCharges.map((charge) => (
+                  <View
+                    key={charge.id}
+                    style={[
+                      styles.chargeItem,
+                      {
+                        backgroundColor: isDark ? '#252525' : '#F5F5F5',
+                        borderColor: isDark ? '#333' : '#E0E0E0',
+                      },
+                    ]}
+                  >
+                    <View style={styles.chargeItemHeader}>
+                      <View style={styles.chargeItemInfo}>
+                        <Text style={[styles.chargeCategory, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                          {translateCategory(charge.category, settings.language)}
+                        </Text>
+                        {charge.note && (
+                          <Text style={[styles.chargeNote, { color: isDark ? '#999' : '#666' }]}>
+                            {charge.note}
+                          </Text>
+                        )}
+                      </View>
+                      <View style={styles.chargeItemActions}>
+                        <Text style={[styles.chargeAmount, { color: '#EF4444' }]}>
+                          {formatCurrency(charge.amount)}
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.chargeDeleteButton}
+                          onPress={() => handleDeleteCharge(charge.id)}
+                        >
+                          <IconSymbol name="trash" size={16} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
           </View>
         </View>
       </Modal>
@@ -737,6 +956,123 @@ const styles = StyleSheet.create({
   },
   categoryChipText: {
     fontSize: 14,
+  },
+  monthList: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  monthChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 8,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  monthChipText: {
+    fontSize: 13,
+    textTransform: 'capitalize',
+  },
+  installmentsList: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  installmentChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 8,
+    minWidth: 44,
+    alignItems: 'center',
+  },
+  installmentChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  chargesModalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '85%',
+    minHeight: 300,
+  },
+  chargesMonthSelector: {
+    flexGrow: 0,
+    flexShrink: 0,
+    marginBottom: 12,
+  },
+  chargesMonthSelectorContent: {
+    paddingRight: 20,
+    alignItems: 'center',
+  },
+  chargesTotal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginBottom: 12,
+    borderBottomWidth: 1,
+  },
+  chargesTotalLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  chargesTotalValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  chargesList: {
+    flexGrow: 1,
+  },
+  chargesListContent: {
+    paddingBottom: 20,
+  },
+  noChargesContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 12,
+  },
+  noChargesText: {
+    fontSize: 14,
+  },
+  chargeItem: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  chargeItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  chargeItemInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  chargeItemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  chargeCategory: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  chargeAmount: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  chargeNote: {
+    fontSize: 13,
+    fontStyle: 'italic',
+  },
+  chargeDeleteButton: {
+    padding: 4,
   },
   formButtons: {
     flexDirection: 'row',
