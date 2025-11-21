@@ -1,98 +1,225 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
+import { StyleSheet, View, Text, ScrollView } from 'react-native';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { useAccount } from '@/contexts/account-context';
+import { useSettings } from '@/contexts/settings-context';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const { account } = useAccount();
+  const { settings } = useSettings();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
+  const translations = {
+    en: {
+      noAccount: 'No account selected',
+      welcomeBack: 'Welcome back,',
+      level: 'Level',
+      xp: 'XP',
+      completedTasks: 'Completed tasks',
+      allTime: 'All time',
+    },
+    pt: {
+      noAccount: 'Nenhuma conta selecionada',
+      welcomeBack: 'Bem-vindo de volta,',
+      level: 'Nível',
+      xp: 'XP',
+      completedTasks: 'Tarefas concluídas',
+      allTime: 'Total',
+    },
+  };
+
+  const t = translations[settings.language];
+
+  if (!account) {
+    return (
+      <ThemedView style={styles.container}>
+        <Text style={[styles.emptyText, { color: isDark ? '#999' : '#666' }]}>
+          {t.noAccount}
+        </Text>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    );
+  }
+
+  const level = Math.floor(account.xp / 1000);
+  const currentProgress = account.xp % 1000;
+  const progressPercent = Math.min(100, (currentProgress / 1000) * 100);
+
+  return (
+    <ThemedView style={styles.container}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        <View style={[styles.overview, { borderColor: isDark ? '#333' : '#E0E0E0' }]}>
+          <View style={styles.header}>
+            <View
+              style={[
+                styles.avatar,
+                { backgroundColor: isDark ? '#1F1F1F' : '#F5F5F5' },
+              ]}
+            >
+              <Text style={[styles.avatarText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                {account.name.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+
+            <View style={styles.headerInfo}>
+              <Text style={[styles.welcomeText, { color: isDark ? '#999' : '#666' }]}>
+                {t.welcomeBack}
+              </Text>
+              <Text style={[styles.nameText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                {account.name}
+              </Text>
+            </View>
+          </View>
+
+          <View
+            style={[
+              styles.levelCard,
+              {
+                backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
+                borderColor: isDark ? '#333' : '#E0E0E0',
+              },
+            ]}
+          >
+            <View style={styles.levelHeader}>
+              <Text style={[styles.levelText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                {t.level} {level}
+              </Text>
+            </View>
+            <Text style={[styles.xpText, { color: isDark ? '#999' : '#666' }]}>
+              {currentProgress}/1000 {t.xp}
+            </Text>
+
+            <View style={[styles.progressTrack, { backgroundColor: isDark ? '#333' : '#E0E0E0' }]}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${progressPercent}%`,
+                    backgroundColor: '#007AFF',
+                  },
+                ]}
+              />
+            </View>
+          </View>
+
+          <View style={styles.statsGrid}>
+            <View
+              style={[
+                styles.statCard,
+                {
+                  backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
+                  borderColor: isDark ? '#333' : '#E0E0E0',
+                },
+              ]}
+            >
+              <Text style={[styles.statLabel, { color: isDark ? '#999' : '#666' }]}>
+                {t.completedTasks}
+              </Text>
+              <Text style={[styles.statValue, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                {account.completedTasks}
+              </Text>
+              <Text style={[styles.statHint, { color: isDark ? '#666' : '#999' }]}>
+                {t.allTime}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  overview: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    gap: 16,
+  },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 16,
+  },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 28,
+    fontWeight: '600',
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  welcomeText: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  nameText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  levelCard: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
     gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  levelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  levelText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  xpText: {
+    fontSize: 14,
+  },
+  progressTrack: {
+    width: '100%',
+    height: 10,
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 5,
+  },
+  statsGrid: {
+    gap: 12,
+  },
+  statCard: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    gap: 4,
+  },
+  statLabel: {
+    fontSize: 14,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  statHint: {
+    fontSize: 12,
   },
 });
