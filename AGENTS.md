@@ -55,6 +55,14 @@ As vezes EU VOU CONVERSAR COM VC EM PORTUGUÊS QUE É MINHA LINGUA NATIVA APENAS
   - Overdue task indicators
   - Cycle-based completion tracking (daily/weekly/monthly reset)
   - Today's progress tracking on home screen
+- **Books Module**: Reading tracker for books and manga
+  - Track books with or without total chapters (supports ongoing series)
+  - Log chapters read with XP rewards (+20 per chapter)
+  - Multiple reviews per book with optional chapter/range association
+  - Progress tracking with completion status
+  - Drop books feature (mark as abandoned)
+  - Chapter history with timestamps
+  - Monthly chapters read stat on profile screen
 
 ---
 
@@ -225,6 +233,9 @@ services/
 - `@life-manager/finance/{accountId}/card-charges/{cardId}` - Card charges
 - `@life_manager_investments` - Investment portfolios
 - `@life_manager_investment_movements` - Investment movements/contributions
+- `@life_manager_books` - Books data
+- `@life_manager_book_chapters` - Chapter reading history
+- `@life_manager_book_reviews` - Book reviews
 
 **Context Providers** (wrap entire app in `app/_layout.tsx`):
 ```typescript
@@ -232,7 +243,11 @@ services/
   <AccountProvider>
     <FinanceProvider>
       <InvestmentProvider>
-        {children}
+        <TasksProvider>
+          <BooksProvider>
+            {children}
+          </BooksProvider>
+        </TasksProvider>
       </InvestmentProvider>
     </FinanceProvider>
   </AccountProvider>
@@ -331,7 +346,38 @@ Task management with one-time and recurring tasks.
 - `@life_manager_tasks` - All tasks by type
 - `@life_manager_task_state_{accountId}` - Completion status per account
 
-### 7. **Module System**
+### 7. **Books Module**
+
+Reading tracker for books, manga, and other serialized content.
+
+**Data Models** (`types/books.ts`):
+- `Book` - Book with name, total chapters (nullable for ongoing), dropped status
+- `BookChapter` - Individual chapter reading record with timestamp
+- `BookReview` - Review with optional chapter/range association
+- `BookWithProgress` - Book with calculated progress, reviews array, completion status
+
+**Key Features**:
+- Track books with or without total chapters (ongoing series support)
+- Log chapters read (+20 XP per chapter)
+- Multiple reviews per book with chapter range selection
+- Progress percentage for finite books
+- Drop/abandon books feature
+- Chapter history with timestamps
+- Monthly reading stats on profile
+
+**Helper Functions** (`types/books.ts`):
+- `generateId()` - Create unique IDs
+- `formatDate(dateStr, language)` - Format date for display
+- `formatDateTime(dateStr, language)` - Format date and time for display
+- `calculateProgress(book, chapters)` - Calculate reading progress
+- `BOOK_XP` - XP constant (20) for reading a chapter
+
+**Storage Keys** (AsyncStorage):
+- `@life_manager_books` - Books data
+- `@life_manager_book_chapters` - Chapter reading history
+- `@life_manager_book_reviews` - Book reviews
+
+### 8. **Module System**
 
 The app supports enabling/disabling modules from settings. When disabled:
 - Module cards and stats are hidden from the home screen
@@ -344,6 +390,7 @@ type ModulesConfig = {
   finance: boolean;
   investments: boolean;
   tasks: boolean;
+  books: boolean;
 };
 
 type Settings = {
@@ -361,7 +408,7 @@ type Settings = {
 )}
 ```
 
-### 8. **Visual Patterns and UI Conventions**
+### 9. **Visual Patterns and UI Conventions**
 
 **Back Button Pattern** (used in Finance and Investments modules):
 ```typescript
@@ -394,6 +441,7 @@ headerLeft: () => <BackButton />,
 - Positive values/gains: `#10B981` (green)
 - Negative values/losses: `#EF4444` (red)
 - Primary action button: `#007AFF` (blue)
+- Books module accent: `#6C5CE7` (purple)
 - Dark mode background: `#151718` (header), `#1A1A1A` (cards)
 - Light mode background: `#fff` (header), `#F9F9F9` (cards)
 - Dark mode text: `#ECEDEE` (primary), `#999` (secondary)
@@ -401,7 +449,7 @@ headerLeft: () => <BackButton />,
 - Dark mode borders: `#333`
 - Light mode borders: `#E0E0E0`
 
-### 9. **Component Architecture**
+### 10. **Component Architecture**
 
 Components are organized by reusability level:
 
@@ -445,10 +493,15 @@ life-manager-mobile/
 │   │   ├── _layout.tsx          # Investments stack navigation
 │   │   ├── index.tsx            # Investments overview (chart, cards)
 │   │   └── [id].tsx             # Investment detail (movements, add contribution)
-│   └── tasks/                   # Tasks module screens
-│       ├── _layout.tsx          # Tasks stack navigation
-│       ├── index.tsx            # Tasks overview (sections, progress)
-│       └── add.tsx              # Add task modal screen
+│   ├── tasks/                   # Tasks module screens
+│   │   ├── _layout.tsx          # Tasks stack navigation
+│   │   ├── index.tsx            # Tasks overview (sections, progress)
+│   │   └── add.tsx              # Add task modal screen
+│   └── books/                   # Books module screens
+│       ├── _layout.tsx          # Books stack navigation
+│       ├── index.tsx            # Books overview (in progress, completed, dropped)
+│       ├── add.tsx              # Add book screen
+│       └── [id].tsx             # Book detail (progress, reviews, chapter history)
 │
 ├── components/                   # Reusable components
 │   ├── ui/                      # Lower-level UI components
@@ -469,21 +522,24 @@ life-manager-mobile/
 │   ├── settings-context.tsx     # App settings (language, currency)
 │   ├── finance-context.tsx      # Finance data management
 │   ├── investment-context.tsx   # Investment data management
-│   └── tasks-context.tsx        # Tasks data management
+│   ├── tasks-context.tsx        # Tasks data management
+│   └── books-context.tsx        # Books data management
 │
 ├── services/                     # Data persistence layer
 │   ├── account-storage.ts       # Account AsyncStorage operations
 │   ├── settings-storage.ts      # Settings AsyncStorage operations
 │   ├── finance-storage.ts       # Finance AsyncStorage operations
 │   ├── investment-storage.ts    # Investment AsyncStorage operations
-│   └── tasks-storage.ts         # Tasks AsyncStorage operations
+│   ├── tasks-storage.ts         # Tasks AsyncStorage operations
+│   └── books-storage.ts         # Books AsyncStorage operations
 │
 ├── types/                        # TypeScript type definitions
 │   ├── account.ts               # Account types
 │   ├── settings.ts              # Settings types (Language, Currency, ModulesConfig)
 │   ├── finance.ts               # Finance types + helpers
 │   ├── investment.ts            # Investment types + helpers
-│   └── tasks.ts                 # Tasks types + helpers
+│   ├── tasks.ts                 # Tasks types + helpers
+│   └── books.ts                 # Books types + helpers
 │
 ├── hooks/                        # Custom React hooks
 │   ├── use-color-scheme.ts      # Theme detection (native)
@@ -1175,10 +1231,13 @@ A feature is complete when:
 **Last Updated**: 2025-11-21
 
 **Recent Changes**:
-- Added Tasks Module with support for one-time and recurring tasks (daily/weekly/monthly)
-- Tasks support optional date, time, and tag fields
-- Integrated tasks progress on home screen
-- Added tasks module toggle in settings
-- Added @react-native-community/datetimepicker dependency
+- Added Books Module for tracking reading progress
+  - Support for books with or without total chapters (ongoing series like manga)
+  - Multiple reviews per book with optional chapter/range association
+  - Chapter history with timestamps and XP rewards (+20 per chapter)
+  - Drop/abandon books feature
+  - Monthly chapters read stat on profile screen
+- Added `book.fill` icon mapping to Material Icons (`menu-book`)
+- Added books module toggle in settings
 
 **Note**: This document should be updated as the codebase evolves. When making significant architectural changes or adding new patterns, update this file accordingly.
