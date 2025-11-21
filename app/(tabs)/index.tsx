@@ -28,6 +28,8 @@ export default function HomeScreen() {
       booksDesc: 'Track your reading',
       mood: 'Mood',
       moodDesc: 'Track your feelings',
+      training: 'Training',
+      trainingDesc: 'Log your workouts',
     },
     pt: {
       noAccount: 'Nenhuma conta selecionada',
@@ -43,6 +45,8 @@ export default function HomeScreen() {
       booksDesc: 'Acompanhe sua leitura',
       mood: 'Humor',
       moodDesc: 'Registre seus sentimentos',
+      training: 'Treino',
+      trainingDesc: 'Registre seus treinos',
     },
   };
 
@@ -98,7 +102,7 @@ export default function HomeScreen() {
           <IconSymbol name="chevron.right" size={20} color={isDark ? '#666' : '#999'} />
         </TouchableOpacity>
 
-        {(settings.modules?.finance !== false || settings.modules?.investments !== false || settings.modules?.tasks !== false || settings.modules?.books !== false || settings.modules?.mood !== false) && (
+        {(settings.modules?.finance !== false || settings.modules?.investments !== false || settings.modules?.tasks !== false || settings.modules?.books !== false || settings.modules?.mood !== false || settings.modules?.training !== false) && (
           <View style={styles.modulesGrid}>
             {settings.modules?.finance !== false && (
               <TouchableOpacity
@@ -216,6 +220,30 @@ export default function HomeScreen() {
                 </Text>
                 <Text style={[styles.moduleDesc, { color: isDark ? '#999' : '#666' }]}>
                   {t.moodDesc}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {settings.modules?.training !== false && (
+              <TouchableOpacity
+                style={[
+                  styles.moduleCard,
+                  {
+                    backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
+                    borderColor: isDark ? '#333' : '#E0E0E0',
+                  },
+                ]}
+                onPress={() => router.push('/training')}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.moduleIcon, { backgroundColor: '#4CAF50' }]}>
+                  <IconSymbol name="dumbbell.fill" size={28} color="#fff" />
+                </View>
+                <Text style={[styles.moduleTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                  {t.training}
+                </Text>
+                <Text style={[styles.moduleDesc, { color: isDark ? '#999' : '#666' }]}>
+                  {t.trainingDesc}
                 </Text>
               </TouchableOpacity>
             )}

@@ -12,6 +12,7 @@ import { InvestmentProvider } from '@/contexts/investment-context';
 import { TasksProvider } from '@/contexts/tasks-context';
 import { BooksProvider } from '@/contexts/books-context';
 import { MoodProvider } from '@/contexts/mood-context';
+import { TrainingProvider } from '@/contexts/training-context';
 import { useSettings } from '@/contexts/settings-context';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
@@ -44,6 +45,7 @@ function RootLayoutNav() {
         <Stack.Screen name="tasks" options={{ headerShown: false }} />
         <Stack.Screen name="books" options={{ headerShown: false }} />
         <Stack.Screen name="mood" options={{ headerShown: false }} />
+        <Stack.Screen name="training" options={{ headerShown: false }} />
         <Stack.Screen
           name="profile"
           options={{
@@ -72,7 +74,9 @@ export default function RootLayout() {
             <TasksProvider>
               <BooksProvider>
                 <MoodProvider>
-                  <RootLayoutNav />
+                  <TrainingProvider>
+                    <RootLayoutNav />
+                  </TrainingProvider>
                 </MoodProvider>
               </BooksProvider>
             </TasksProvider>

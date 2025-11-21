@@ -7,6 +7,7 @@ export type ModulesConfig = {
   tasks: boolean;
   books: boolean;
   mood: boolean;
+  training: boolean;
 };
 
 export type Settings = {
@@ -21,6 +22,7 @@ export const DEFAULT_MODULES: ModulesConfig = {
   tasks: true,
   books: true,
   mood: true,
+  training: true,
 };
 
 export const DEFAULT_SETTINGS: Settings = {

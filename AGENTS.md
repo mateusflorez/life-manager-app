@@ -72,6 +72,15 @@ As vezes EU VOU CONVERSAR COM VC EM PORTUGUÊS QUE É MINHA LINGUA NATIVA APENAS
   - Streak tracking for consecutive days
   - XP rewards (+10 per mood log)
   - Mood module toggle in settings
+- **Training Module**: Workout logging and exercise tracking
+  - Create and manage exercises
+  - Log sessions with load, reps, date, and notes
+  - Volume calculation (load × reps)
+  - 60-day activity heatmap
+  - Exercise detail with volume chart
+  - Session history per exercise
+  - XP rewards (+10 per session logged)
+  - Training module toggle in settings
 
 ---
 
@@ -424,7 +433,41 @@ Daily mood tracking with visualization and history.
 **Storage Keys** (AsyncStorage):
 - `@life_manager_mood_entries` - Mood entries data
 
-### 9. **Module System**
+### 9. **Training Module**
+
+Workout logging and exercise tracking system.
+
+**Data Models** (`types/training.ts`):
+- `Exercise` - Exercise with id, name, createdAt
+- `TrainingSession` - Session with exerciseId, date, load, reps, notes
+- `ExerciseWithStats` - Exercise with totalSessions, totalVolume, sessions array
+- `SessionWithExercise` - Session with exerciseName and calculated volume
+
+**Key Features**:
+- Create and manage exercises
+- Log sessions with load, reps, date, and notes
+- Volume calculation (load × reps)
+- 60-day activity heatmap on overview
+- Exercise detail screen with volume chart
+- Session history per exercise
+- XP rewards (+10 per session logged)
+
+**Helper Functions** (`types/training.ts`):
+- `generateId()` - Create unique IDs
+- `getTodayKey()` - Get today as "YYYY-MM-DD"
+- `calculateVolume(load, reps)` - Calculate session volume
+- `formatDate(dateStr, language)` - Format date for display
+- `formatShortDate(dateStr, language)` - Short date format
+- `getLast60Days()` - Get array of last 60 day keys
+- `getLast7Days()` - Get array of last 7 day keys
+- `getWeekStart()` - Get current week's Monday
+- `t(key, language)` - Translation helper
+
+**Storage Keys** (AsyncStorage):
+- `@life_manager_exercises` - Exercises data
+- `@life_manager_training_sessions` - Training sessions data
+
+### 10. **Module System**
 
 The app supports enabling/disabling modules from settings. When disabled:
 - Module cards and stats are hidden from the home screen
@@ -439,6 +482,7 @@ type ModulesConfig = {
   tasks: boolean;
   books: boolean;
   mood: boolean;
+  training: boolean;
 };
 
 type Settings = {
@@ -456,7 +500,7 @@ type Settings = {
 )}
 ```
 
-### 10. **Visual Patterns and UI Conventions**
+### 11. **Visual Patterns and UI Conventions**
 
 **Back Button Pattern** (used in Finance and Investments modules):
 ```typescript
@@ -497,7 +541,7 @@ headerLeft: () => <BackButton />,
 - Dark mode borders: `#333`
 - Light mode borders: `#E0E0E0`
 
-### 11. **Component Architecture**
+### 12. **Component Architecture**
 
 Components are organized by reusability level:
 
@@ -545,11 +589,16 @@ life-manager-mobile/
 │   │   ├── _layout.tsx          # Tasks stack navigation
 │   │   ├── index.tsx            # Tasks overview (sections, progress)
 │   │   └── add.tsx              # Add task modal screen
-│   └── books/                   # Books module screens
-│       ├── _layout.tsx          # Books stack navigation
-│       ├── index.tsx            # Books overview (in progress, completed, dropped)
-│       ├── add.tsx              # Add book screen
-│       └── [id].tsx             # Book detail (progress, reviews, chapter history)
+│   ├── books/                   # Books module screens
+│   │   ├── _layout.tsx          # Books stack navigation
+│   │   ├── index.tsx            # Books overview (in progress, completed, dropped)
+│   │   ├── add.tsx              # Add book screen
+│   │   └── [id].tsx             # Book detail (progress, reviews, chapter history)
+│   └── training/                # Training module screens
+│       ├── _layout.tsx          # Training stack navigation
+│       ├── index.tsx            # Training overview (heatmap, log session modal)
+│       ├── exercises.tsx        # Exercises list (add exercise modal)
+│       └── [id].tsx             # Exercise detail (volume chart, session history)
 │
 ├── components/                   # Reusable components
 │   ├── ui/                      # Lower-level UI components
@@ -571,7 +620,9 @@ life-manager-mobile/
 │   ├── finance-context.tsx      # Finance data management
 │   ├── investment-context.tsx   # Investment data management
 │   ├── tasks-context.tsx        # Tasks data management
-│   └── books-context.tsx        # Books data management
+│   ├── books-context.tsx        # Books data management
+│   ├── mood-context.tsx         # Mood data management
+│   └── training-context.tsx     # Training data management
 │
 ├── services/                     # Data persistence layer
 │   ├── account-storage.ts       # Account AsyncStorage operations
@@ -579,7 +630,9 @@ life-manager-mobile/
 │   ├── finance-storage.ts       # Finance AsyncStorage operations
 │   ├── investment-storage.ts    # Investment AsyncStorage operations
 │   ├── tasks-storage.ts         # Tasks AsyncStorage operations
-│   └── books-storage.ts         # Books AsyncStorage operations
+│   ├── books-storage.ts         # Books AsyncStorage operations
+│   ├── mood-storage.ts          # Mood AsyncStorage operations
+│   └── training-storage.ts      # Training AsyncStorage operations
 │
 ├── types/                        # TypeScript type definitions
 │   ├── account.ts               # Account types
@@ -587,7 +640,9 @@ life-manager-mobile/
 │   ├── finance.ts               # Finance types + helpers
 │   ├── investment.ts            # Investment types + helpers
 │   ├── tasks.ts                 # Tasks types + helpers
-│   └── books.ts                 # Books types + helpers
+│   ├── books.ts                 # Books types + helpers
+│   ├── mood.ts                  # Mood types + helpers
+│   └── training.ts              # Training types + helpers
 │
 ├── hooks/                        # Custom React hooks
 │   ├── use-color-scheme.ts      # Theme detection (native)
@@ -1279,14 +1334,15 @@ A feature is complete when:
 **Last Updated**: 2025-11-21
 
 **Recent Changes**:
-- Added Mood Module for daily mood tracking
-  - Track mood on 1-5 scale with emoji faces (😞 😕 😐 🙂 😄)
-  - 60-day trend line chart using react-native-chart-kit
-  - Optional notes for each entry
-  - Full history screen with search functionality
-  - Streak tracking and XP rewards (+10 per log)
-- Added `face.smiling.fill`, `magnifyingglass`, `xmark.circle.fill` icon mappings
-- Added `@react-native-community/slider` dependency for mood input
-- Added mood module toggle in settings
+- Added Training Module for workout logging
+  - Create and manage exercises
+  - Log sessions with load, reps, date, and notes (via modals)
+  - Volume calculation (load × reps)
+  - 60-day activity heatmap visualization
+  - Exercise detail screen with volume line chart
+  - Session history per exercise with delete option
+  - XP rewards (+10 per session logged)
+- Added `dumbbell.fill` icon mapping to `fitness-center`
+- Added training module toggle in settings
 
 **Note**: This document should be updated as the codebase evolves. When making significant architectural changes or adding new patterns, update this file accordingly.

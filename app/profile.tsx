@@ -6,9 +6,10 @@ import { useFinance } from '@/contexts/finance-context';
 import { useInvestment } from '@/contexts/investment-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useTasks } from '@/contexts/tasks-context';
+import { useTraining } from '@/contexts/training-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import * as ImagePicker from 'expo-image-picker';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
@@ -18,7 +19,16 @@ export default function ProfileScreen() {
   const { portfolioTotal, investments } = useInvestment();
   const { todayProgress } = useTasks();
   const { chaptersReadThisMonth, inProgressBooks } = useBooks();
+  const { sessions } = useTraining();
   const colorScheme = useColorScheme();
+
+  const sessionsThisMonth = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
+    return sessions.filter((s) => s.date.startsWith(monthPrefix)).length;
+  }, [sessions]);
   const isDark = colorScheme === 'dark';
 
   const [monthBalance, setMonthBalance] = useState<number | null>(null);
@@ -76,6 +86,8 @@ export default function ProfileScreen() {
       chaptersRead: 'Chapters Read',
       thisMonth: 'This month',
       booksInProgress: 'in progress',
+      trainingSessions: 'Training Sessions',
+      sessionsCount: 'sessions',
     },
     pt: {
       level: 'Nível',
@@ -93,6 +105,8 @@ export default function ProfileScreen() {
       chaptersRead: 'Capítulos Lidos',
       thisMonth: 'Este mês',
       booksInProgress: 'em progresso',
+      trainingSessions: 'Treinos',
+      sessionsCount: 'sessões',
     },
   };
 
@@ -275,6 +289,28 @@ export default function ProfileScreen() {
               </Text>
               <Text style={[styles.statHint, { color: isDark ? '#666' : '#999' }]}>
                 {t.thisMonth} ({inProgressBooks.length} {t.booksInProgress})
+              </Text>
+            </View>
+          )}
+
+          {settings.modules?.training !== false && sessionsThisMonth > 0 && (
+            <View
+              style={[
+                styles.statCard,
+                {
+                  backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
+                  borderColor: isDark ? '#333' : '#E0E0E0',
+                },
+              ]}
+            >
+              <Text style={[styles.statLabel, { color: isDark ? '#999' : '#666' }]}>
+                {t.trainingSessions}
+              </Text>
+              <Text style={[styles.statValue, { color: '#FF6B6B' }]}>
+                {sessionsThisMonth}
+              </Text>
+              <Text style={[styles.statHint, { color: isDark ? '#666' : '#999' }]}>
+                {t.thisMonth}
               </Text>
             </View>
           )}

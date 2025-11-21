@@ -45,6 +45,8 @@ const MAPPING = {
   'face.smiling.fill': 'mood',
   'magnifyingglass': 'search',
   'xmark.circle.fill': 'cancel',
+  // Training icons
+  'dumbbell.fill': 'fitness-center',
 } as IconMapping;
 
 /**

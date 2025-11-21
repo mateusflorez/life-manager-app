@@ -74,6 +74,8 @@ export default function ConfigScreen() {
       booksModuleDesc: 'Track your reading progress and reviews',
       moodModule: 'Mood',
       moodModuleDesc: 'Track your daily mood and emotional patterns',
+      trainingModule: 'Training',
+      trainingModuleDesc: 'Log your workouts and track progress',
     },
     pt: {
       title: 'Configurações',
@@ -93,6 +95,8 @@ export default function ConfigScreen() {
       booksModuleDesc: 'Acompanhe sua leitura e resenhas',
       moodModule: 'Humor',
       moodModuleDesc: 'Registre seu humor diário e padrões emocionais',
+      trainingModule: 'Treino',
+      trainingModuleDesc: 'Registre seus treinos e acompanhe seu progresso',
     },
   };
 
@@ -318,6 +322,31 @@ export default function ConfigScreen() {
             onValueChange={(value) => handleModuleToggle('mood', value)}
             trackColor={{ false: isDark ? '#333' : '#D0D0D0', true: '#81C784' }}
             thumbColor={settings.modules?.mood ? '#4CAF50' : isDark ? '#666' : '#f4f3f4'}
+          />
+        </View>
+
+        <View
+          style={[
+            styles.moduleItem,
+            {
+              backgroundColor: isDark ? '#1F1F1F' : '#F5F5F5',
+              borderColor: isDark ? '#333' : '#E0E0E0',
+            },
+          ]}
+        >
+          <View style={styles.moduleInfo}>
+            <Text style={[styles.moduleName, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+              {t.trainingModule}
+            </Text>
+            <Text style={[styles.moduleDesc, { color: isDark ? '#999' : '#666' }]}>
+              {t.trainingModuleDesc}
+            </Text>
+          </View>
+          <Switch
+            value={settings.modules?.training ?? true}
+            onValueChange={(value) => handleModuleToggle('training', value)}
+            trackColor={{ false: isDark ? '#333' : '#D0D0D0', true: '#81C784' }}
+            thumbColor={settings.modules?.training ? '#4CAF50' : isDark ? '#666' : '#f4f3f4'}
           />
         </View>
 
