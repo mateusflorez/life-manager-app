@@ -1,14 +1,17 @@
-import { StyleSheet, View, Text, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { useRouter } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
 import { useAccount } from '@/contexts/account-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function HomeScreen() {
   const { account } = useAccount();
   const { settings } = useSettings();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const router = useRouter();
 
   const translations = {
     en: {
@@ -18,6 +21,9 @@ export default function HomeScreen() {
       xp: 'XP',
       completedTasks: 'Completed tasks',
       allTime: 'All time',
+      modules: 'Modules',
+      finance: 'Finance',
+      financeDesc: 'Track your expenses',
     },
     pt: {
       noAccount: 'Nenhuma conta selecionada',
@@ -26,6 +32,9 @@ export default function HomeScreen() {
       xp: 'XP',
       completedTasks: 'Tarefas concluídas',
       allTime: 'Total',
+      modules: 'Módulos',
+      finance: 'Finanças',
+      financeDesc: 'Controle seus gastos',
     },
   };
 
@@ -56,9 +65,13 @@ export default function HomeScreen() {
                 { backgroundColor: isDark ? '#1F1F1F' : '#F5F5F5' },
               ]}
             >
-              <Text style={[styles.avatarText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                {account.name.charAt(0).toUpperCase()}
-              </Text>
+              {account.avatar ? (
+                <Image source={{ uri: account.avatar }} style={styles.avatarImage} />
+              ) : (
+                <Text style={[styles.avatarText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                  {account.name.charAt(0).toUpperCase()}
+                </Text>
+              )}
             </View>
 
             <View style={styles.headerInfo}>
@@ -124,6 +137,36 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
+
+        <View style={styles.modulesSection}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+            {t.modules}
+          </Text>
+
+          <View style={styles.modulesGrid}>
+            <TouchableOpacity
+              style={[
+                styles.moduleCard,
+                {
+                  backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
+                  borderColor: isDark ? '#333' : '#E0E0E0',
+                },
+              ]}
+              onPress={() => router.push('/finance')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.moduleIcon, { backgroundColor: '#10B981' }]}>
+                <IconSymbol name="dollarsign.circle.fill" size={28} color="#fff" />
+              </View>
+              <Text style={[styles.moduleTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                {t.finance}
+              </Text>
+              <Text style={[styles.moduleDesc, { color: isDark ? '#999' : '#666' }]}>
+                {t.financeDesc}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </ScrollView>
     </ThemedView>
   );
@@ -160,6 +203,12 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
   },
   avatarText: {
     fontSize: 28,
@@ -221,5 +270,40 @@ const styles = StyleSheet.create({
   },
   statHint: {
     fontSize: 12,
+  },
+  modulesSection: {
+    marginTop: 24,
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  modulesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  moduleCard: {
+    width: '47%',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    gap: 8,
+  },
+  moduleIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  moduleTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  moduleDesc: {
+    fontSize: 13,
   },
 });

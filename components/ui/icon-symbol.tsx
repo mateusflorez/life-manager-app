@@ -18,7 +18,21 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'chevron.down': 'keyboard-arrow-down',
   'gearshape.fill': 'settings',
+  // Finance icons
+  'dollarsign.circle.fill': 'attach-money',
+  'chart.pie.fill': 'pie-chart',
+  'creditcard.fill': 'credit-card',
+  'creditcard': 'credit-card',
+  'arrow.2.squarepath': 'repeat',
+  'calendar': 'calendar-today',
+  'plus': 'add',
+  'plus.circle.fill': 'add-circle',
+  'xmark': 'close',
+  'checkmark': 'check',
+  'trash': 'delete',
+  'building.columns': 'account-balance',
 } as IconMapping;
 
 /**
