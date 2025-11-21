@@ -45,6 +45,16 @@ As vezes EU VOU CONVERSAR COM VC EM PORTUGUÊS QUE É MINHA LINGUA NATIVA APENAS
   - Movement history with tags support
   - 12-month line chart showing portfolio trends
   - Portfolio summary on home screen
+- **Tasks Module**: Task management with recurring tasks
+  - One-time tasks (to-do) with optional date, time, and tag
+  - Daily recurring tasks with optional time and tag
+  - Weekly recurring tasks with optional date, time, and tag
+  - Monthly recurring tasks with optional date, time, and tag
+  - Due date logic: date+time = exact datetime, date only = 23:59 of that day
+  - XP rewards (+50) on task completion
+  - Overdue task indicators
+  - Cycle-based completion tracking (daily/weekly/monthly reset)
+  - Today's progress tracking on home screen
 
 ---
 
@@ -286,7 +296,42 @@ Track investments and portfolio contributions.
 - `calculateChartData(investments)` - Generate chart data
 - `t(key, language)` - Translation helper
 
-### 6. **Module System**
+### 6. **Tasks Module**
+
+Task management with one-time and recurring tasks.
+
+**Data Models** (`types/tasks.ts`):
+- `TodoTask` - One-time tasks with optional date, time, tag
+- `DailyTask` - Daily recurring tasks with optional time, tag
+- `WeeklyTask` - Weekly recurring tasks with optional date, time, tag
+- `MonthlyTask` - Monthly recurring tasks with optional date, time, tag
+- `TaskState` - Completion status tracking per task type
+
+**Key Features**:
+- Four task types: todo (one-time), daily, weekly, monthly
+- Due date calculation: date+time = exact, date only = 23:59
+- XP rewards (+50) on task completion
+- Cycle-based reset for recurring tasks
+- Overdue task indicators
+- Collapsible sections per task type
+- Today's progress tracking
+
+**Helper Functions** (`types/tasks.ts`):
+- `generateId()` - Create unique IDs
+- `getTodayKey()` - Get today as "YYYY-MM-DD"
+- `formatDate(dateStr, language)` - Format date for display
+- `formatTime(timeStr, language)` - Format time for display
+- `isCycleComplete(type, lastCompletionDate)` - Check if recurring task is done
+- `calculateDueDate(task)` - Get due date for task
+- `isTaskOverdue(task)` - Check if task is overdue
+- `isDueToday(task)` - Check if task is due today
+- `t(key, language)` - Translation helper
+
+**Storage Keys** (AsyncStorage):
+- `@life_manager_tasks` - All tasks by type
+- `@life_manager_task_state_{accountId}` - Completion status per account
+
+### 7. **Module System**
 
 The app supports enabling/disabling modules from settings. When disabled:
 - Module cards and stats are hidden from the home screen
@@ -298,6 +343,7 @@ The app supports enabling/disabling modules from settings. When disabled:
 type ModulesConfig = {
   finance: boolean;
   investments: boolean;
+  tasks: boolean;
 };
 
 type Settings = {
@@ -315,7 +361,7 @@ type Settings = {
 )}
 ```
 
-### 7. **Visual Patterns and UI Conventions**
+### 8. **Visual Patterns and UI Conventions**
 
 **Back Button Pattern** (used in Finance and Investments modules):
 ```typescript
@@ -355,7 +401,7 @@ headerLeft: () => <BackButton />,
 - Dark mode borders: `#333`
 - Light mode borders: `#E0E0E0`
 
-### 8. **Component Architecture**
+### 9. **Component Architecture**
 
 Components are organized by reusability level:
 
@@ -395,10 +441,14 @@ life-manager-mobile/
 │   │   ├── months.tsx           # Monthly entries management
 │   │   ├── cards.tsx            # Credit cards management
 │   │   └── recurring.tsx        # Recurring expenses
-│   └── investments/             # Investments module screens
-│       ├── _layout.tsx          # Investments stack navigation
-│       ├── index.tsx            # Investments overview (chart, cards)
-│       └── [id].tsx             # Investment detail (movements, add contribution)
+│   ├── investments/             # Investments module screens
+│   │   ├── _layout.tsx          # Investments stack navigation
+│   │   ├── index.tsx            # Investments overview (chart, cards)
+│   │   └── [id].tsx             # Investment detail (movements, add contribution)
+│   └── tasks/                   # Tasks module screens
+│       ├── _layout.tsx          # Tasks stack navigation
+│       ├── index.tsx            # Tasks overview (sections, progress)
+│       └── add.tsx              # Add task modal screen
 │
 ├── components/                   # Reusable components
 │   ├── ui/                      # Lower-level UI components
@@ -418,19 +468,22 @@ life-manager-mobile/
 │   ├── account-context.tsx      # User account state management
 │   ├── settings-context.tsx     # App settings (language, currency)
 │   ├── finance-context.tsx      # Finance data management
-│   └── investment-context.tsx   # Investment data management
+│   ├── investment-context.tsx   # Investment data management
+│   └── tasks-context.tsx        # Tasks data management
 │
 ├── services/                     # Data persistence layer
 │   ├── account-storage.ts       # Account AsyncStorage operations
 │   ├── settings-storage.ts      # Settings AsyncStorage operations
 │   ├── finance-storage.ts       # Finance AsyncStorage operations
-│   └── investment-storage.ts    # Investment AsyncStorage operations
+│   ├── investment-storage.ts    # Investment AsyncStorage operations
+│   └── tasks-storage.ts         # Tasks AsyncStorage operations
 │
 ├── types/                        # TypeScript type definitions
 │   ├── account.ts               # Account types
 │   ├── settings.ts              # Settings types (Language, Currency, ModulesConfig)
 │   ├── finance.ts               # Finance types + helpers
-│   └── investment.ts            # Investment types + helpers
+│   ├── investment.ts            # Investment types + helpers
+│   └── tasks.ts                 # Tasks types + helpers
 │
 ├── hooks/                        # Custom React hooks
 │   ├── use-color-scheme.ts      # Theme detection (native)
@@ -1122,8 +1175,10 @@ A feature is complete when:
 **Last Updated**: 2025-11-21
 
 **Recent Changes**:
-- Added Visual Patterns section documenting UI conventions
-- Standardized back button pattern across Finance and Investments modules
-- Documented color conventions and chart label patterns
+- Added Tasks Module with support for one-time and recurring tasks (daily/weekly/monthly)
+- Tasks support optional date, time, and tag fields
+- Integrated tasks progress on home screen
+- Added tasks module toggle in settings
+- Added @react-native-community/datetimepicker dependency
 
 **Note**: This document should be updated as the codebase evolves. When making significant architectural changes or adding new patterns, update this file accordingly.

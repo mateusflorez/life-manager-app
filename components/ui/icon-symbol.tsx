@@ -37,6 +37,8 @@ const MAPPING = {
   // Investment icons
   'chart.line.uptrend.xyaxis': 'trending-up',
   'chart.xyaxis.line': 'show-chart',
+  // Tasks icons
+  'checklist': 'checklist',
 } as IconMapping;
 
 /**

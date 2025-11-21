@@ -4,6 +4,7 @@ export type Currency = 'BRL' | 'USD';
 export type ModulesConfig = {
   finance: boolean;
   investments: boolean;
+  tasks: boolean;
 };
 
 export type Settings = {
@@ -15,6 +16,7 @@ export type Settings = {
 export const DEFAULT_MODULES: ModulesConfig = {
   finance: true,
   investments: true,
+  tasks: true,
 };
 
 export const DEFAULT_SETTINGS: Settings = {

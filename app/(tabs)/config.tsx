@@ -68,6 +68,8 @@ export default function ConfigScreen() {
       financeModuleDesc: 'Track expenses, income, and credit cards',
       investmentsModule: 'Investments',
       investmentsModuleDesc: 'Track your investments and contributions',
+      tasksModule: 'Tasks',
+      tasksModuleDesc: 'Manage your to-dos and recurring tasks',
     },
     pt: {
       title: 'Configurações',
@@ -81,6 +83,8 @@ export default function ConfigScreen() {
       financeModuleDesc: 'Controle gastos, receitas e cartões',
       investmentsModule: 'Investimentos',
       investmentsModuleDesc: 'Acompanhe seus investimentos e aportes',
+      tasksModule: 'Tarefas',
+      tasksModuleDesc: 'Gerencie suas tarefas e rotinas',
     },
   };
 
@@ -231,6 +235,31 @@ export default function ConfigScreen() {
             onValueChange={(value) => handleModuleToggle('investments', value)}
             trackColor={{ false: isDark ? '#333' : '#D0D0D0', true: '#81C784' }}
             thumbColor={settings.modules?.investments ? '#4CAF50' : isDark ? '#666' : '#f4f3f4'}
+          />
+        </View>
+
+        <View
+          style={[
+            styles.moduleItem,
+            {
+              backgroundColor: isDark ? '#1F1F1F' : '#F5F5F5',
+              borderColor: isDark ? '#333' : '#E0E0E0',
+            },
+          ]}
+        >
+          <View style={styles.moduleInfo}>
+            <Text style={[styles.moduleName, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+              {t.tasksModule}
+            </Text>
+            <Text style={[styles.moduleDesc, { color: isDark ? '#999' : '#666' }]}>
+              {t.tasksModuleDesc}
+            </Text>
+          </View>
+          <Switch
+            value={settings.modules?.tasks ?? true}
+            onValueChange={(value) => handleModuleToggle('tasks', value)}
+            trackColor={{ false: isDark ? '#333' : '#D0D0D0', true: '#81C784' }}
+            thumbColor={settings.modules?.tasks ? '#4CAF50' : isDark ? '#666' : '#f4f3f4'}
           />
         </View>
 
