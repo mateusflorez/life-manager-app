@@ -47,6 +47,21 @@ const MAPPING = {
   'xmark.circle.fill': 'cancel',
   // Training icons
   'dumbbell.fill': 'fitness-center',
+  // Focus icons
+  'clock.fill': 'schedule',
+  'clock': 'schedule',
+  'timer': 'timer',
+  'stopwatch': 'timer',
+  'clock.badge.checkmark': 'schedule',
+  'checkmark.circle.fill': 'check-circle',
+  // Achievements icons
+  'trophy.fill': 'emoji-events',
+  // Welcome/Logo icons
+  'sparkles': 'auto-awesome',
+  // Data management icons
+  'square.and.arrow.down': 'file-download',
+  'square.and.arrow.up': 'file-upload',
+  'folder': 'folder',
 } as IconMapping;
 
 /**

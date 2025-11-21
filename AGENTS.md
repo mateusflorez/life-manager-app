@@ -81,6 +81,34 @@ As vezes EU VOU CONVERSAR COM VC EM PORTUGUÊS QUE É MINHA LINGUA NATIVA APENAS
   - Session history per exercise
   - XP rewards (+10 per session logged)
   - Training module toggle in settings
+- **Focus Module**: Timer for concentration sessions
+  - Three focus modes:
+    - **Pomodoro** (default): Focus + break cycles with configurable intervals
+    - **Countdown**: Simple timer with target duration (no breaks)
+    - **Countup**: Stopwatch style, track time without limits
+  - Pause/resume functionality for all modes
+  - **Background notifications**: Persistent notification showing timer while app is in background
+  - **Completion alerts**: Sound notification when focus/break phase or timer completes
+  - Session history with search
+  - Stats: total minutes, today's minutes, streak tracking
+  - XP rewards (+1 per focus minute)
+  - Focus module toggle in settings
+  - Extensible architecture for future focus modes
+- **Achievements Module**: Milestone progress tracking (always visible, cannot be disabled)
+  - Tracks progress across 7 categories:
+    - **Level milestones**: 10, 25, 50, 100, 500
+    - **Chapters read**: 50, 100, 500, 1,000, 5,000
+    - **Amount invested**: 1K, 5K, 10K, 50K, 100K
+    - **Tasks completed**: 50, 100, 500, 1,000, 5,000
+    - **Training sessions**: 50, 100, 500, 1,000, 5,000
+    - **Focused hours**: 1h, 5h, 10h, 50h, 100h
+    - **Mood logs**: 50, 100, 500, 1,000, 5,000
+  - Overall progress summary with percentage
+  - Horizontally scrollable tier cards per category
+  - Color-coded tiers (Gray → Green → Blue → Purple → Orange)
+  - Trophy icons for completed milestones
+  - Read-only module (data pulled from other modules)
+  - Accessible via bottom tab bar (between Home and Config)
 
 ---
 
@@ -467,7 +495,110 @@ Workout logging and exercise tracking system.
 - `@life_manager_exercises` - Exercises data
 - `@life_manager_training_sessions` - Training sessions data
 
-### 10. **Module System**
+### 10. **Focus Module**
+
+Timer for concentration sessions with multiple focus modes.
+
+**Data Models** (`types/focus.ts`):
+- `FocusEntry` - Session entry with id, date, startedAt, endedAt, mode, durationMinutes, optional targetMinutes/breakMinutes/cyclesCompleted
+- `FocusMode` - Type union of 'pomodoro' | 'countdown' | 'countup' (extensible for future modes)
+- `FocusPhase` - Type union of 'idle' | 'focus' | 'break'
+- `FocusTimerState` - Active timer state with running, mode, phase, targets, cycles, timestamps
+- `FocusStats` - Stats summary with totalMinutes, todayMinutes, weekMinutes, streak, lastEntry
+
+**Key Features**:
+- Three focus modes:
+  - **Pomodoro** (default): Focus + break cycles with configurable intervals and cycle count
+  - **Countdown**: Simple timer with target duration, completes when time runs out
+  - **Countup**: Stopwatch style, track time without limits, finish when ready
+- Pause/resume functionality for all modes
+- Automatic phase transitions in Pomodoro mode (focus → break → focus)
+- **Background notifications**: Persistent notification showing current timer while app is in background
+- **Completion alerts**: System notification sound when focus/break phase or timer completes
+- Session history with searchable list grouped by month
+- Stats: total minutes, today's minutes, streak tracking
+- XP rewards (+1 per focus minute)
+
+**Notification Service** (`services/focus-notification.ts`):
+- `configureFocusNotifications()` - Request permissions and setup notification channel
+- `showOngoingNotification(...)` - Show/update persistent notification with timer
+- `showCompletionNotification(type, language)` - Show completion alert with sound
+- `dismissOngoingNotification()` - Dismiss the ongoing notification
+- `cleanupFocusNotifications()` - Cleanup on unmount
+
+**Helper Functions** (`types/focus.ts`):
+- `generateId()` - Create unique IDs
+- `getTodayKey()` - Get today as "YYYY-MM-DD"
+- `formatTimerDisplay(ms)` - Format milliseconds as MM:SS or HH:MM:SS
+- `formatDate(dateStr, language)` - Format date for display
+- `formatDateTime(isoString, language)` - Format date and time for display
+- `calculateStats(entries)` - Calculate stats from entries
+- `calculateStreak(entries)` - Calculate consecutive days streak
+- `groupEntriesByMonth(entries, language)` - Group entries for history view
+- `getDefaultTimerState()` - Get default timer state
+- `t(key, language)` - Translation helper
+
+**Storage Keys** (AsyncStorage):
+- `@life_manager_focus_entries` - Focus session history
+- `@life_manager_focus_timer_state` - Current timer state (persists across app restart)
+
+### 11. **Achievements Module**
+
+Read-only module that tracks milestone progress across all other modules.
+
+**Data Models** (`types/achievements.ts`):
+- `AchievementCategory` - Type union of category keys
+- `Achievement` - Category with title, current value, tiers, and label function
+- `AchievementStats` - Summary with total/completed tiers and percentage
+
+**Key Features**:
+- Read-only module (no data entry, values pulled from contexts)
+- Cannot be disabled (always visible in tab bar)
+- Tracks 7 categories with 5 tiers each (35 total milestones)
+- Color-coded tier cards (Bronze → Silver → Gold → Platinum → Diamond)
+- Progress bars for incomplete tiers
+- Trophy icons for completed milestones
+- Overall completion summary at top
+
+**Tier Colors** (`TIER_COLORS`):
+- Tier 1: `#4b5563` (Gray - Bronze)
+- Tier 2: `#22c55e` (Green - Silver)
+- Tier 3: `#3b82f6` (Blue - Gold)
+- Tier 4: `#a855f7` (Purple - Platinum)
+- Tier 5: `#fb923c` (Orange - Diamond)
+
+**Achievement Tiers**:
+| Category | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 |
+|----------|--------|--------|--------|--------|--------|
+| Levels | 10 | 25 | 50 | 100 | 500 |
+| Chapters | 50 | 100 | 500 | 1,000 | 5,000 |
+| Invested | 1K | 5K | 10K | 50K | 100K |
+| Tasks | 50 | 100 | 500 | 1,000 | 5,000 |
+| Training | 50 | 100 | 500 | 1,000 | 5,000 |
+| Focus (min) | 60 | 300 | 600 | 3,000 | 6,000 |
+| Mood | 50 | 100 | 500 | 1,000 | 5,000 |
+
+**Data Sources** (from other contexts):
+- `useAccount` → XP level (`Math.floor(account.xp / 1000)`)
+- `useAccount` → Tasks completed (`account.completedTasks`)
+- `useBooks` → Chapters read (`totalChaptersRead`)
+- `useInvestment` → Total invested (`portfolioTotal`)
+- `useTraining` → Training sessions (`totalSessions`)
+- `useFocus` → Focus minutes (`stats.totalMinutes`)
+- `useMood` → Mood logs (`entries.length`)
+
+**Helper Functions** (`types/achievements.ts`):
+- `buildAchievements(language, currency, values)` - Build achievements array
+- `calculateAchievementStats(achievements)` - Calculate overall stats
+- `calculateCompletedTiers(value, tiers)` - Count completed tiers
+- `calculateProgress(value, target)` - Calculate progress percentage
+- `formatCurrency(value, currency, language)` - Format currency values
+- `formatHours(minutes)` - Format minutes as hours
+- `t(key, language)` - Translation helper
+
+**Tab Bar Position**: Between Home and Config (cannot be disabled)
+
+### 12. **Module System**
 
 The app supports enabling/disabling modules from settings. When disabled:
 - Module cards and stats are hidden from the home screen
@@ -483,6 +614,7 @@ type ModulesConfig = {
   books: boolean;
   mood: boolean;
   training: boolean;
+  focus: boolean;
 };
 
 type Settings = {
@@ -500,7 +632,7 @@ type Settings = {
 )}
 ```
 
-### 11. **Visual Patterns and UI Conventions**
+### 13. **Visual Patterns and UI Conventions**
 
 **Back Button Pattern** (used in Finance and Investments modules):
 ```typescript
@@ -541,7 +673,7 @@ headerLeft: () => <BackButton />,
 - Dark mode borders: `#333`
 - Light mode borders: `#E0E0E0`
 
-### 12. **Component Architecture**
+### 14. **Component Architecture**
 
 Components are organized by reusability level:
 
@@ -572,8 +704,9 @@ life-manager-mobile/
 │   ├── index.tsx                # Welcome/entry screen
 │   ├── modal.tsx                # Modal example
 │   ├── (tabs)/                  # Tab navigation group
-│   │   ├── _layout.tsx          # Tab configuration
+│   │   ├── _layout.tsx          # Tab configuration (Home, Achievements, Config)
 │   │   ├── index.tsx            # Home screen (balance, stats, modules)
+│   │   ├── achievements.tsx     # Achievements screen (milestone tracking)
 │   │   └── config.tsx           # Settings screen (language, currency, modules)
 │   ├── finance/                 # Finance module screens
 │   │   ├── _layout.tsx          # Finance tab navigation
@@ -594,11 +727,15 @@ life-manager-mobile/
 │   │   ├── index.tsx            # Books overview (in progress, completed, dropped)
 │   │   ├── add.tsx              # Add book screen
 │   │   └── [id].tsx             # Book detail (progress, reviews, chapter history)
-│   └── training/                # Training module screens
-│       ├── _layout.tsx          # Training stack navigation
-│       ├── index.tsx            # Training overview (heatmap, log session modal)
-│       ├── exercises.tsx        # Exercises list (add exercise modal)
-│       └── [id].tsx             # Exercise detail (volume chart, session history)
+│   ├── training/                # Training module screens
+│   │   ├── _layout.tsx          # Training stack navigation
+│   │   ├── index.tsx            # Training overview (heatmap, log session modal)
+│   │   ├── exercises.tsx        # Exercises list (add exercise modal)
+│   │   └── [id].tsx             # Exercise detail (volume chart, session history)
+│   └── focus/                   # Focus module screens
+│       ├── _layout.tsx          # Focus stack navigation
+│       ├── index.tsx            # Focus overview (timer, stats, recent sessions)
+│       └── history.tsx          # Full session history with search
 │
 ├── components/                   # Reusable components
 │   ├── ui/                      # Lower-level UI components
@@ -622,7 +759,8 @@ life-manager-mobile/
 │   ├── tasks-context.tsx        # Tasks data management
 │   ├── books-context.tsx        # Books data management
 │   ├── mood-context.tsx         # Mood data management
-│   └── training-context.tsx     # Training data management
+│   ├── training-context.tsx     # Training data management
+│   └── focus-context.tsx        # Focus data management
 │
 ├── services/                     # Data persistence layer
 │   ├── account-storage.ts       # Account AsyncStorage operations
@@ -632,7 +770,8 @@ life-manager-mobile/
 │   ├── tasks-storage.ts         # Tasks AsyncStorage operations
 │   ├── books-storage.ts         # Books AsyncStorage operations
 │   ├── mood-storage.ts          # Mood AsyncStorage operations
-│   └── training-storage.ts      # Training AsyncStorage operations
+│   ├── training-storage.ts      # Training AsyncStorage operations
+│   └── focus-storage.ts         # Focus AsyncStorage operations
 │
 ├── types/                        # TypeScript type definitions
 │   ├── account.ts               # Account types
@@ -642,7 +781,9 @@ life-manager-mobile/
 │   ├── tasks.ts                 # Tasks types + helpers
 │   ├── books.ts                 # Books types + helpers
 │   ├── mood.ts                  # Mood types + helpers
-│   └── training.ts              # Training types + helpers
+│   ├── training.ts              # Training types + helpers
+│   ├── focus.ts                 # Focus types + helpers
+│   └── achievements.ts          # Achievements types + helpers (read-only)
 │
 ├── hooks/                        # Custom React hooks
 │   ├── use-color-scheme.ts      # Theme detection (native)
@@ -998,6 +1139,8 @@ const styles = StyleSheet.create({
 - `expo-haptics` - Haptic feedback (iOS)
 - `expo-image` - Optimized images
 - `expo-linking` - Deep linking
+- `expo-notifications` - Push/local notifications (Focus timer)
+- `expo-av` - Audio/video playback (optional for custom sounds)
 - `expo-splash-screen` - Splash screen
 - `expo-status-bar` - Status bar control
 - `expo-symbols` - SF Symbols (iOS icons)
@@ -1334,15 +1477,31 @@ A feature is complete when:
 **Last Updated**: 2025-11-21
 
 **Recent Changes**:
-- Added Training Module for workout logging
-  - Create and manage exercises
-  - Log sessions with load, reps, date, and notes (via modals)
-  - Volume calculation (load × reps)
-  - 60-day activity heatmap visualization
-  - Exercise detail screen with volume line chart
-  - Session history per exercise with delete option
-  - XP rewards (+10 per session logged)
-- Added `dumbbell.fill` icon mapping to `fitness-center`
-- Added training module toggle in settings
+- Added Achievements Module for milestone progress tracking
+  - Tracks 7 categories: levels, chapters, investments, tasks, training, focus, mood
+  - 5 tiers per category (35 total milestones)
+  - Color-coded tier cards with progress bars
+  - Overall completion summary at top
+  - Read-only module (pulls data from other contexts)
+  - Always visible in tab bar (cannot be disabled)
+  - Tab position: between Home and Config
+  - Added trophy.fill icon mapping for Material Icons
+- Added background notifications to Focus Module
+  - Persistent notification showing timer while app is in background
+  - Completion alerts with system notification sound
+  - Notifications for: focus phase end, break phase end, all cycles complete, timer complete
+  - Added expo-notifications and expo-av dependencies
+  - Created focus-notification.ts service for notification management
+- Added Focus Module for concentration sessions
+  - Three focus modes: Pomodoro (default), Countdown, Countup
+  - Pomodoro: Focus + break cycles with configurable intervals
+  - Countdown: Simple timer with target duration (no breaks)
+  - Countup: Stopwatch style, track time without limits
+  - Pause/resume functionality for all modes
+  - Session history with searchable list grouped by month
+  - Stats: total minutes, today's minutes, streak tracking
+  - XP rewards (+1 per focus minute)
+  - Extensible architecture for future focus modes
+- Added focus module toggle in settings
 
 **Note**: This document should be updated as the codebase evolves. When making significant architectural changes or adding new patterns, update this file accordingly.

@@ -3,6 +3,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useAccount } from '@/contexts/account-context';
 import { useBooks } from '@/contexts/books-context';
 import { useFinance } from '@/contexts/finance-context';
+import { useFocus } from '@/contexts/focus-context';
 import { useInvestment } from '@/contexts/investment-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useTasks } from '@/contexts/tasks-context';
@@ -20,6 +21,7 @@ export default function ProfileScreen() {
   const { todayProgress } = useTasks();
   const { chaptersReadThisMonth, inProgressBooks } = useBooks();
   const { sessions } = useTraining();
+  const { entries: focusEntries } = useFocus();
   const colorScheme = useColorScheme();
 
   const sessionsThisMonth = useMemo(() => {
@@ -29,6 +31,20 @@ export default function ProfileScreen() {
     const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
     return sessions.filter((s) => s.date.startsWith(monthPrefix)).length;
   }, [sessions]);
+
+  const focusMinutesThisMonth = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
+    return focusEntries
+      .filter((e) => e.date.startsWith(monthPrefix))
+      .reduce((sum, e) => sum + e.durationMinutes, 0);
+  }, [focusEntries]);
+
+  const focusHoursThisMonth = Math.floor(focusMinutesThisMonth / 60);
+  const focusRemainingMinutes = focusMinutesThisMonth % 60;
+
   const isDark = colorScheme === 'dark';
 
   const [monthBalance, setMonthBalance] = useState<number | null>(null);
@@ -88,6 +104,9 @@ export default function ProfileScreen() {
       booksInProgress: 'in progress',
       trainingSessions: 'Training Sessions',
       sessionsCount: 'sessions',
+      focusTime: 'Focus Time',
+      hours: 'h',
+      minutes: 'min',
     },
     pt: {
       level: 'Nível',
@@ -107,6 +126,9 @@ export default function ProfileScreen() {
       booksInProgress: 'em progresso',
       trainingSessions: 'Treinos',
       sessionsCount: 'sessões',
+      focusTime: 'Tempo de Foco',
+      hours: 'h',
+      minutes: 'min',
     },
   };
 
@@ -308,6 +330,30 @@ export default function ProfileScreen() {
               </Text>
               <Text style={[styles.statValue, { color: '#FF6B6B' }]}>
                 {sessionsThisMonth}
+              </Text>
+              <Text style={[styles.statHint, { color: isDark ? '#666' : '#999' }]}>
+                {t.thisMonth}
+              </Text>
+            </View>
+          )}
+
+          {settings.modules?.focus !== false && focusMinutesThisMonth > 0 && (
+            <View
+              style={[
+                styles.statCard,
+                {
+                  backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
+                  borderColor: isDark ? '#333' : '#E0E0E0',
+                },
+              ]}
+            >
+              <Text style={[styles.statLabel, { color: isDark ? '#999' : '#666' }]}>
+                {t.focusTime}
+              </Text>
+              <Text style={[styles.statValue, { color: '#EF4444' }]}>
+                {focusHoursThisMonth > 0
+                  ? `${focusHoursThisMonth}${t.hours} ${focusRemainingMinutes}${t.minutes}`
+                  : `${focusMinutesThisMonth}${t.minutes}`}
               </Text>
               <Text style={[styles.statHint, { color: isDark ? '#666' : '#999' }]}>
                 {t.thisMonth}

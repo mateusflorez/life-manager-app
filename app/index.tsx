@@ -7,7 +7,9 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedView } from '@/components/themed-view';
 import { AccountForm } from '@/components/account-form';
 import { useRouter } from 'expo-router';
@@ -16,6 +18,8 @@ import { type Account } from '@/types/account';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccount } from '@/contexts/account-context';
 import { useSettings } from '@/contexts/settings-context';
+import { RippleBackground } from '@/components/ui/ripple-background';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -31,29 +35,33 @@ export default function WelcomeScreen() {
   const translations = {
     en: {
       title: 'Life Manager',
-      subtitle: 'Your manager to make life easier',
-      subtitleCreate: 'Create a new account',
+      subtitle: 'Your personal life organizer',
+      subtitleCreate: 'Create your first account',
       selectAccount: 'Select your account',
-      createNew: '+ Create new account',
+      createNew: 'Create new account',
       deleteTitle: 'Delete Account',
       deleteMessage: (name: string) =>
         `Are you sure you want to delete "${name}"? This action cannot be undone.`,
       cancel: 'Cancel',
       delete: 'Delete',
       created: 'Created',
+      level: 'Level',
+      xp: 'XP',
     },
     pt: {
       title: 'Life Manager',
-      subtitle: 'Seu gerenciador para facilitar a vida',
-      subtitleCreate: 'Criar uma nova conta',
+      subtitle: 'Seu organizador pessoal',
+      subtitleCreate: 'Crie sua primeira conta',
       selectAccount: 'Selecione sua conta',
-      createNew: '+ Criar nova conta',
+      createNew: 'Criar nova conta',
       deleteTitle: 'Excluir Conta',
       deleteMessage: (name: string) =>
         `Tem certeza que deseja excluir "${name}"? Esta ação não pode ser desfeita.`,
       cancel: 'Cancelar',
       delete: 'Excluir',
       created: 'Criada em',
+      level: 'Nível',
+      xp: 'XP',
     },
   };
 
@@ -125,7 +133,17 @@ export default function WelcomeScreen() {
   if (loading) {
     return (
       <ThemedView style={styles.container}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <RippleBackground isDark={isDark} rippleCount={6} />
+        <View style={styles.loadingContainer}>
+          <LinearGradient
+            colors={['#6366F1', '#8B5CF6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.loadingGradient}
+          >
+            <ActivityIndicator size="large" color="#FFFFFF" />
+          </LinearGradient>
+        </View>
       </ThemedView>
     );
   }
@@ -133,19 +151,45 @@ export default function WelcomeScreen() {
   if (showCreateForm || accounts.length === 0) {
     return (
       <ThemedView style={styles.container}>
+        <RippleBackground isDark={isDark} rippleCount={6} />
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>{t.title}</Text>
-          <Text style={[styles.subtitle, { color: isDark ? '#999' : '#666' }]}>
-            {accounts.length === 0 ? t.subtitle : t.subtitleCreate}
-          </Text>
+          {/* Logo Section */}
+          <View style={styles.logoSection}>
+            <LinearGradient
+              colors={['#6366F1', '#8B5CF6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.logoContainer}
+            >
+              <IconSymbol name="sparkles" size={40} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.title, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {t.title}
+            </Text>
+            <Text style={[styles.subtitle, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
+              {accounts.length === 0 ? t.subtitle : t.subtitleCreate}
+            </Text>
+          </View>
 
-          <AccountForm
-            onSubmit={handleCreateAccount}
-            onCancel={accounts.length > 0 ? () => setShowCreateForm(false) : undefined}
-          />
+          {/* Form Card */}
+          <View
+            style={[
+              styles.formCard,
+              {
+                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              },
+            ]}
+          >
+            <AccountForm
+              onSubmit={handleCreateAccount}
+              onCancel={accounts.length > 0 ? () => setShowCreateForm(false) : undefined}
+            />
+          </View>
         </ScrollView>
       </ThemedView>
     );
@@ -153,52 +197,107 @@ export default function WelcomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>{t.title}</Text>
-        <Text style={[styles.subtitle, { color: isDark ? '#999' : '#666' }]}>
-          {t.selectAccount}
-        </Text>
-
-        <View style={styles.accountsList}>
-          {accounts.map((account) => (
-            <View
-              key={account.id}
-              style={[
-                styles.accountCard,
-                {
-                  backgroundColor: isDark ? '#1F1F1F' : '#F5F5F5',
-                  borderColor: isDark ? '#333' : '#E0E0E0',
-                },
-              ]}
-            >
-              <TouchableOpacity
-                style={styles.accountContent}
-                onPress={() => handleSelectAccount(account)}
-              >
-                <Text
-                  style={[styles.accountName, { color: isDark ? '#ECEDEE' : '#11181C' }]}
-                >
-                  {account.name}
-                </Text>
-                <Text style={styles.accountDate}>
-                  {t.created} {new Date(account.createdAt).toLocaleDateString()}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => handleDeleteAccount(account.id, account.name)}
-              >
-                <Text style={styles.deleteButtonText}>×</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-
-          <TouchableOpacity
-            style={[styles.createNewButton]}
-            onPress={() => setShowCreateForm(true)}
+      <RippleBackground isDark={isDark} rippleCount={8} />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Logo Section */}
+        <View style={styles.logoSection}>
+          <LinearGradient
+            colors={['#6366F1', '#8B5CF6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.logoContainer}
           >
-            <Text style={styles.createNewButtonText}>{t.createNew}</Text>
+            <IconSymbol name="sparkles" size={40} color="#FFFFFF" />
+          </LinearGradient>
+          <Text style={[styles.title, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+            {t.title}
+          </Text>
+          <Text style={[styles.subtitle, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
+            {t.selectAccount}
+          </Text>
+        </View>
+
+        {/* Accounts List */}
+        <View style={styles.accountsList}>
+          {accounts.map((account) => {
+            const level = Math.floor(account.xp / 1000);
+            return (
+              <TouchableOpacity
+                key={account.id}
+                style={[
+                  styles.accountCard,
+                  {
+                    backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                  },
+                ]}
+                onPress={() => handleSelectAccount(account)}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#6366F1', '#8B5CF6']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.avatarGradient}
+                >
+                  {account.avatar ? (
+                    <Image source={{ uri: account.avatar }} style={styles.avatarImage} />
+                  ) : (
+                    <Text style={styles.avatarText}>
+                      {account.name.charAt(0).toUpperCase()}
+                    </Text>
+                  )}
+                </LinearGradient>
+
+                <View style={styles.accountInfo}>
+                  <Text style={[styles.accountName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                    {account.name}
+                  </Text>
+                  <View style={styles.accountMeta}>
+                    <View style={styles.levelBadge}>
+                      <Text style={styles.levelText}>{t.level} {level}</Text>
+                    </View>
+                    <Text style={[styles.xpText, { color: isDark ? '#808080' : '#9CA3AF' }]}>
+                      {account.xp.toLocaleString()} {t.xp}
+                    </Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteAccount(account.id, account.name)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <IconSymbol name="trash" size={18} color="#EF4444" />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            );
+          })}
+
+          {/* Create New Account Button */}
+          <TouchableOpacity
+            style={[
+              styles.createButton,
+              {
+                backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)',
+                borderColor: isDark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(99, 102, 241, 0.2)',
+              },
+            ]}
+            onPress={() => setShowCreateForm(true)}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#6366F1', '#8B5CF6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.createIconContainer}
+            >
+              <IconSymbol name="plus" size={20} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={styles.createButtonText}>{t.createNew}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -210,73 +309,156 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
-    paddingVertical: 40,
+    paddingHorizontal: 24,
+    paddingVertical: 60,
+  },
+  logoSection: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   title: {
-    fontSize: 42,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 16,
+    fontSize: 36,
+    fontWeight: '800',
+    marginBottom: 8,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 18,
-    marginBottom: 40,
+    fontSize: 16,
     textAlign: 'center',
+    fontWeight: '500',
+  },
+  formCard: {
+    width: '100%',
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   accountsList: {
     width: '100%',
     gap: 12,
   },
   accountCard: {
-    borderRadius: 12,
-    borderWidth: 1,
     flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  avatarGradient: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
   },
-  accountContent: {
+  avatarImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+  },
+  avatarText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  accountInfo: {
     flex: 1,
-    padding: 20,
+    gap: 6,
   },
   accountName: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
-    marginBottom: 4,
   },
-  accountDate: {
-    fontSize: 14,
-    color: '#666',
+  accountMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  levelBadge: {
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  levelText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6366F1',
+  },
+  xpText: {
+    fontSize: 13,
   },
   deleteButton: {
-    width: 48,
-    alignSelf: 'stretch',
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FF3B30',
   },
-  deleteButtonText: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '300',
-  },
-  createNewButton: {
-    padding: 20,
-    borderRadius: 12,
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    padding: 16,
     borderWidth: 2,
-    borderColor: '#007AFF',
     borderStyle: 'dashed',
+    gap: 12,
     marginTop: 8,
   },
-  createNewButtonText: {
+  createIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  createButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
-    textAlign: 'center',
+    color: '#6366F1',
   },
 });
