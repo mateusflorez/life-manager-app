@@ -38,6 +38,13 @@ As vezes EU VOU CONVERSAR COM VC EM PORTUGUÊS QUE É MINHA LINGUA NATIVA APENAS
   - Recurring expenses with month selector
   - Category-based expense tracking with translations
   - Charts (Pie chart for categories, Line chart for yearly trends)
+- **Investments Module**: Track investments and contributions
+  - Create multiple investment portfolios
+  - Track contributions via "new total" input (auto-calculates delta)
+  - Running total with percentage change vs previous
+  - Movement history with tags support
+  - 12-month line chart showing portfolio trends
+  - Portfolio summary on home screen
 
 ---
 
@@ -193,7 +200,8 @@ Colors = {
 services/
 ├── account-storage.ts    # User account persistence
 ├── settings-storage.ts   # App settings persistence
-└── finance-storage.ts    # Finance data persistence
+├── finance-storage.ts    # Finance data persistence
+└── investment-storage.ts # Investment data persistence
 ```
 
 **Storage Keys** (AsyncStorage):
@@ -205,13 +213,17 @@ services/
 - `@life-manager/finance/{accountId}/finance-months` - Monthly records
 - `@life-manager/finance/{accountId}/finance-entries/{monthId}` - Month entries
 - `@life-manager/finance/{accountId}/card-charges/{cardId}` - Card charges
+- `@life_manager_investments` - Investment portfolios
+- `@life_manager_investment_movements` - Investment movements/contributions
 
 **Context Providers** (wrap entire app in `app/_layout.tsx`):
 ```typescript
 <SettingsProvider>
   <AccountProvider>
     <FinanceProvider>
-      {children}
+      <InvestmentProvider>
+        {children}
+      </InvestmentProvider>
     </FinanceProvider>
   </AccountProvider>
 </SettingsProvider>
@@ -249,7 +261,32 @@ Complete personal finance management system.
 - `getMonthName(month, language)` - Get translated month name
 - `translateCategory(category, language)` - Translate category name
 
-### 5. **Module System**
+### 5. **Investments Module**
+
+Track investments and portfolio contributions.
+
+**Data Models** (`types/investment.ts`):
+- `Investment` - Investment portfolio (name, description, color)
+- `InvestmentMovement` - Contribution/withdrawal with amount, date, tags
+- `InvestmentWithTotal` - Investment with calculated running total
+
+**Key Features**:
+- Add contributions by entering "new total" (delta auto-calculated)
+- Running total with percentage change vs previous
+- Movement history with tags (e.g., "bonus", "initial")
+- 12-month line chart showing portfolio trends
+
+**Helper Functions** (`types/investment.ts`):
+- `generateId()` - Create unique IDs
+- `getTodayKey()` - Get today as "YYYY-MM-DD"
+- `formatDate(dateStr, language)` - Format date for display
+- `calculatePercentChange(amount, previousTotal)` - Calculate % change
+- `formatPercentChange(percent)` - Format percentage for display
+- `getLast12Months()` - Get last 12 months for chart
+- `calculateChartData(investments)` - Generate chart data
+- `t(key, language)` - Translation helper
+
+### 6. **Module System**
 
 The app supports enabling/disabling modules from settings. When disabled:
 - Module cards and stats are hidden from the home screen
@@ -260,6 +297,7 @@ The app supports enabling/disabling modules from settings. When disabled:
 ```typescript
 type ModulesConfig = {
   finance: boolean;
+  investments: boolean;
 };
 
 type Settings = {
@@ -277,7 +315,47 @@ type Settings = {
 )}
 ```
 
-### 6. **Component Architecture**
+### 7. **Visual Patterns and UI Conventions**
+
+**Back Button Pattern** (used in Finance and Investments modules):
+```typescript
+import { useRouter } from 'expo-router';
+import { TouchableOpacity } from 'react-native';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+
+const BackButton = () => (
+  <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 8 }}>
+    <IconSymbol name="chevron.left" size={24} color={isDark ? '#ECEDEE' : '#11181C'} />
+  </TouchableOpacity>
+);
+
+// Usage in layout screenOptions:
+headerLeft: () => <BackButton />,
+```
+
+**Chart Label Patterns** (for crowded X-axis labels):
+- Show every 3rd label to avoid overlap
+- Use shortened format: "Jan" instead of "January 2025"
+- Add year suffix only for January or edge labels: "Jan'25"
+- Font size: 10px for chart labels
+
+**Legend Layout** (when horizontal legend overlaps):
+- Use vertical column layout instead of horizontal row
+- Align items to flex-start
+- Add gap: 8 between items
+
+**Color Conventions**:
+- Positive values/gains: `#10B981` (green)
+- Negative values/losses: `#EF4444` (red)
+- Primary action button: `#007AFF` (blue)
+- Dark mode background: `#151718` (header), `#1A1A1A` (cards)
+- Light mode background: `#fff` (header), `#F9F9F9` (cards)
+- Dark mode text: `#ECEDEE` (primary), `#999` (secondary)
+- Light mode text: `#11181C` (primary), `#666` (secondary)
+- Dark mode borders: `#333`
+- Light mode borders: `#E0E0E0`
+
+### 8. **Component Architecture**
 
 Components are organized by reusability level:
 
@@ -311,12 +389,16 @@ life-manager-mobile/
 │   │   ├── _layout.tsx          # Tab configuration
 │   │   ├── index.tsx            # Home screen (balance, stats, modules)
 │   │   └── config.tsx           # Settings screen (language, currency, modules)
-│   └── finance/                 # Finance module screens
-│       ├── _layout.tsx          # Finance tab navigation
-│       ├── index.tsx            # Finance overview (charts, summaries)
-│       ├── months.tsx           # Monthly entries management
-│       ├── cards.tsx            # Credit cards management
-│       └── recurring.tsx        # Recurring expenses
+│   ├── finance/                 # Finance module screens
+│   │   ├── _layout.tsx          # Finance tab navigation
+│   │   ├── index.tsx            # Finance overview (charts, summaries)
+│   │   ├── months.tsx           # Monthly entries management
+│   │   ├── cards.tsx            # Credit cards management
+│   │   └── recurring.tsx        # Recurring expenses
+│   └── investments/             # Investments module screens
+│       ├── _layout.tsx          # Investments stack navigation
+│       ├── index.tsx            # Investments overview (chart, cards)
+│       └── [id].tsx             # Investment detail (movements, add contribution)
 │
 ├── components/                   # Reusable components
 │   ├── ui/                      # Lower-level UI components
@@ -335,17 +417,20 @@ life-manager-mobile/
 ├── contexts/                     # React Context providers
 │   ├── account-context.tsx      # User account state management
 │   ├── settings-context.tsx     # App settings (language, currency)
-│   └── finance-context.tsx      # Finance data management
+│   ├── finance-context.tsx      # Finance data management
+│   └── investment-context.tsx   # Investment data management
 │
 ├── services/                     # Data persistence layer
 │   ├── account-storage.ts       # Account AsyncStorage operations
 │   ├── settings-storage.ts      # Settings AsyncStorage operations
-│   └── finance-storage.ts       # Finance AsyncStorage operations
+│   ├── finance-storage.ts       # Finance AsyncStorage operations
+│   └── investment-storage.ts    # Investment AsyncStorage operations
 │
 ├── types/                        # TypeScript type definitions
 │   ├── account.ts               # Account types
 │   ├── settings.ts              # Settings types (Language, Currency, ModulesConfig)
-│   └── finance.ts               # Finance types + helpers
+│   ├── finance.ts               # Finance types + helpers
+│   └── investment.ts            # Investment types + helpers
 │
 ├── hooks/                        # Custom React hooks
 │   ├── use-color-scheme.ts      # Theme detection (native)
@@ -1035,5 +1120,10 @@ A feature is complete when:
 ---
 
 **Last Updated**: 2025-11-21
+
+**Recent Changes**:
+- Added Visual Patterns section documenting UI conventions
+- Standardized back button pattern across Finance and Investments modules
+- Documented color conventions and chart label patterns
 
 **Note**: This document should be updated as the codebase evolves. When making significant architectural changes or adding new patterns, update this file accordingly.

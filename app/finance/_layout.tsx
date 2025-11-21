@@ -1,4 +1,5 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
+import { TouchableOpacity } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSettings } from '@/contexts/settings-context';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -7,6 +8,8 @@ import { Colors } from '@/constants/theme';
 export default function FinanceLayout() {
   const colorScheme = useColorScheme();
   const { settings } = useSettings();
+  const router = useRouter();
+  const isDark = colorScheme === 'dark';
 
   const translations = {
     en: {
@@ -25,19 +28,26 @@ export default function FinanceLayout() {
 
   const t = translations[settings.language];
 
+  const BackButton = () => (
+    <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 8 }}>
+      <IconSymbol name="chevron.left" size={24} color={isDark ? '#ECEDEE' : '#11181C'} />
+    </TouchableOpacity>
+  );
+
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: true,
         tabBarStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#151718' : '#fff',
-          borderTopColor: colorScheme === 'dark' ? '#333' : '#E0E0E0',
+          backgroundColor: isDark ? '#151718' : '#fff',
+          borderTopColor: isDark ? '#333' : '#E0E0E0',
         },
         headerStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#151718' : '#fff',
+          backgroundColor: isDark ? '#151718' : '#fff',
         },
-        headerTintColor: colorScheme === 'dark' ? '#ECEDEE' : '#11181C',
+        headerTintColor: isDark ? '#ECEDEE' : '#11181C',
+        headerLeft: () => <BackButton />,
       }}
     >
       <Tabs.Screen

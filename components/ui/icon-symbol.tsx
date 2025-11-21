@@ -17,6 +17,7 @@ const MAPPING = {
   'house.fill': 'home',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
+  'chevron.left': 'chevron-left',
   'chevron.right': 'chevron-right',
   'chevron.down': 'keyboard-arrow-down',
   'gearshape.fill': 'settings',
@@ -33,6 +34,9 @@ const MAPPING = {
   'checkmark': 'check',
   'trash': 'delete',
   'building.columns': 'account-balance',
+  // Investment icons
+  'chart.line.uptrend.xyaxis': 'trending-up',
+  'chart.xyaxis.line': 'show-chart',
 } as IconMapping;
 
 /**

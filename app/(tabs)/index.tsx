@@ -5,6 +5,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useAccount } from '@/contexts/account-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useFinance } from '@/contexts/finance-context';
+import { useInvestment } from '@/contexts/investment-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
@@ -12,6 +13,7 @@ export default function HomeScreen() {
   const { account } = useAccount();
   const { settings } = useSettings();
   const { activeBankAccount, ensureMonth, getMonthSummary } = useFinance();
+  const { portfolioTotal, investments, monthlyChange } = useInvestment();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const router = useRouter();
@@ -54,6 +56,11 @@ export default function HomeScreen() {
       modules: 'Modules',
       finance: 'Finance',
       financeDesc: 'Track your expenses',
+      investments: 'Investments',
+      investmentsDesc: 'Track your portfolio',
+      portfolioTotal: 'Portfolio',
+      investmentsCount: 'investments',
+      thisMonth: 'this month',
     },
     pt: {
       noAccount: 'Nenhuma conta selecionada',
@@ -67,6 +74,11 @@ export default function HomeScreen() {
       modules: 'Módulos',
       finance: 'Finanças',
       financeDesc: 'Controle seus gastos',
+      investments: 'Investimentos',
+      investmentsDesc: 'Acompanhe seu portfólio',
+      portfolioTotal: 'Portfólio',
+      investmentsCount: 'investimentos',
+      thisMonth: 'este mês',
     },
   };
 
@@ -182,6 +194,27 @@ export default function HomeScreen() {
                 </Text>
               </View>
             )}
+            {settings.modules?.investments !== false && portfolioTotal > 0 && (
+              <View
+                style={[
+                  styles.statCard,
+                  {
+                    backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
+                    borderColor: isDark ? '#333' : '#E0E0E0',
+                  },
+                ]}
+              >
+                <Text style={[styles.statLabel, { color: isDark ? '#999' : '#666' }]}>
+                  {t.portfolioTotal}
+                </Text>
+                <Text style={[styles.statValue, { color: '#36A2EB' }]}>
+                  {formatCurrency(portfolioTotal)}
+                </Text>
+                <Text style={[styles.statHint, { color: isDark ? '#666' : '#999' }]}>
+                  {investments.length} {t.investmentsCount}
+                </Text>
+              </View>
+            )}
             <View
               style={[
                 styles.statCard,
@@ -204,34 +237,60 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {settings.modules?.finance !== false && (
+        {(settings.modules?.finance !== false || settings.modules?.investments !== false) && (
           <View style={styles.modulesSection}>
             <Text style={[styles.sectionTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
               {t.modules}
             </Text>
 
             <View style={styles.modulesGrid}>
-              <TouchableOpacity
-                style={[
-                  styles.moduleCard,
-                  {
-                    backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-                    borderColor: isDark ? '#333' : '#E0E0E0',
-                  },
-                ]}
-                onPress={() => router.push('/finance')}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.moduleIcon, { backgroundColor: '#10B981' }]}>
-                  <IconSymbol name="dollarsign.circle.fill" size={28} color="#fff" />
-                </View>
-                <Text style={[styles.moduleTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                  {t.finance}
-                </Text>
-                <Text style={[styles.moduleDesc, { color: isDark ? '#999' : '#666' }]}>
-                  {t.financeDesc}
-                </Text>
-              </TouchableOpacity>
+              {settings.modules?.finance !== false && (
+                <TouchableOpacity
+                  style={[
+                    styles.moduleCard,
+                    {
+                      backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
+                      borderColor: isDark ? '#333' : '#E0E0E0',
+                    },
+                  ]}
+                  onPress={() => router.push('/finance')}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.moduleIcon, { backgroundColor: '#10B981' }]}>
+                    <IconSymbol name="dollarsign.circle.fill" size={28} color="#fff" />
+                  </View>
+                  <Text style={[styles.moduleTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                    {t.finance}
+                  </Text>
+                  <Text style={[styles.moduleDesc, { color: isDark ? '#999' : '#666' }]}>
+                    {t.financeDesc}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {settings.modules?.investments !== false && (
+                <TouchableOpacity
+                  style={[
+                    styles.moduleCard,
+                    {
+                      backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
+                      borderColor: isDark ? '#333' : '#E0E0E0',
+                    },
+                  ]}
+                  onPress={() => router.push('/investments')}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.moduleIcon, { backgroundColor: '#36A2EB' }]}>
+                    <IconSymbol name="chart.line.uptrend.xyaxis" size={28} color="#fff" />
+                  </View>
+                  <Text style={[styles.moduleTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                    {t.investments}
+                  </Text>
+                  <Text style={[styles.moduleDesc, { color: isDark ? '#999' : '#666' }]}>
+                    {t.investmentsDesc}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
