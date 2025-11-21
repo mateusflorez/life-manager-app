@@ -1,17 +1,45 @@
+import { useEffect, useState, useCallback } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
 import { useAccount } from '@/contexts/account-context';
 import { useSettings } from '@/contexts/settings-context';
+import { useFinance } from '@/contexts/finance-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function HomeScreen() {
   const { account } = useAccount();
   const { settings } = useSettings();
+  const { activeBankAccount, ensureMonth, getMonthSummary } = useFinance();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const router = useRouter();
+
+  const [monthBalance, setMonthBalance] = useState<number | null>(null);
+
+  const loadBalance = useCallback(async () => {
+    if (!activeBankAccount) {
+      setMonthBalance(null);
+      return;
+    }
+
+    try {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      const { financeMonth } = await ensureMonth(year, month);
+      const summary = await getMonthSummary(financeMonth.id);
+      setMonthBalance(summary.balance);
+    } catch (error) {
+      console.error('Error loading balance:', error);
+      setMonthBalance(null);
+    }
+  }, [activeBankAccount, ensureMonth, getMonthSummary]);
+
+  useEffect(() => {
+    loadBalance();
+  }, [loadBalance]);
 
   const translations = {
     en: {
@@ -19,6 +47,8 @@ export default function HomeScreen() {
       welcomeBack: 'Welcome back,',
       level: 'Level',
       xp: 'XP',
+      monthBalance: 'Month Balance',
+      currentMonth: 'Current month',
       completedTasks: 'Completed tasks',
       allTime: 'All time',
       modules: 'Modules',
@@ -30,6 +60,8 @@ export default function HomeScreen() {
       welcomeBack: 'Bem-vindo de volta,',
       level: 'Nível',
       xp: 'XP',
+      monthBalance: 'Saldo do Mês',
+      currentMonth: 'Mês atual',
       completedTasks: 'Tarefas concluídas',
       allTime: 'Total',
       modules: 'Módulos',
@@ -39,6 +71,14 @@ export default function HomeScreen() {
   };
 
   const t = translations[settings.language];
+
+  const formatCurrency = (value: number) => {
+    const locale = settings.currency === 'BRL' ? 'pt-BR' : 'en-US';
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: settings.currency,
+    }).format(value);
+  };
 
   if (!account) {
     return (
@@ -116,6 +156,32 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.statsGrid}>
+            {monthBalance !== null && (
+              <View
+                style={[
+                  styles.statCard,
+                  {
+                    backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
+                    borderColor: isDark ? '#333' : '#E0E0E0',
+                  },
+                ]}
+              >
+                <Text style={[styles.statLabel, { color: isDark ? '#999' : '#666' }]}>
+                  {t.monthBalance}
+                </Text>
+                <Text
+                  style={[
+                    styles.statValue,
+                    { color: monthBalance >= 0 ? '#10B981' : '#EF4444' },
+                  ]}
+                >
+                  {formatCurrency(monthBalance)}
+                </Text>
+                <Text style={[styles.statHint, { color: isDark ? '#666' : '#999' }]}>
+                  {t.currentMonth}
+                </Text>
+              </View>
+            )}
             <View
               style={[
                 styles.statCard,

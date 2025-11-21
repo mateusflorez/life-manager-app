@@ -9,13 +9,22 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  Dimensions,
 } from 'react-native';
+import { PieChart, LineChart } from 'react-native-chart-kit';
 import { ThemedView } from '@/components/themed-view';
 import { useFinance } from '@/contexts/finance-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { BankAccount, getMonthName } from '@/types/finance';
+import { BankAccount, getMonthName, translateCategory } from '@/types/finance';
+
+const screenWidth = Dimensions.get('window').width;
+
+const CHART_COLORS = [
+  '#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6',
+  '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1',
+];
 
 export default function FinanceOverviewScreen() {
   const {
@@ -26,6 +35,7 @@ export default function FinanceOverviewScreen() {
     ensureMonth,
     getMonthSummary,
     getYearSummary,
+    getFinanceEntries,
     loading,
     refreshData,
   } = useFinance();
@@ -55,6 +65,9 @@ export default function FinanceOverviewScreen() {
       balance: number;
     }>,
   });
+  const [expensesByCategory, setExpensesByCategory] = useState<
+    Array<{ name: string; amount: number; color: string; legendFontColor: string }>
+  >([]);
 
   const translations = {
     en: {
@@ -74,6 +87,8 @@ export default function FinanceOverviewScreen() {
       yearSummary: 'Year Summary',
       noData: 'No data yet',
       account: 'Account',
+      expensesByCategory: 'Expenses by Category',
+      yearlyTrend: 'Yearly Trend',
     },
     pt: {
       selectAccount: 'Selecionar Conta',
@@ -92,6 +107,8 @@ export default function FinanceOverviewScreen() {
       yearSummary: 'Resumo do Ano',
       noData: 'Sem dados ainda',
       account: 'Conta',
+      expensesByCategory: 'Despesas por Categoria',
+      yearlyTrend: 'Tendência Anual',
     },
   };
 
@@ -103,6 +120,13 @@ export default function FinanceOverviewScreen() {
       style: 'currency',
       currency: settings.currency,
     }).format(value);
+  };
+
+  const formatShortCurrency = (value: number) => {
+    if (value >= 1000) {
+      return `${(value / 1000).toFixed(1)}k`;
+    }
+    return value.toFixed(0);
   };
 
   const loadSummaries = useCallback(async () => {
@@ -118,13 +142,35 @@ export default function FinanceOverviewScreen() {
       const monthSum = await getMonthSummary(financeMonth.id);
       setCurrentMonthSummary(monthSum);
 
+      // Get entries for pie chart
+      const entries = await getFinanceEntries(financeMonth.id);
+      const expenseEntries = entries.filter((e) => e.type === 'expense');
+
+      // Group by category
+      const categoryTotals: Record<string, number> = {};
+      expenseEntries.forEach((entry) => {
+        categoryTotals[entry.category] = (categoryTotals[entry.category] || 0) + entry.amount;
+      });
+
+      // Convert to pie chart data
+      const pieData = Object.entries(categoryTotals)
+        .map(([name, amount], index) => ({
+          name,
+          amount,
+          color: CHART_COLORS[index % CHART_COLORS.length],
+          legendFontColor: isDark ? '#ECEDEE' : '#11181C',
+        }))
+        .sort((a, b) => b.amount - a.amount);
+
+      setExpensesByCategory(pieData);
+
       // Get year summary
       const yearSum = await getYearSummary(year);
       setYearSummary(yearSum);
     } catch (error) {
       console.error('Error loading summaries:', error);
     }
-  }, [activeBankAccount, ensureMonth, getMonthSummary, getYearSummary]);
+  }, [activeBankAccount, ensureMonth, getMonthSummary, getYearSummary, getFinanceEntries, isDark]);
 
   useEffect(() => {
     loadSummaries();
@@ -157,6 +203,50 @@ export default function FinanceOverviewScreen() {
   const now = new Date();
   const currentMonthName = getMonthName(now.getMonth() + 1, settings.language);
   const currentYear = now.getFullYear();
+
+  // Prepare line chart data
+  const monthLabels = yearSummary.months.map((m) =>
+    getMonthName(m.month, settings.language).substring(0, 3)
+  );
+
+  const lineChartData = {
+    labels: monthLabels.length > 0 ? monthLabels : [''],
+    datasets: [
+      {
+        data: yearSummary.months.length > 0 ? yearSummary.months.map((m) => m.income) : [0],
+        color: () => '#10B981',
+        strokeWidth: 2,
+      },
+      {
+        data: yearSummary.months.length > 0 ? yearSummary.months.map((m) => m.expenses) : [0],
+        color: () => '#EF4444',
+        strokeWidth: 2,
+      },
+      {
+        data: yearSummary.months.length > 0 ? yearSummary.months.map((m) => m.balance) : [0],
+        color: () => '#3B82F6',
+        strokeWidth: 2,
+      },
+    ],
+    legend: [t.income, t.expenses, t.balance],
+  };
+
+  const chartConfig = {
+    backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
+    backgroundGradientFrom: isDark ? '#1A1A1A' : '#F9F9F9',
+    backgroundGradientTo: isDark ? '#1A1A1A' : '#F9F9F9',
+    decimalPlaces: 0,
+    color: (opacity = 1) => (isDark ? `rgba(236, 237, 238, ${opacity})` : `rgba(17, 24, 28, ${opacity})`),
+    labelColor: () => (isDark ? '#999' : '#666'),
+    style: {
+      borderRadius: 16,
+    },
+    propsForDots: {
+      r: '4',
+      strokeWidth: '2',
+    },
+    formatYLabel: (value: string) => formatShortCurrency(parseFloat(value)),
+  };
 
   if (loading) {
     return (
@@ -259,14 +349,124 @@ export default function FinanceOverviewScreen() {
                   style={[
                     styles.balanceValue,
                     {
-                      color:
-                        currentMonthSummary.balance >= 0 ? '#10B981' : '#EF4444',
+                      color: currentMonthSummary.balance >= 0 ? '#10B981' : '#EF4444',
                     },
                   ]}
                 >
                   {formatCurrency(currentMonthSummary.balance)}
                 </Text>
               </View>
+            </View>
+
+            {/* Expenses by Category - Pie Chart */}
+            <View
+              style={[
+                styles.chartCard,
+                {
+                  backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
+                  borderColor: isDark ? '#333' : '#E0E0E0',
+                },
+              ]}
+            >
+              <Text style={[styles.cardTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                {t.expensesByCategory}
+              </Text>
+
+              {expensesByCategory.length === 0 ? (
+                <Text style={[styles.noData, { color: isDark ? '#666' : '#999' }]}>
+                  {t.noData}
+                </Text>
+              ) : (
+                <>
+                  <View style={styles.pieChartContainer}>
+                    <PieChart
+                      data={expensesByCategory.map((item) => ({
+                        name: translateCategory(item.name, settings.language),
+                        population: parseFloat(item.amount.toFixed(2)),
+                        color: item.color,
+                        legendFontColor: item.legendFontColor,
+                        legendFontSize: 11,
+                      }))}
+                      width={200}
+                      height={200}
+                      chartConfig={chartConfig}
+                      accessor="population"
+                      backgroundColor="transparent"
+                      paddingLeft="50"
+                      hasLegend={false}
+                    />
+                  </View>
+                  <View style={styles.pieLegendContainer}>
+                    {expensesByCategory.map((item, index) => (
+                      <View key={index} style={styles.pieLegendItem}>
+                        <View style={[styles.pieLegendDot, { backgroundColor: item.color }]} />
+                        <Text style={[styles.pieLegendText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                          {translateCategory(item.name, settings.language)}: {formatCurrency(item.amount)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              )}
+            </View>
+
+            {/* Yearly Trend - Line Chart */}
+            <View
+              style={[
+                styles.chartCard,
+                {
+                  backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
+                  borderColor: isDark ? '#333' : '#E0E0E0',
+                },
+              ]}
+            >
+              <Text style={[styles.cardTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                {t.yearlyTrend} {currentYear}
+              </Text>
+
+              {yearSummary.months.length === 0 ? (
+                <Text style={[styles.noData, { color: isDark ? '#666' : '#999' }]}>
+                  {t.noData}
+                </Text>
+              ) : (
+                <LineChart
+                  data={lineChartData}
+                  width={screenWidth - 64}
+                  height={220}
+                  chartConfig={chartConfig}
+                  bezier
+                  style={styles.lineChart}
+                  withInnerLines={false}
+                  withOuterLines={true}
+                  withVerticalLabels={true}
+                  withHorizontalLabels={true}
+                  fromZero={false}
+                />
+              )}
+
+              {/* Legend */}
+              {yearSummary.months.length > 0 && (
+                <View style={styles.legendContainer}>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
+                    <Text style={[styles.legendText, { color: isDark ? '#999' : '#666' }]}>
+                      {t.income}
+                    </Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
+                    <Text style={[styles.legendText, { color: isDark ? '#999' : '#666' }]}>
+                      {t.expenses}
+                    </Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: '#3B82F6' }]} />
+                    <Text style={[styles.legendText, { color: isDark ? '#999' : '#666' }]}>
+                      {t.balance}
+                    </Text>
+                  </View>
+                </View>
+              )}
             </View>
 
             {/* Year Summary */}
@@ -317,8 +517,7 @@ export default function FinanceOverviewScreen() {
                       style={[
                         styles.balanceValue,
                         {
-                          color:
-                            yearSummary.totalBalance >= 0 ? '#10B981' : '#EF4444',
+                          color: yearSummary.totalBalance >= 0 ? '#10B981' : '#EF4444',
                         },
                       ]}
                     >
@@ -514,6 +713,7 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     gap: 16,
+    paddingBottom: 32,
   },
   accountSelector: {
     flexDirection: 'row',
@@ -566,9 +766,17 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 16,
   },
+  chartCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    gap: 12,
+    alignItems: 'center',
+  },
   cardTitle: {
     fontSize: 16,
     fontWeight: '600',
+    alignSelf: 'flex-start',
   },
   summaryRow: {
     flexDirection: 'row',
@@ -599,6 +807,55 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     paddingVertical: 16,
+  },
+  lineChart: {
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  legendContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 8,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  legendText: {
+    fontSize: 12,
+  },
+  pieChartContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pieLegendContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  pieLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 4,
+  },
+  pieLegendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  pieLegendText: {
+    fontSize: 11,
   },
   modalOverlay: {
     flex: 1,

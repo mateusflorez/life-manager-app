@@ -14,7 +14,8 @@ import { useFinance } from '@/contexts/finance-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { CreditCard, CardCharge, getCurrentMonthKey } from '@/types/finance';
+import { CurrencyInput, currencyToFloat } from '@/components/ui/currency-input';
+import { CreditCard, CardCharge, getCurrentMonthKey, translateCategory } from '@/types/finance';
 
 export default function CardsScreen() {
   const {
@@ -132,11 +133,12 @@ export default function CardsScreen() {
   };
 
   const handleCreateCard = async () => {
-    if (!cardName.trim() || !cardLimit) return;
+    const limit = currencyToFloat(cardLimit);
+    if (!cardName.trim() || limit <= 0) return;
     try {
       await createCreditCard(
         cardName.trim(),
-        parseFloat(cardLimit),
+        limit,
         parseInt(closeDay) || 15,
         parseInt(dueDay) || 22
       );
@@ -152,11 +154,12 @@ export default function CardsScreen() {
   };
 
   const handleAddCharge = async () => {
-    if (!selectedCard || !chargeAmount || !chargeCategory) return;
+    const amount = currencyToFloat(chargeAmount);
+    if (!selectedCard || amount <= 0 || !chargeCategory) return;
     try {
       await createCardCharge(
         selectedCard.id,
-        parseFloat(chargeAmount),
+        amount,
         chargeCategory,
         chargeMonth,
         chargeNote.trim() || undefined
@@ -344,21 +347,23 @@ export default function CardsScreen() {
               <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
                 {t.limit}
               </Text>
-              <TextInput
+              <View
                 style={[
                   styles.input,
                   {
                     backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    color: isDark ? '#ECEDEE' : '#11181C',
                     borderColor: isDark ? '#444' : '#E0E0E0',
                   },
                 ]}
-                value={cardLimit}
-                onChangeText={setCardLimit}
-                placeholder="0.00"
-                placeholderTextColor={isDark ? '#666' : '#999'}
-                keyboardType="decimal-pad"
-              />
+              >
+                <CurrencyInput
+                  value={cardLimit}
+                  onChangeValue={setCardLimit}
+                  currency={settings.currency}
+                  textColor={isDark ? '#ECEDEE' : '#11181C'}
+                  prefixColor={isDark ? '#999' : '#666'}
+                />
+              </View>
 
               <View style={styles.row}>
                 <View style={styles.halfInput}>
@@ -415,10 +420,10 @@ export default function CardsScreen() {
                 <TouchableOpacity
                   style={[
                     styles.submitButton,
-                    { opacity: cardName.trim() && cardLimit ? 1 : 0.5 },
+                    { opacity: cardName.trim() && currencyToFloat(cardLimit) > 0 ? 1 : 0.5 },
                   ]}
                   onPress={handleCreateCard}
-                  disabled={!cardName.trim() || !cardLimit}
+                  disabled={!cardName.trim() || currencyToFloat(cardLimit) <= 0}
                 >
                   <Text style={styles.submitButtonText}>{t.save}</Text>
                 </TouchableOpacity>
@@ -455,21 +460,23 @@ export default function CardsScreen() {
               <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
                 {t.amount}
               </Text>
-              <TextInput
+              <View
                 style={[
                   styles.input,
                   {
                     backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    color: isDark ? '#ECEDEE' : '#11181C',
                     borderColor: isDark ? '#444' : '#E0E0E0',
                   },
                 ]}
-                value={chargeAmount}
-                onChangeText={setChargeAmount}
-                placeholder="0.00"
-                placeholderTextColor={isDark ? '#666' : '#999'}
-                keyboardType="decimal-pad"
-              />
+              >
+                <CurrencyInput
+                  value={chargeAmount}
+                  onChangeValue={setChargeAmount}
+                  currency={settings.currency}
+                  textColor={isDark ? '#ECEDEE' : '#11181C'}
+                  prefixColor={isDark ? '#999' : '#666'}
+                />
+              </View>
 
               <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
                 {t.category}
@@ -493,7 +500,7 @@ export default function CardsScreen() {
                         { color: chargeCategory === cat ? '#fff' : isDark ? '#ECEDEE' : '#11181C' },
                       ]}
                     >
-                      {cat}
+                      {translateCategory(cat, settings.language)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -547,10 +554,10 @@ export default function CardsScreen() {
                 <TouchableOpacity
                   style={[
                     styles.submitButton,
-                    { opacity: chargeAmount && chargeCategory ? 1 : 0.5 },
+                    { opacity: currencyToFloat(chargeAmount) > 0 && chargeCategory ? 1 : 0.5 },
                   ]}
                   onPress={handleAddCharge}
-                  disabled={!chargeAmount || !chargeCategory}
+                  disabled={currencyToFloat(chargeAmount) <= 0 || !chargeCategory}
                 >
                   <Text style={styles.submitButtonText}>{t.save}</Text>
                 </TouchableOpacity>

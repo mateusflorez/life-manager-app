@@ -14,7 +14,8 @@ import { useFinance } from '@/contexts/finance-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { getCurrentMonthKey } from '@/types/finance';
+import { CurrencyInput, currencyToFloat } from '@/components/ui/currency-input';
+import { getCurrentMonthKey, translateCategory } from '@/types/finance';
 
 export default function RecurringScreen() {
   const {
@@ -104,12 +105,13 @@ export default function RecurringScreen() {
   };
 
   const handleCreate = async () => {
-    if (!title.trim() || !amount || !category) return;
+    const amountValue = currencyToFloat(amount);
+    if (!title.trim() || amountValue <= 0 || !category) return;
     try {
       await createRecurringExpense(
         title.trim(),
         category,
-        parseFloat(amount),
+        amountValue,
         startMonth,
         note.trim() || undefined
       );
@@ -239,7 +241,7 @@ export default function RecurringScreen() {
 
                 <View style={styles.expenseInfo}>
                   <Text style={[styles.expenseCategory, { color: isDark ? '#999' : '#666' }]}>
-                    {expense.category}
+                    {translateCategory(expense.category, settings.language)}
                   </Text>
                   <Text style={[styles.expenseAmount, { color: '#EF4444' }]}>
                     {formatCurrency(expense.amount)}{t.perMonth}
@@ -332,21 +334,23 @@ export default function RecurringScreen() {
               <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
                 {t.amount}
               </Text>
-              <TextInput
+              <View
                 style={[
                   styles.input,
                   {
                     backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    color: isDark ? '#ECEDEE' : '#11181C',
                     borderColor: isDark ? '#444' : '#E0E0E0',
                   },
                 ]}
-                value={amount}
-                onChangeText={setAmount}
-                placeholder="0.00"
-                placeholderTextColor={isDark ? '#666' : '#999'}
-                keyboardType="decimal-pad"
-              />
+              >
+                <CurrencyInput
+                  value={amount}
+                  onChangeValue={setAmount}
+                  currency={settings.currency}
+                  textColor={isDark ? '#ECEDEE' : '#11181C'}
+                  prefixColor={isDark ? '#999' : '#666'}
+                />
+              </View>
 
               <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
                 {t.category}
@@ -370,7 +374,7 @@ export default function RecurringScreen() {
                         { color: category === cat ? '#fff' : isDark ? '#ECEDEE' : '#11181C' },
                       ]}
                     >
-                      {cat}
+                      {translateCategory(cat, settings.language)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -424,10 +428,10 @@ export default function RecurringScreen() {
                 <TouchableOpacity
                   style={[
                     styles.submitButton,
-                    { opacity: title.trim() && amount && category ? 1 : 0.5 },
+                    { opacity: title.trim() && currencyToFloat(amount) > 0 && category ? 1 : 0.5 },
                   ]}
                   onPress={handleCreate}
-                  disabled={!title.trim() || !amount || !category}
+                  disabled={!title.trim() || currencyToFloat(amount) <= 0 || !category}
                 >
                   <Text style={styles.submitButtonText}>{t.save}</Text>
                 </TouchableOpacity>

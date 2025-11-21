@@ -14,7 +14,8 @@ import { useFinance } from '@/contexts/finance-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { FinanceMonth, FinanceEntry, getMonthName } from '@/types/finance';
+import { CurrencyInput, currencyToFloat } from '@/components/ui/currency-input';
+import { FinanceMonth, FinanceEntry, getMonthName, translateCategory } from '@/types/finance';
 
 type MonthWithSummary = FinanceMonth & {
   income: number;
@@ -44,7 +45,12 @@ export default function MonthsScreen() {
   const [monthEntries, setMonthEntries] = useState<FinanceEntry[]>([]);
   const [showMonthDetail, setShowMonthDetail] = useState(false);
   const [showAddEntry, setShowAddEntry] = useState(false);
+  const [showAddMonthModal, setShowAddMonthModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Add month form
+  const [newMonthYear, setNewMonthYear] = useState(new Date().getFullYear());
+  const [newMonthMonth, setNewMonthMonth] = useState(new Date().getMonth() + 1);
 
   // Entry form
   const [entryType, setEntryType] = useState<'income' | 'expense'>('expense');
@@ -75,6 +81,12 @@ export default function MonthsScreen() {
       manual: 'Manual',
       card: 'Card',
       recurring: 'Recurring',
+      addMonth: 'Add Month',
+      selectMonth: 'Select Month',
+      year: 'Year',
+      month: 'Month',
+      monthExists: 'Month already exists',
+      add: 'Add',
     },
     pt: {
       noAccount: 'Selecione uma conta primeiro',
@@ -98,6 +110,12 @@ export default function MonthsScreen() {
       manual: 'Manual',
       card: 'Cartão',
       recurring: 'Recorrente',
+      addMonth: 'Adicionar Mês',
+      selectMonth: 'Selecionar Mês',
+      year: 'Ano',
+      month: 'Mês',
+      monthExists: 'Mês já existe',
+      add: 'Adicionar',
     },
   };
 
@@ -145,6 +163,33 @@ export default function MonthsScreen() {
     }
   };
 
+  const monthExists = (year: number, month: number): boolean => {
+    return financeMonths.some((m) => m.year === year && m.month === month);
+  };
+
+  const isMonthFuture = (year: number, month: number): boolean => {
+    const now = new Date();
+    return year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth() + 1);
+  };
+
+  const canAddMonth = (year: number, month: number): boolean => {
+    return !monthExists(year, month) && !isMonthFuture(year, month);
+  };
+
+  const handleAddMonth = async () => {
+    if (!canAddMonth(newMonthYear, newMonthMonth)) {
+      return;
+    }
+    try {
+      await ensureMonth(newMonthYear, newMonthMonth);
+      await loadMonthsWithSummary();
+      setShowAddMonthModal(false);
+      setSelectedYear(newMonthYear);
+    } catch (error) {
+      console.error('Error creating month:', error);
+    }
+  };
+
   const openMonthDetail = async (month: FinanceMonth) => {
     setSelectedMonth(month);
     const entries = await getFinanceEntries(month.id);
@@ -153,13 +198,14 @@ export default function MonthsScreen() {
   };
 
   const handleAddEntry = async () => {
-    if (!selectedMonth || !entryAmount || !entryCategory) return;
+    const amount = currencyToFloat(entryAmount);
+    if (!selectedMonth || amount <= 0 || !entryCategory) return;
     try {
       await createFinanceEntry(
         selectedMonth.id,
         entryType,
         entryCategory,
-        parseFloat(entryAmount),
+        amount,
         entryTag.trim() || undefined
       );
       const entries = await getFinanceEntries(selectedMonth.id);
@@ -326,12 +372,10 @@ export default function MonthsScreen() {
         )}
       </ScrollView>
 
-      {/* Floating Create Month Button */}
-      {monthsWithSummary.length > 0 && (
-        <TouchableOpacity style={styles.fab} onPress={handleCreateCurrentMonth}>
-          <IconSymbol name="plus" size={24} color="#fff" />
-        </TouchableOpacity>
-      )}
+      {/* Floating Add Month Button */}
+      <TouchableOpacity style={styles.fab} onPress={() => setShowAddMonthModal(true)}>
+        <IconSymbol name="plus" size={24} color="#fff" />
+      </TouchableOpacity>
 
       {/* Month Detail Modal */}
       <Modal
@@ -390,7 +434,7 @@ export default function MonthsScreen() {
                     >
                       <View style={styles.entryInfo}>
                         <Text style={[styles.entryCategory, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                          {entry.category}
+                          {translateCategory(entry.category, settings.language)}
                         </Text>
                         {entry.tag && (
                           <Text style={[styles.entryTag, { color: isDark ? '#666' : '#999' }]}>
@@ -449,7 +493,7 @@ export default function MonthsScreen() {
                     >
                       <View style={styles.entryInfo}>
                         <Text style={[styles.entryCategory, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                          {entry.category}
+                          {translateCategory(entry.category, settings.language)}
                         </Text>
                         {entry.tag && (
                           <Text style={[styles.entryTag, { color: isDark ? '#666' : '#999' }]}>
@@ -556,21 +600,23 @@ export default function MonthsScreen() {
               <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
                 {t.amount}
               </Text>
-              <TextInput
+              <View
                 style={[
                   styles.input,
                   {
                     backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    color: isDark ? '#ECEDEE' : '#11181C',
                     borderColor: isDark ? '#444' : '#E0E0E0',
                   },
                 ]}
-                value={entryAmount}
-                onChangeText={setEntryAmount}
-                placeholder="0.00"
-                placeholderTextColor={isDark ? '#666' : '#999'}
-                keyboardType="decimal-pad"
-              />
+              >
+                <CurrencyInput
+                  value={entryAmount}
+                  onChangeValue={setEntryAmount}
+                  currency={settings.currency}
+                  textColor={isDark ? '#ECEDEE' : '#11181C'}
+                  prefixColor={isDark ? '#999' : '#666'}
+                />
+              </View>
 
               <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
                 {t.category}
@@ -594,7 +640,7 @@ export default function MonthsScreen() {
                         { color: entryCategory === cat ? '#fff' : isDark ? '#ECEDEE' : '#11181C' },
                       ]}
                     >
-                      {cat}
+                      {translateCategory(cat, settings.language)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -630,12 +676,171 @@ export default function MonthsScreen() {
                 <TouchableOpacity
                   style={[
                     styles.submitButton,
-                    { opacity: entryAmount && entryCategory ? 1 : 0.5 },
+                    { opacity: currencyToFloat(entryAmount) > 0 && entryCategory ? 1 : 0.5 },
                   ]}
                   onPress={handleAddEntry}
-                  disabled={!entryAmount || !entryCategory}
+                  disabled={currencyToFloat(entryAmount) <= 0 || !entryCategory}
                 >
                   <Text style={styles.submitButtonText}>{t.save}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Month Modal */}
+      <Modal
+        visible={showAddMonthModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddMonthModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: isDark ? '#1A1A1A' : '#fff' },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                {t.addMonth}
+              </Text>
+              <TouchableOpacity onPress={() => setShowAddMonthModal(false)}>
+                <IconSymbol name="xmark" size={24} color={isDark ? '#999' : '#666'} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.form}>
+              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
+                {t.year}
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.categoryList}
+              >
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 4 + i).map(
+                  (year) => (
+                    <TouchableOpacity
+                      key={year}
+                      style={[
+                        styles.categoryChip,
+                        {
+                          backgroundColor:
+                            newMonthYear === year ? '#007AFF' : isDark ? '#333' : '#F5F5F5',
+                          borderColor:
+                            newMonthYear === year ? '#007AFF' : isDark ? '#444' : '#E0E0E0',
+                        },
+                      ]}
+                      onPress={() => setNewMonthYear(year)}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryChipText,
+                          {
+                            color:
+                              newMonthYear === year ? '#fff' : isDark ? '#ECEDEE' : '#11181C',
+                          },
+                        ]}
+                      >
+                        {year}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                )}
+              </ScrollView>
+
+              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
+                {t.month}
+              </Text>
+              <View style={styles.monthGrid}>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => {
+                  const exists = monthExists(newMonthYear, month);
+                  const now = new Date();
+                  const isFuture =
+                    newMonthYear > now.getFullYear() ||
+                    (newMonthYear === now.getFullYear() && month > now.getMonth() + 1);
+                  const isDisabled = exists || isFuture;
+                  return (
+                    <TouchableOpacity
+                      key={month}
+                      style={[
+                        styles.monthChip,
+                        {
+                          backgroundColor:
+                            newMonthMonth === month && !isDisabled
+                              ? '#007AFF'
+                              : isDisabled
+                              ? isDark
+                                ? '#222'
+                                : '#E8E8E8'
+                              : isDark
+                              ? '#333'
+                              : '#F5F5F5',
+                          borderColor:
+                            newMonthMonth === month && !isDisabled
+                              ? '#007AFF'
+                              : isDisabled
+                              ? isDark
+                                ? '#333'
+                                : '#CCC'
+                              : isDark
+                              ? '#444'
+                              : '#E0E0E0',
+                          opacity: isDisabled ? 0.5 : 1,
+                        },
+                      ]}
+                      onPress={() => !isDisabled && setNewMonthMonth(month)}
+                      disabled={isDisabled}
+                    >
+                      <Text
+                        style={[
+                          styles.monthChipText,
+                          {
+                            color:
+                              newMonthMonth === month && !isDisabled
+                                ? '#fff'
+                                : isDisabled
+                                ? isDark
+                                  ? '#666'
+                                  : '#999'
+                                : isDark
+                                ? '#ECEDEE'
+                                : '#11181C',
+                          },
+                        ]}
+                      >
+                        {getMonthName(month, settings.language).substring(0, 3)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View style={styles.formButtons}>
+                <TouchableOpacity
+                  style={[styles.cancelButton, { borderColor: isDark ? '#444' : '#E0E0E0' }]}
+                  onPress={() => setShowAddMonthModal(false)}
+                >
+                  <Text
+                    style={[styles.cancelButtonText, { color: isDark ? '#ECEDEE' : '#11181C' }]}
+                  >
+                    {t.cancel}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.submitButton,
+                    {
+                      opacity: canAddMonth(newMonthYear, newMonthMonth) ? 1 : 0.5,
+                    },
+                  ]}
+                  onPress={handleAddMonth}
+                  disabled={!canAddMonth(newMonthYear, newMonthMonth)}
+                >
+                  <Text style={styles.submitButtonText}>{t.add}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -875,6 +1080,23 @@ const styles = StyleSheet.create({
   },
   categoryChipText: {
     fontSize: 14,
+  },
+  monthGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 8,
+  },
+  monthChip: {
+    width: '23%',
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  monthChipText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   formButtons: {
     flexDirection: 'row',

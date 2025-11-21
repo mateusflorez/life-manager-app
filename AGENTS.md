@@ -24,7 +24,18 @@ As vezes EU VOU CONVERSAR COM VC EM PORTUGUÊS QUE É MINHA LINGUA NATIVA APENAS
 - Primary language: TypeScript
 - React: 19.1.0
 - Started: 2025
-- Status: Early development phase
+- Status: Active development
+
+### Implemented Features
+- **Account System**: User profiles with XP/level progression and task tracking
+- **Settings**: Language (EN/PT) and currency (USD/BRL) preferences
+- **Finance Module**: Complete personal finance management
+  - Bank accounts management
+  - Monthly income/expense tracking
+  - Credit cards with spending limits
+  - Recurring expenses
+  - Category-based expense tracking with translations
+  - Charts (Pie chart for categories, Line chart for yearly trends)
 
 ---
 
@@ -171,20 +182,69 @@ Colors = {
 }
 ```
 
-### 3. **Local Data Storage**
+### 3. **Local Data Storage (Implemented)**
 
-**IMPORTANT**: This app stores all data locally on the device. There is NO backend API.
+**IMPORTANT**: This app stores all data locally on the device using AsyncStorage. There is NO backend API.
 
-- Original content comes from an Obsidian vault (`life-manager-old/`)
-- All notes, tasks, and data will be stored on-device
-- Consider using: AsyncStorage, SQLite (expo-sqlite), or File System API (expo-file-system)
+**Storage Architecture**:
+```
+services/
+├── account-storage.ts    # User account persistence
+├── settings-storage.ts   # App settings persistence
+└── finance-storage.ts    # Finance data persistence
+```
 
-**Future Implementation Notes**:
-- Data persistence layer not yet implemented
-- Consider data migration strategy from Obsidian markdown files
-- Implement backup/export functionality for user data
+**Storage Keys** (AsyncStorage):
+- `@life-manager/account` - User account data
+- `@life-manager/settings` - Language and currency preferences
+- `@life-manager/finance/{accountId}/bank-accounts` - Bank accounts
+- `@life-manager/finance/{accountId}/credit-cards` - Credit cards
+- `@life-manager/finance/{accountId}/recurring-expenses` - Recurring expenses
+- `@life-manager/finance/{accountId}/finance-months` - Monthly records
+- `@life-manager/finance/{accountId}/finance-entries/{monthId}` - Month entries
+- `@life-manager/finance/{accountId}/card-charges/{cardId}` - Card charges
 
-### 4. **Component Architecture**
+**Context Providers** (wrap entire app in `app/_layout.tsx`):
+```typescript
+<SettingsProvider>
+  <AccountProvider>
+    <FinanceProvider>
+      {children}
+    </FinanceProvider>
+  </AccountProvider>
+</SettingsProvider>
+```
+
+### 4. **Finance Module**
+
+Complete personal finance management system.
+
+**Data Models** (`types/finance.ts`):
+- `BankAccount` - Bank account with name, description
+- `CreditCard` - Card with limit, close day, due day
+- `CardCharge` - Individual card charge with category
+- `RecurringExpense` - Monthly recurring expense
+- `FinanceMonth` - Monthly record (year/month)
+- `FinanceEntry` - Income/expense entry with category, amount, source
+
+**Entry Sources**:
+- `manual` - Manually entered by user
+- `card` - Generated from credit card charges
+- `recurring` - Generated from recurring expenses
+
+**Default Categories** (translatable EN/PT):
+- **Income**: Salary, Freelance, Investments, Gifts, Refunds, Other
+- **Expense**: Housing, Food, Transport, Health, Education, Entertainment, Shopping, Subscriptions, Bills, Other
+
+**Helper Functions** (`types/finance.ts`):
+- `generateSlug(name)` - Create URL-safe slugs
+- `generateId()` - Create unique IDs
+- `getCurrentMonthKey()` - Get "YYYY-MM" format
+- `formatMonthKey(key, language)` - Format for display
+- `getMonthName(month, language)` - Get translated month name
+- `translateCategory(category, language)` - Translate category name
+
+### 5. **Component Architecture**
 
 Components are organized by reusability level:
 
@@ -211,25 +271,49 @@ Components are organized by reusability level:
 ```
 life-manager-mobile/
 ├── app/                          # Expo Router - File-based routing
-│   ├── _layout.tsx              # Root layout (theme, navigation)
+│   ├── _layout.tsx              # Root layout (providers, navigation)
 │   ├── index.tsx                # Welcome/entry screen
 │   ├── modal.tsx                # Modal example
-│   └── (tabs)/                  # Tab navigation group
-│       ├── _layout.tsx          # Tab configuration
-│       ├── index.tsx            # Home screen
-│       └── explore.tsx          # Explore/docs screen
+│   ├── (tabs)/                  # Tab navigation group
+│   │   ├── _layout.tsx          # Tab configuration
+│   │   ├── index.tsx            # Home screen (balance, stats, modules)
+│   │   ├── explore.tsx          # Explore/docs screen
+│   │   └── settings.tsx         # Settings screen
+│   └── finance/                 # Finance module screens
+│       ├── _layout.tsx          # Finance tab navigation
+│       ├── index.tsx            # Finance overview (charts, summaries)
+│       ├── months.tsx           # Monthly entries management
+│       ├── cards.tsx            # Credit cards management
+│       └── recurring.tsx        # Recurring expenses
 │
 ├── components/                   # Reusable components
 │   ├── ui/                      # Lower-level UI components
 │   │   ├── icon-symbol.tsx      # Cross-platform icons
 │   │   ├── icon-symbol.ios.tsx  # iOS-specific implementation
-│   │   └── collapsible.tsx      # Collapsible sections
+│   │   ├── collapsible.tsx      # Collapsible sections
+│   │   └── currency-input.tsx   # Currency input (right-to-left typing)
 │   ├── themed-view.tsx          # Theme-aware View
 │   ├── themed-text.tsx          # Theme-aware Text
+│   ├── account-form.tsx         # Account creation/edit form
 │   ├── haptic-tab.tsx           # Tab with haptics
 │   ├── parallax-scroll-view.tsx # Parallax scroll
 │   ├── external-link.tsx        # External browser links
 │   └── hello-wave.tsx           # Animation example
+│
+├── contexts/                     # React Context providers
+│   ├── account-context.tsx      # User account state management
+│   ├── settings-context.tsx     # App settings (language, currency)
+│   └── finance-context.tsx      # Finance data management
+│
+├── services/                     # Data persistence layer
+│   ├── account-storage.ts       # Account AsyncStorage operations
+│   ├── settings-storage.ts      # Settings AsyncStorage operations
+│   └── finance-storage.ts       # Finance AsyncStorage operations
+│
+├── types/                        # TypeScript type definitions
+│   ├── account.ts               # Account types
+│   ├── settings.ts              # Settings types
+│   └── finance.ts               # Finance types + helpers
 │
 ├── hooks/                        # Custom React hooks
 │   ├── use-color-scheme.ts      # Theme detection (native)
@@ -241,8 +325,6 @@ life-manager-mobile/
 │
 ├── assets/                       # Static assets
 │   └── images/                  # Images, icons, splash
-│
-├── life-manager-old/            # Original Obsidian vault (reference)
 │
 ├── scripts/                      # Utility scripts
 │   └── reset-project.js         # Reset to blank project
@@ -576,6 +658,9 @@ const styles = StyleSheet.create({
 | typescript | ~5.9.2 | Type system |
 | react-native-reanimated | ~4.1.1 | Animations |
 | react-native-gesture-handler | ~2.28.0 | Gesture system |
+| @react-native-async-storage/async-storage | ^2.1.2 | Local data persistence |
+| react-native-chart-kit | ^6.12.0 | Charts (Pie, Line) |
+| react-native-svg | ^15.11.2 | SVG support for charts |
 
 ### Expo Modules
 
@@ -741,11 +826,12 @@ import * as FileSystem from 'expo-file-system';
 
 ### Known Technical Debt
 
-1. **No Data Persistence Layer**: Currently, no data is saved between app restarts.
-2. **Welcome Screen Placeholder**: "Create account" button just navigates to tabs - no auth flow.
+1. ~~**No Data Persistence Layer**~~: ✅ Implemented with AsyncStorage
+2. ~~**Welcome Screen Placeholder**~~: ✅ Account creation flow implemented
 3. **Example Components**: Some components (HelloWave, ParallaxScrollView) are examples and may not be needed.
 4. **No Error Boundaries**: App doesn't have error handling infrastructure.
 5. **No Testing**: No test files or testing setup.
+6. **Chart TypeScript Errors**: `formatYLabel` type mismatch in react-native-chart-kit (pre-existing library issue).
 
 ### Expo Configuration Notes
 

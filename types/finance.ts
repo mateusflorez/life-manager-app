@@ -138,3 +138,33 @@ export function getMonthName(month: number, language: 'en' | 'pt'): string {
     month: 'long',
   });
 }
+
+// Category translations
+const CATEGORY_TRANSLATIONS: Record<string, { en: string; pt: string }> = {
+  // Income categories
+  Salary: { en: 'Salary', pt: 'Salário' },
+  Freelance: { en: 'Freelance', pt: 'Freelance' },
+  Investments: { en: 'Investments', pt: 'Investimentos' },
+  Gifts: { en: 'Gifts', pt: 'Presentes' },
+  Refunds: { en: 'Refunds', pt: 'Reembolsos' },
+  // Expense categories
+  Housing: { en: 'Housing', pt: 'Moradia' },
+  Food: { en: 'Food', pt: 'Alimentação' },
+  Transport: { en: 'Transport', pt: 'Transporte' },
+  Health: { en: 'Health', pt: 'Saúde' },
+  Education: { en: 'Education', pt: 'Educação' },
+  Entertainment: { en: 'Entertainment', pt: 'Lazer' },
+  Shopping: { en: 'Shopping', pt: 'Compras' },
+  Subscriptions: { en: 'Subscriptions', pt: 'Assinaturas' },
+  Bills: { en: 'Bills', pt: 'Contas' },
+  Other: { en: 'Other', pt: 'Outros' },
+};
+
+// Helper to translate category
+export function translateCategory(category: string, language: 'en' | 'pt'): string {
+  const translation = CATEGORY_TRANSLATIONS[category];
+  if (translation) {
+    return translation[language];
+  }
+  return category;
+}
