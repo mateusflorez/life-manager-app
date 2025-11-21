@@ -1,5 +1,4 @@
 import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
 import { useAccount } from '@/contexts/account-context';
 import { useSettings } from '@/contexts/settings-context';
@@ -19,7 +18,6 @@ export default function ProfileScreen() {
   const { todayProgress } = useTasks();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const router = useRouter();
 
   const [monthBalance, setMonthBalance] = useState<number | null>(null);
 
@@ -61,7 +59,6 @@ export default function ProfileScreen() {
 
   const translations = {
     en: {
-      profile: 'Profile',
       level: 'Level',
       xp: 'XP',
       monthBalance: 'Month Balance',
@@ -76,7 +73,6 @@ export default function ProfileScreen() {
       changePhoto: 'Tap to change photo',
     },
     pt: {
-      profile: 'Perfil',
       level: 'Nível',
       xp: 'XP',
       monthBalance: 'Saldo do Mês',
@@ -283,24 +279,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
