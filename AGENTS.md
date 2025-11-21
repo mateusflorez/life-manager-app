@@ -63,6 +63,15 @@ As vezes EU VOU CONVERSAR COM VC EM PORTUGUÊS QUE É MINHA LINGUA NATIVA APENAS
   - Drop books feature (mark as abandoned)
   - Chapter history with timestamps
   - Monthly chapters read stat on profile screen
+- **Mood Module**: Daily mood tracking and visualization
+  - Track mood on 1-5 scale with emoji faces
+  - 60-day trend line chart
+  - Optional notes for each entry
+  - Recent entries display and full history
+  - Search through past entries
+  - Streak tracking for consecutive days
+  - XP rewards (+10 per mood log)
+  - Mood module toggle in settings
 
 ---
 
@@ -377,7 +386,45 @@ Reading tracker for books, manga, and other serialized content.
 - `@life_manager_book_chapters` - Chapter reading history
 - `@life_manager_book_reviews` - Book reviews
 
-### 8. **Module System**
+### 8. **Mood Module**
+
+Daily mood tracking with visualization and history.
+
+**Data Models** (`types/mood.ts`):
+- `MoodEntry` - Entry with date, mood score (1-5), optional note, timestamp
+- `MoodScore` - Type union of 1 | 2 | 3 | 4 | 5
+
+**Key Features**:
+- Track daily mood on a 1-5 scale with emojis
+- 60-day trend line chart visualization
+- Optional notes for each entry
+- Recent entries display on overview
+- Full history screen with search
+- Streak tracking for consecutive days
+- XP rewards (+10 per mood log)
+
+**Emoji Mapping**:
+- 1: 😞 (Very sad)
+- 2: 😕 (Sad)
+- 3: 😐 (Neutral)
+- 4: 🙂 (Happy)
+- 5: 😄 (Very happy)
+
+**Helper Functions** (`types/mood.ts`):
+- `generateId()` - Create unique IDs
+- `getTodayKey()` - Get today as "YYYY-MM-DD"
+- `formatDate(dateStr, language)` - Format date for display
+- `formatShortDate(dateStr, language)` - Short date format
+- `getMoodFace(mood)` - Get emoji for mood score
+- `calculateStreak(entries)` - Calculate consecutive days streak
+- `calculateAverageMood(entries, days)` - Calculate average mood
+- `buildChartData(entries, days, language)` - Generate chart data
+- `groupEntriesByMonth(entries, language)` - Group entries for history
+
+**Storage Keys** (AsyncStorage):
+- `@life_manager_mood_entries` - Mood entries data
+
+### 9. **Module System**
 
 The app supports enabling/disabling modules from settings. When disabled:
 - Module cards and stats are hidden from the home screen
@@ -391,6 +438,7 @@ type ModulesConfig = {
   investments: boolean;
   tasks: boolean;
   books: boolean;
+  mood: boolean;
 };
 
 type Settings = {
@@ -408,7 +456,7 @@ type Settings = {
 )}
 ```
 
-### 9. **Visual Patterns and UI Conventions**
+### 10. **Visual Patterns and UI Conventions**
 
 **Back Button Pattern** (used in Finance and Investments modules):
 ```typescript
@@ -449,7 +497,7 @@ headerLeft: () => <BackButton />,
 - Dark mode borders: `#333`
 - Light mode borders: `#E0E0E0`
 
-### 10. **Component Architecture**
+### 11. **Component Architecture**
 
 Components are organized by reusability level:
 
@@ -1231,13 +1279,14 @@ A feature is complete when:
 **Last Updated**: 2025-11-21
 
 **Recent Changes**:
-- Added Books Module for tracking reading progress
-  - Support for books with or without total chapters (ongoing series like manga)
-  - Multiple reviews per book with optional chapter/range association
-  - Chapter history with timestamps and XP rewards (+20 per chapter)
-  - Drop/abandon books feature
-  - Monthly chapters read stat on profile screen
-- Added `book.fill` icon mapping to Material Icons (`menu-book`)
-- Added books module toggle in settings
+- Added Mood Module for daily mood tracking
+  - Track mood on 1-5 scale with emoji faces (😞 😕 😐 🙂 😄)
+  - 60-day trend line chart using react-native-chart-kit
+  - Optional notes for each entry
+  - Full history screen with search functionality
+  - Streak tracking and XP rewards (+10 per log)
+- Added `face.smiling.fill`, `magnifyingglass`, `xmark.circle.fill` icon mappings
+- Added `@react-native-community/slider` dependency for mood input
+- Added mood module toggle in settings
 
 **Note**: This document should be updated as the codebase evolves. When making significant architectural changes or adding new patterns, update this file accordingly.

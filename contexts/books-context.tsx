@@ -156,12 +156,11 @@ export function BooksProvider({ children }: { children: React.ReactNode }) {
         }
 
         setChapters((prev) => [...prev, ...newChapters]);
-        await addXp(currentChapter * BOOK_XP);
       }
 
       return book;
     },
-    [addXp]
+    []
   );
 
   const logChapter = useCallback(

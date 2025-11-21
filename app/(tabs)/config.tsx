@@ -72,6 +72,8 @@ export default function ConfigScreen() {
       tasksModuleDesc: 'Manage your to-dos and recurring tasks',
       booksModule: 'Books',
       booksModuleDesc: 'Track your reading progress and reviews',
+      moodModule: 'Mood',
+      moodModuleDesc: 'Track your daily mood and emotional patterns',
     },
     pt: {
       title: 'Configurações',
@@ -89,6 +91,8 @@ export default function ConfigScreen() {
       tasksModuleDesc: 'Gerencie suas tarefas e rotinas',
       booksModule: 'Livros',
       booksModuleDesc: 'Acompanhe sua leitura e resenhas',
+      moodModule: 'Humor',
+      moodModuleDesc: 'Registre seu humor diário e padrões emocionais',
     },
   };
 
@@ -289,6 +293,31 @@ export default function ConfigScreen() {
             onValueChange={(value) => handleModuleToggle('books', value)}
             trackColor={{ false: isDark ? '#333' : '#D0D0D0', true: '#81C784' }}
             thumbColor={settings.modules?.books ? '#4CAF50' : isDark ? '#666' : '#f4f3f4'}
+          />
+        </View>
+
+        <View
+          style={[
+            styles.moduleItem,
+            {
+              backgroundColor: isDark ? '#1F1F1F' : '#F5F5F5',
+              borderColor: isDark ? '#333' : '#E0E0E0',
+            },
+          ]}
+        >
+          <View style={styles.moduleInfo}>
+            <Text style={[styles.moduleName, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+              {t.moodModule}
+            </Text>
+            <Text style={[styles.moduleDesc, { color: isDark ? '#999' : '#666' }]}>
+              {t.moodModuleDesc}
+            </Text>
+          </View>
+          <Switch
+            value={settings.modules?.mood ?? true}
+            onValueChange={(value) => handleModuleToggle('mood', value)}
+            trackColor={{ false: isDark ? '#333' : '#D0D0D0', true: '#81C784' }}
+            thumbColor={settings.modules?.mood ? '#4CAF50' : isDark ? '#666' : '#f4f3f4'}
           />
         </View>
 

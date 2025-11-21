@@ -41,6 +41,10 @@ const MAPPING = {
   'checklist': 'checklist',
   // Books icons
   'book.fill': 'menu-book',
+  // Mood icons
+  'face.smiling.fill': 'mood',
+  'magnifyingglass': 'search',
+  'xmark.circle.fill': 'cancel',
 } as IconMapping;
 
 /**
