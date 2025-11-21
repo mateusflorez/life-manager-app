@@ -156,7 +156,7 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.statsGrid}>
-            {monthBalance !== null && (
+            {settings.modules?.finance !== false && monthBalance !== null && (
               <View
                 style={[
                   styles.statCard,
@@ -204,35 +204,37 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View style={styles.modulesSection}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-            {t.modules}
-          </Text>
+        {settings.modules?.finance !== false && (
+          <View style={styles.modulesSection}>
+            <Text style={[styles.sectionTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+              {t.modules}
+            </Text>
 
-          <View style={styles.modulesGrid}>
-            <TouchableOpacity
-              style={[
-                styles.moduleCard,
-                {
-                  backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-                  borderColor: isDark ? '#333' : '#E0E0E0',
-                },
-              ]}
-              onPress={() => router.push('/finance')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.moduleIcon, { backgroundColor: '#10B981' }]}>
-                <IconSymbol name="dollarsign.circle.fill" size={28} color="#fff" />
-              </View>
-              <Text style={[styles.moduleTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                {t.finance}
-              </Text>
-              <Text style={[styles.moduleDesc, { color: isDark ? '#999' : '#666' }]}>
-                {t.financeDesc}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.modulesGrid}>
+              <TouchableOpacity
+                style={[
+                  styles.moduleCard,
+                  {
+                    backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
+                    borderColor: isDark ? '#333' : '#E0E0E0',
+                  },
+                ]}
+                onPress={() => router.push('/finance')}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.moduleIcon, { backgroundColor: '#10B981' }]}>
+                  <IconSymbol name="dollarsign.circle.fill" size={28} color="#fff" />
+                </View>
+                <Text style={[styles.moduleTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                  {t.finance}
+                </Text>
+                <Text style={[styles.moduleDesc, { color: isDark ? '#999' : '#666' }]}>
+                  {t.financeDesc}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
       </ScrollView>
     </ThemedView>
   );
@@ -247,6 +249,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+    paddingTop: 60,
   },
   emptyText: {
     fontSize: 16,

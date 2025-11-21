@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Switch } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSettings } from '@/contexts/settings-context';
-import { type Language, type Currency } from '@/types/settings';
+import { type Language, type Currency, type ModulesConfig } from '@/types/settings';
 
 export default function ConfigScreen() {
   const colorScheme = useColorScheme();
@@ -39,6 +39,22 @@ export default function ConfigScreen() {
     }
   };
 
+  const handleModuleToggle = async (module: keyof ModulesConfig, enabled: boolean) => {
+    try {
+      const updatedModules = { ...settings.modules, [module]: enabled };
+      await updateSettings({ modules: updatedModules });
+      setSaveStatus(
+        settings.language === 'pt' ? 'Módulo atualizado!' : 'Module updated!'
+      );
+      setTimeout(() => setSaveStatus(''), 3000);
+    } catch (error) {
+      console.error('Failed to update module:', error);
+      setSaveStatus(
+        settings.language === 'pt' ? 'Erro ao salvar' : 'Failed to save'
+      );
+    }
+  };
+
   const translations = {
     en: {
       title: 'Settings',
@@ -46,6 +62,10 @@ export default function ConfigScreen() {
       currencyLabel: 'Currency',
       languageHelp: 'Choose your preferred UI language',
       currencyHelp: 'Choose your preferred currency',
+      modulesTitle: 'Modules',
+      modulesHelp: 'Enable or disable app modules. Disabling a module hides it from the home screen but keeps your data.',
+      financeModule: 'Finance',
+      financeModuleDesc: 'Track expenses, income, and credit cards',
     },
     pt: {
       title: 'Configurações',
@@ -53,6 +73,10 @@ export default function ConfigScreen() {
       currencyLabel: 'Moeda',
       languageHelp: 'Escolha seu idioma preferido',
       currencyHelp: 'Escolha sua moeda preferida',
+      modulesTitle: 'Módulos',
+      modulesHelp: 'Habilite ou desabilite módulos do app. Desabilitar um módulo oculta ele da tela inicial mas mantém seus dados.',
+      financeModule: 'Finanças',
+      financeModuleDesc: 'Controle gastos, receitas e cartões',
     },
   };
 
@@ -137,6 +161,50 @@ export default function ConfigScreen() {
           </View>
         </View>
 
+        {/* Modules Section */}
+        <Text style={[styles.sectionTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+          {t.modulesTitle}
+        </Text>
+
+        <View
+          style={[
+            styles.infoBox,
+            {
+              backgroundColor: isDark ? '#1A1A1A' : '#F0F8FF',
+              borderColor: isDark ? '#333' : '#B0D4FF',
+            },
+          ]}
+        >
+          <Text style={[styles.infoText, { color: isDark ? '#999' : '#4A7BA7' }]}>
+            {t.modulesHelp}
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.moduleItem,
+            {
+              backgroundColor: isDark ? '#1F1F1F' : '#F5F5F5',
+              borderColor: isDark ? '#333' : '#E0E0E0',
+            },
+          ]}
+        >
+          <View style={styles.moduleInfo}>
+            <Text style={[styles.moduleName, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+              {t.financeModule}
+            </Text>
+            <Text style={[styles.moduleDesc, { color: isDark ? '#999' : '#666' }]}>
+              {t.financeModuleDesc}
+            </Text>
+          </View>
+          <Switch
+            value={settings.modules?.finance ?? true}
+            onValueChange={(value) => handleModuleToggle('finance', value)}
+            trackColor={{ false: isDark ? '#333' : '#D0D0D0', true: '#81C784' }}
+            thumbColor={settings.modules?.finance ? '#4CAF50' : isDark ? '#666' : '#f4f3f4'}
+          />
+        </View>
+
         {saveStatus ? (
           <Text style={[styles.status, { color: isDark ? '#4CAF50' : '#2E7D32' }]}>
             {saveStatus}
@@ -156,6 +224,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+    paddingTop: 60,
   },
   title: {
     fontSize: 28,
@@ -193,5 +262,32 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     fontWeight: '500',
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  moduleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  moduleInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  moduleName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  moduleDesc: {
+    fontSize: 13,
   },
 });

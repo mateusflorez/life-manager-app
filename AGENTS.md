@@ -28,12 +28,14 @@ As vezes EU VOU CONVERSAR COM VC EM PORTUGUÊS QUE É MINHA LINGUA NATIVA APENAS
 
 ### Implemented Features
 - **Account System**: User profiles with XP/level progression and task tracking
-- **Settings**: Language (EN/PT) and currency (USD/BRL) preferences
+- **Settings**: Language (EN/PT) and currency (USD/BRL) preferences, module toggles
+- **Module System**: Enable/disable modules from settings (data preserved when disabled)
 - **Finance Module**: Complete personal finance management
   - Bank accounts management
   - Monthly income/expense tracking
-  - Credit cards with spending limits
-  - Recurring expenses
+  - Credit cards with spending limits and installment support
+  - View/delete card charges by month
+  - Recurring expenses with month selector
   - Category-based expense tracking with translations
   - Charts (Pie chart for categories, Line chart for yearly trends)
 
@@ -196,7 +198,7 @@ services/
 
 **Storage Keys** (AsyncStorage):
 - `@life-manager/account` - User account data
-- `@life-manager/settings` - Language and currency preferences
+- `@life-manager/settings` - Language, currency, and module preferences
 - `@life-manager/finance/{accountId}/bank-accounts` - Bank accounts
 - `@life-manager/finance/{accountId}/credit-cards` - Credit cards
 - `@life-manager/finance/{accountId}/recurring-expenses` - Recurring expenses
@@ -239,12 +241,43 @@ Complete personal finance management system.
 **Helper Functions** (`types/finance.ts`):
 - `generateSlug(name)` - Create URL-safe slugs
 - `generateId()` - Create unique IDs
-- `getCurrentMonthKey()` - Get "YYYY-MM" format
-- `formatMonthKey(key, language)` - Format for display
+- `getCurrentMonthKey()` - Get current month as "YYYY-MM" format
+- `getNextMonthKey()` - Get next month as "YYYY-MM" format
+- `getMonthOptions(monthsAhead)` - Generate array of month keys for selectors
+- `addMonthsToKey(monthKey, monthsToAdd)` - Add N months to a month key
+- `formatMonthKey(key, language)` - Format month key for display
 - `getMonthName(month, language)` - Get translated month name
 - `translateCategory(category, language)` - Translate category name
 
-### 5. **Component Architecture**
+### 5. **Module System**
+
+The app supports enabling/disabling modules from settings. When disabled:
+- Module cards and stats are hidden from the home screen
+- Data is preserved (not deleted)
+- Module can be re-enabled anytime
+
+**Settings Type** (`types/settings.ts`):
+```typescript
+type ModulesConfig = {
+  finance: boolean;
+};
+
+type Settings = {
+  language: Language;
+  currency: Currency;
+  modules: ModulesConfig;
+};
+```
+
+**Usage in Components**:
+```typescript
+// Check if module is enabled (with backwards compatibility)
+{settings.modules?.finance !== false && (
+  <FinanceCard />
+)}
+```
+
+### 6. **Component Architecture**
 
 Components are organized by reusability level:
 
@@ -277,8 +310,7 @@ life-manager-mobile/
 │   ├── (tabs)/                  # Tab navigation group
 │   │   ├── _layout.tsx          # Tab configuration
 │   │   ├── index.tsx            # Home screen (balance, stats, modules)
-│   │   ├── explore.tsx          # Explore/docs screen
-│   │   └── settings.tsx         # Settings screen
+│   │   └── config.tsx           # Settings screen (language, currency, modules)
 │   └── finance/                 # Finance module screens
 │       ├── _layout.tsx          # Finance tab navigation
 │       ├── index.tsx            # Finance overview (charts, summaries)
@@ -312,7 +344,7 @@ life-manager-mobile/
 │
 ├── types/                        # TypeScript type definitions
 │   ├── account.ts               # Account types
-│   ├── settings.ts              # Settings types
+│   ├── settings.ts              # Settings types (Language, Currency, ModulesConfig)
 │   └── finance.ts               # Finance types + helpers
 │
 ├── hooks/                        # Custom React hooks
@@ -1002,6 +1034,6 @@ A feature is complete when:
 
 ---
 
-**Last Updated**: 2025-01-21
+**Last Updated**: 2025-11-21
 
 **Note**: This document should be updated as the codebase evolves. When making significant architectural changes or adding new patterns, update this file accordingly.
