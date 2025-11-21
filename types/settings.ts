@@ -5,6 +5,7 @@ export type ModulesConfig = {
   finance: boolean;
   investments: boolean;
   tasks: boolean;
+  books: boolean;
 };
 
 export type Settings = {
@@ -17,6 +18,7 @@ export const DEFAULT_MODULES: ModulesConfig = {
   finance: true,
   investments: true,
   tasks: true,
+  books: true,
 };
 
 export const DEFAULT_SETTINGS: Settings = {

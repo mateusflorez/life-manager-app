@@ -1,14 +1,15 @@
-import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity } from 'react-native';
 import { ThemedView } from '@/components/themed-view';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useAccount } from '@/contexts/account-context';
-import { useSettings } from '@/contexts/settings-context';
+import { useBooks } from '@/contexts/books-context';
 import { useFinance } from '@/contexts/finance-context';
 import { useInvestment } from '@/contexts/investment-context';
+import { useSettings } from '@/contexts/settings-context';
 import { useTasks } from '@/contexts/tasks-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useCallback, useEffect, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import { useCallback, useEffect, useState } from 'react';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
   const { account, updateAccount } = useAccount();
@@ -16,6 +17,7 @@ export default function ProfileScreen() {
   const { activeBankAccount, ensureMonth, getMonthSummary } = useFinance();
   const { portfolioTotal, investments } = useInvestment();
   const { todayProgress } = useTasks();
+  const { chaptersReadThisMonth, inProgressBooks } = useBooks();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -71,6 +73,9 @@ export default function ProfileScreen() {
       tasksCompleted: 'completed',
       overdueCount: 'overdue',
       changePhoto: 'Tap to change photo',
+      chaptersRead: 'Chapters Read',
+      thisMonth: 'This month',
+      booksInProgress: 'in progress',
     },
     pt: {
       level: 'Nível',
@@ -85,6 +90,9 @@ export default function ProfileScreen() {
       tasksCompleted: 'concluídas',
       overdueCount: 'atrasadas',
       changePhoto: 'Toque para mudar foto',
+      chaptersRead: 'Capítulos Lidos',
+      thisMonth: 'Este mês',
+      booksInProgress: 'em progresso',
     },
   };
 
@@ -249,7 +257,7 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          {settings.modules?.tasks !== false && (
+          {settings.modules?.books !== false && chaptersReadThisMonth > 0 && (
             <View
               style={[
                 styles.statCard,
@@ -260,13 +268,13 @@ export default function ProfileScreen() {
               ]}
             >
               <Text style={[styles.statLabel, { color: isDark ? '#999' : '#666' }]}>
-                {t.completedTasks}
+                {t.chaptersRead}
               </Text>
-              <Text style={[styles.statValue, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                {account.completedTasks}
+              <Text style={[styles.statValue, { color: '#6C5CE7' }]}>
+                {chaptersReadThisMonth}
               </Text>
               <Text style={[styles.statHint, { color: isDark ? '#666' : '#999' }]}>
-                {t.allTime}
+                {t.thisMonth} ({inProgressBooks.length} {t.booksInProgress})
               </Text>
             </View>
           )}

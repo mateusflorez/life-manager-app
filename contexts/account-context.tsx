@@ -7,6 +7,7 @@ type AccountContextType = {
   setAccount: (account: Account | null) => Promise<void>;
   updateAccount: (updates: Partial<Account>) => Promise<void>;
   clearAccount: () => Promise<void>;
+  addXp: (amount: number) => Promise<void>;
   loading: boolean;
 };
 
@@ -69,6 +70,21 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const addXp = async (amount: number) => {
+    if (!account) return;
+
+    try {
+      const newXp = (account.xp || 0) + amount;
+      const updatedAccount = { ...account, xp: newXp };
+      await accountStorage.updateAccount(updatedAccount);
+      await accountStorage.setActiveAccount(updatedAccount);
+      setAccountState(updatedAccount);
+    } catch (error) {
+      console.error('Failed to add XP:', error);
+      throw error;
+    }
+  };
+
   return (
     <AccountContext.Provider
       value={{
@@ -76,6 +92,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         setAccount,
         updateAccount,
         clearAccount,
+        addXp,
         loading,
       }}
     >

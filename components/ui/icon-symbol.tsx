@@ -39,6 +39,8 @@ const MAPPING = {
   'chart.xyaxis.line': 'show-chart',
   // Tasks icons
   'checklist': 'checklist',
+  // Books icons
+  'book.fill': 'menu-book',
 } as IconMapping;
 
 /**

@@ -10,6 +10,7 @@ import { SettingsProvider } from '@/contexts/settings-context';
 import { FinanceProvider } from '@/contexts/finance-context';
 import { InvestmentProvider } from '@/contexts/investment-context';
 import { TasksProvider } from '@/contexts/tasks-context';
+import { BooksProvider } from '@/contexts/books-context';
 import { useSettings } from '@/contexts/settings-context';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
@@ -40,6 +41,7 @@ function RootLayoutNav() {
         <Stack.Screen name="finance" options={{ headerShown: false }} />
         <Stack.Screen name="investments" options={{ headerShown: false }} />
         <Stack.Screen name="tasks" options={{ headerShown: false }} />
+        <Stack.Screen name="books" options={{ headerShown: false }} />
         <Stack.Screen
           name="profile"
           options={{
@@ -66,7 +68,9 @@ export default function RootLayout() {
         <FinanceProvider>
           <InvestmentProvider>
             <TasksProvider>
-              <RootLayoutNav />
+              <BooksProvider>
+                <RootLayoutNav />
+              </BooksProvider>
             </TasksProvider>
           </InvestmentProvider>
         </FinanceProvider>
