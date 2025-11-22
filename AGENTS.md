@@ -154,6 +154,12 @@ pnpm run ios
 
 # Start web version
 pnpm run web
+
+# Build Android APK locally (EAS --local, default preview profile)
+pnpm run build:apk
+
+# Build Android APK locally with production profile
+pnpm run build:apk:prod:local
 ```
 
 ### Code Quality

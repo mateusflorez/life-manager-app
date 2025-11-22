@@ -1,32 +1,16 @@
 #!/bin/bash
 
-# =============================================================================
-# Life Manager Mobile - APK Build Script
-# =============================================================================
-# This script builds an APK for the Life Manager Mobile app using EAS Build.
-#
-# Usage:
-#   ./scripts/build-apk.sh [option]
-#
-# Options:
-#   local      - Build locally (requires Android SDK)
-#   preview    - Build on EAS cloud (preview profile)
-#   production - Build on EAS cloud (production profile)
-#   dev        - Build development client APK
-#
-# Default: preview (if no option provided)
-# =============================================================================
-
 set -e
 
-# Colors for output
+# =============================================================================
+# Cores e funções de print (precisam vir ANTES de qualquer chamada!)
+# =============================================================================
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Print colored message
 print_msg() {
     local color=$1
     local msg=$2
@@ -40,6 +24,19 @@ print_header() {
     print_msg $BLUE "=============================================="
     echo ""
 }
+
+# ==== Java / JDK automático ====
+if [ -z "$JAVA_HOME" ] && [ -d "/usr/lib/jvm/java-17-openjdk-amd64" ]; then
+    export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+    export PATH="$JAVA_HOME/bin:$PATH"
+    print_msg $YELLOW "JAVA_HOME configurado automaticamente: $JAVA_HOME"
+fi
+
+if ! command -v java &> /dev/null; then
+    print_msg $RED "Java não encontrado! Instale o OpenJDK 17."
+    exit 1
+fi
+print_msg $GREEN "Java encontrado: $(java -version 2>&1 | head -n1)"
 
 # Check if eas-cli is installed
 check_eas_cli() {
@@ -64,33 +61,20 @@ check_eas_login() {
 
 # Build APK locally (requires Android SDK)
 build_local() {
-    print_msg $BLUE "Building APK locally..."
-    print_msg $YELLOW "Note: This requires Android SDK to be installed and configured."
+    local profile=${1:-preview}
+    print_msg $BLUE "Building APK locally with EAS (profile: $profile)..."
+    print_msg $YELLOW "Note: Requires Android SDK and EAS credentials available locally."
     echo ""
 
-    # Run prebuild to generate native project
-    print_msg $BLUE "Running expo prebuild..."
-    npx expo prebuild --platform android --clean
+    check_eas_login
 
-    # Navigate to android folder and build
-    print_msg $BLUE "Building APK with Gradle..."
-    cd android
-    ./gradlew assembleRelease
-    cd ..
+    eas build --platform android --profile "$profile" --local --output ./life-manager-mobile.apk
 
-    # Find the APK
-    APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
-    if [ -f "$APK_PATH" ]; then
+    if [ -f "./life-manager-mobile.apk" ]; then
         print_msg $GREEN "APK built successfully!"
-        print_msg $GREEN "Location: $APK_PATH"
-
-        # Copy to project root for convenience
-        cp "$APK_PATH" "./life-manager-mobile.apk"
-        print_msg $GREEN "Copied to: ./life-manager-mobile.apk"
+        print_msg $GREEN "Location: ./life-manager-mobile.apk"
     else
-        print_msg $RED "APK not found at expected location."
-        print_msg $YELLOW "Searching for APK files..."
-        find android -name "*.apk" -type f 2>/dev/null
+        print_msg $RED "APK not found after local build."
     fi
 }
 
@@ -136,7 +120,8 @@ main() {
 
     case $BUILD_TYPE in
         local)
-            build_local
+            # Optional second arg sets the EAS profile (default: preview)
+            build_local "${2:-preview}"
             ;;
         preview)
             build_eas "preview"

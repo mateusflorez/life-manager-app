@@ -9,9 +9,10 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "build:apk": "./scripts/build-apk.sh preview",
+    "build:apk": "./scripts/build-apk.sh local",
     "build:apk:local": "./scripts/build-apk.sh local",
     "build:apk:prod": "./scripts/build-apk.sh production",
+    "build:apk:prod:local": "./scripts/build-apk.sh local production",
     "build:apk:dev": "./scripts/build-apk.sh dev"
   },
   "dependencies": {
