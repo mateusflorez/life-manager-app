@@ -9,11 +9,13 @@ import {
   TextInput,
   RefreshControl,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedView } from '@/components/themed-view';
 import { useFinance } from '@/contexts/finance-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { RippleBackground } from '@/components/ui/ripple-background';
 import { CurrencyInput, currencyToFloat } from '@/components/ui/currency-input';
 import { CreditCard, CardCharge, getNextMonthKey, getMonthOptions, getCurrentMonthKey, formatMonthKey, addMonthsToKey, translateCategory } from '@/types/finance';
 
@@ -177,7 +179,6 @@ export default function CardsScreen() {
     const installments = Math.max(1, parseInt(chargeInstallments) || 1);
     if (!selectedCard || amount <= 0 || !chargeCategory) return;
     try {
-      // Create charges for each installment
       for (let i = 0; i < installments; i++) {
         const month = addMonthsToKey(chargeMonth, i);
         const note = installments > 1
@@ -232,7 +233,6 @@ export default function CardsScreen() {
   const handleDeleteCharge = async (chargeId: string) => {
     try {
       await deleteCardCharge(chargeId);
-      // Refresh the charges list
       if (viewingCard) {
         const charges = await getCardCharges(viewingCard.id);
         setCardCharges(charges);
@@ -249,9 +249,17 @@ export default function CardsScreen() {
   if (!activeBankAccount) {
     return (
       <ThemedView style={styles.container}>
+        <RippleBackground isDark={isDark} rippleCount={6} />
         <View style={styles.emptyState}>
-          <IconSymbol name="building.columns" size={48} color={isDark ? '#666' : '#999'} />
-          <Text style={[styles.emptyTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+          <LinearGradient
+            colors={['#6366F1', '#8B5CF6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.emptyIconContainer}
+          >
+            <IconSymbol name="building.columns" size={32} color="#FFFFFF" />
+          </LinearGradient>
+          <Text style={[styles.emptyTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
             {t.noAccount}
           </Text>
         </View>
@@ -261,20 +269,29 @@ export default function CardsScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <RippleBackground isDark={isDark} rippleCount={6} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         {creditCards.length === 0 ? (
           <View style={styles.emptyState}>
-            <IconSymbol name="creditcard" size={48} color={isDark ? '#666' : '#999'} />
-            <Text style={[styles.emptyTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+            <LinearGradient
+              colors={['#6366F1', '#8B5CF6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.emptyIconContainer}
+            >
+              <IconSymbol name="creditcard" size={32} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.emptyTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
               {t.noCards}
             </Text>
-            <Text style={[styles.emptyDesc, { color: isDark ? '#999' : '#666' }]}>
+            <Text style={[styles.emptyDesc, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
               {t.addFirst}
             </Text>
           </View>
@@ -291,61 +308,68 @@ export default function CardsScreen() {
                 style={[
                   styles.cardItem,
                   {
-                    backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-                    borderColor: isDark ? '#333' : '#E0E0E0',
+                    backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
                   },
                 ]}
                 onPress={() => openChargesViewModal(card)}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
               >
                 <View style={styles.cardHeader}>
                   <View style={styles.cardTitleRow}>
-                    <IconSymbol name="creditcard.fill" size={24} color="#007AFF" />
-                    <Text style={[styles.cardName, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                    <LinearGradient
+                      colors={['#6366F1', '#8B5CF6']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.cardIconContainer}
+                    >
+                      <IconSymbol name="creditcard.fill" size={18} color="#FFFFFF" />
+                    </LinearGradient>
+                    <Text style={[styles.cardName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                       {card.name}
                     </Text>
                   </View>
-                  <TouchableOpacity onPress={() => handleDeleteCard(card.id)}>
-                    <IconSymbol name="trash" size={20} color="#EF4444" />
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteCard(card.id)}
+                  >
+                    <IconSymbol name="trash" size={18} color="#EF4444" />
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.cardInfo}>
-                  <Text style={[styles.cardLimit, { color: isDark ? '#999' : '#666' }]}>
+                  <Text style={[styles.cardLimit, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
                     {t.limit}: {formatCurrency(card.limit)}
                   </Text>
-                  <Text style={[styles.cardDays, { color: isDark ? '#999' : '#666' }]}>
+                  <Text style={[styles.cardDays, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
                     {t.closeDay}: {card.closeDay} | {t.dueDay}: {card.dueDay}
                   </Text>
                 </View>
 
                 <View style={styles.usageSection}>
                   <View style={styles.usageHeader}>
-                    <Text style={[styles.usageLabel, { color: isDark ? '#999' : '#666' }]}>
+                    <Text style={[styles.usageLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
                       {t.used}: {formatCurrency(summary?.totalUsed || 0)} {t.of} {formatCurrency(card.limit)}
                     </Text>
-                    <Text style={[styles.usagePercent, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                    <Text style={[styles.usagePercent, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                       {usedPercent.toFixed(0)}%
                     </Text>
                   </View>
-                  <View style={[styles.progressTrack, { backgroundColor: isDark ? '#333' : '#E0E0E0' }]}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        {
-                          width: `${usedPercent}%`,
-                          backgroundColor: usedPercent > 80 ? '#EF4444' : usedPercent > 50 ? '#F59E0B' : '#10B981',
-                        },
-                      ]}
+                  <View style={[styles.progressTrack, { backgroundColor: isDark ? '#2A2A2A' : '#E5E7EB' }]}>
+                    <LinearGradient
+                      colors={usedPercent > 80 ? ['#EF4444', '#DC2626'] : usedPercent > 50 ? ['#F59E0B', '#D97706'] : ['#10B981', '#059669']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={[styles.progressFill, { width: `${usedPercent}%` }]}
                     />
                   </View>
                 </View>
 
                 <TouchableOpacity
-                  style={styles.addChargeButton}
+                  style={[styles.addChargeButton, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]}
                   onPress={() => openChargeModal(card)}
                 >
-                  <IconSymbol name="plus.circle.fill" size={20} color="#007AFF" />
+                  <IconSymbol name="plus.circle.fill" size={18} color="#6366F1" />
                   <Text style={styles.addChargeText}>{t.addCharge}</Text>
                 </TouchableOpacity>
               </TouchableOpacity>
@@ -356,10 +380,18 @@ export default function CardsScreen() {
 
       {/* Floating Add Button */}
       <TouchableOpacity
-        style={styles.fab}
+        style={styles.fabContainer}
         onPress={() => setShowNewCardModal(true)}
+        activeOpacity={0.9}
       >
-        <IconSymbol name="plus" size={24} color="#fff" />
+        <LinearGradient
+          colors={['#6366F1', '#8B5CF6']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.fab}
+        >
+          <IconSymbol name="plus" size={24} color="#FFFFFF" />
+        </LinearGradient>
       </TouchableOpacity>
 
       {/* New Card Modal */}
@@ -373,29 +405,39 @@ export default function CardsScreen() {
           <View
             style={[
               styles.modalContent,
-              { backgroundColor: isDark ? '#1A1A1A' : '#fff' },
+              { backgroundColor: isDark ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)' },
             ]}
           >
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                {t.newCard}
-              </Text>
+              <View style={styles.modalTitleRow}>
+                <LinearGradient
+                  colors={['#6366F1', '#8B5CF6']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.modalIconContainer}
+                >
+                  <IconSymbol name="creditcard.fill" size={18} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.newCard}
+                </Text>
+              </View>
               <TouchableOpacity onPress={() => setShowNewCardModal(false)}>
-                <IconSymbol name="xmark" size={24} color={isDark ? '#999' : '#666'} />
+                <IconSymbol name="xmark" size={24} color={isDark ? '#A0A0A0' : '#6B7280'} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.form}>
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
+              <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
                 {t.cardName}
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   {
-                    backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    color: isDark ? '#ECEDEE' : '#11181C',
-                    borderColor: isDark ? '#444' : '#E0E0E0',
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                    color: isDark ? '#FFFFFF' : '#111827',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                   },
                 ]}
                 value={cardName}
@@ -404,15 +446,15 @@ export default function CardsScreen() {
                 placeholderTextColor={isDark ? '#666' : '#999'}
               />
 
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
+              <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
                 {t.limit}
               </Text>
               <View
                 style={[
                   styles.input,
                   {
-                    backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    borderColor: isDark ? '#444' : '#E0E0E0',
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                   },
                 ]}
               >
@@ -420,23 +462,23 @@ export default function CardsScreen() {
                   value={cardLimit}
                   onChangeValue={setCardLimit}
                   currency={settings.currency}
-                  textColor={isDark ? '#ECEDEE' : '#11181C'}
-                  prefixColor={isDark ? '#999' : '#666'}
+                  textColor={isDark ? '#FFFFFF' : '#111827'}
+                  prefixColor={isDark ? '#A0A0A0' : '#6B7280'}
                 />
               </View>
 
               <View style={styles.row}>
                 <View style={styles.halfInput}>
-                  <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
+                  <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
                     {t.closeDay}
                   </Text>
                   <TextInput
                     style={[
                       styles.input,
                       {
-                        backgroundColor: isDark ? '#333' : '#F5F5F5',
-                        color: isDark ? '#ECEDEE' : '#11181C',
-                        borderColor: isDark ? '#444' : '#E0E0E0',
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                        color: isDark ? '#FFFFFF' : '#111827',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                       },
                     ]}
                     value={closeDay}
@@ -447,16 +489,16 @@ export default function CardsScreen() {
                   />
                 </View>
                 <View style={styles.halfInput}>
-                  <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
+                  <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
                     {t.dueDay}
                   </Text>
                   <TextInput
                     style={[
                       styles.input,
                       {
-                        backgroundColor: isDark ? '#333' : '#F5F5F5',
-                        color: isDark ? '#ECEDEE' : '#11181C',
-                        borderColor: isDark ? '#444' : '#E0E0E0',
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                        color: isDark ? '#FFFFFF' : '#111827',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                       },
                     ]}
                     value={dueDay}
@@ -470,22 +512,26 @@ export default function CardsScreen() {
 
               <View style={styles.formButtons}>
                 <TouchableOpacity
-                  style={[styles.cancelButton, { borderColor: isDark ? '#444' : '#E0E0E0' }]}
+                  style={[styles.cancelButton, { borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)' }]}
                   onPress={() => setShowNewCardModal(false)}
                 >
-                  <Text style={[styles.cancelButtonText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                  <Text style={[styles.cancelButtonText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                     {t.cancel}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[
-                    styles.submitButton,
-                    { opacity: cardName.trim() && currencyToFloat(cardLimit) > 0 ? 1 : 0.5 },
-                  ]}
+                  style={[styles.submitButtonContainer, { opacity: cardName.trim() && currencyToFloat(cardLimit) > 0 ? 1 : 0.5 }]}
                   onPress={handleCreateCard}
                   disabled={!cardName.trim() || currencyToFloat(cardLimit) <= 0}
                 >
-                  <Text style={styles.submitButtonText}>{t.save}</Text>
+                  <LinearGradient
+                    colors={['#6366F1', '#8B5CF6']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.submitButton}
+                  >
+                    <Text style={styles.submitButtonText}>{t.save}</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
             </View>
@@ -504,163 +550,191 @@ export default function CardsScreen() {
           <View
             style={[
               styles.modalContent,
-              { backgroundColor: isDark ? '#1A1A1A' : '#fff' },
+              { backgroundColor: isDark ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)' },
             ]}
           >
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                {t.newCharge} - {selectedCard?.name}
-              </Text>
+              <View style={styles.modalTitleRow}>
+                <LinearGradient
+                  colors={['#6366F1', '#8B5CF6']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.modalIconContainer}
+                >
+                  <IconSymbol name="plus.circle.fill" size={18} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.newCharge} - {selectedCard?.name}
+                </Text>
+              </View>
               <TouchableOpacity onPress={() => setShowChargeModal(false)}>
-                <IconSymbol name="xmark" size={24} color={isDark ? '#999' : '#666'} />
+                <IconSymbol name="xmark" size={24} color={isDark ? '#A0A0A0' : '#6B7280'} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.form}>
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
-                {t.amount}
-              </Text>
-              <View
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    borderColor: isDark ? '#444' : '#E0E0E0',
-                  },
-                ]}
-              >
-                <CurrencyInput
-                  value={chargeAmount}
-                  onChangeValue={setChargeAmount}
-                  currency={settings.currency}
-                  textColor={isDark ? '#ECEDEE' : '#11181C'}
-                  prefixColor={isDark ? '#999' : '#666'}
-                />
-              </View>
-
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
-                {t.installments}
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.installmentsList}>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
-                  <TouchableOpacity
-                    key={num}
-                    style={[
-                      styles.installmentChip,
-                      {
-                        backgroundColor: chargeInstallments === String(num) ? '#007AFF' : isDark ? '#333' : '#F5F5F5',
-                        borderColor: chargeInstallments === String(num) ? '#007AFF' : isDark ? '#444' : '#E0E0E0',
-                      },
-                    ]}
-                    onPress={() => setChargeInstallments(String(num))}
-                  >
-                    <Text
-                      style={[
-                        styles.installmentChipText,
-                        { color: chargeInstallments === String(num) ? '#fff' : isDark ? '#ECEDEE' : '#11181C' },
-                      ]}
-                    >
-                      {num}x
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
-                {t.category}
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryList}>
-                {categories.expenseCategories.map((cat) => (
-                  <TouchableOpacity
-                    key={cat}
-                    style={[
-                      styles.categoryChip,
-                      {
-                        backgroundColor: chargeCategory === cat ? '#007AFF' : isDark ? '#333' : '#F5F5F5',
-                        borderColor: chargeCategory === cat ? '#007AFF' : isDark ? '#444' : '#E0E0E0',
-                      },
-                    ]}
-                    onPress={() => setChargeCategory(cat)}
-                  >
-                    <Text
-                      style={[
-                        styles.categoryChipText,
-                        { color: chargeCategory === cat ? '#fff' : isDark ? '#ECEDEE' : '#11181C' },
-                      ]}
-                    >
-                      {translateCategory(cat, settings.language)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
-                {t.month}
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.monthList}>
-                {monthOptions.map((monthKey) => (
-                  <TouchableOpacity
-                    key={monthKey}
-                    style={[
-                      styles.monthChip,
-                      {
-                        backgroundColor: chargeMonth === monthKey ? '#007AFF' : isDark ? '#333' : '#F5F5F5',
-                        borderColor: chargeMonth === monthKey ? '#007AFF' : isDark ? '#444' : '#E0E0E0',
-                      },
-                    ]}
-                    onPress={() => setChargeMonth(monthKey)}
-                  >
-                    <Text
-                      style={[
-                        styles.monthChipText,
-                        { color: chargeMonth === monthKey ? '#fff' : isDark ? '#ECEDEE' : '#11181C' },
-                      ]}
-                    >
-                      {formatMonthKey(monthKey, settings.language)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
-                {t.note}
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    color: isDark ? '#ECEDEE' : '#11181C',
-                    borderColor: isDark ? '#444' : '#E0E0E0',
-                  },
-                ]}
-                value={chargeNote}
-                onChangeText={setChargeNote}
-                placeholder={t.note}
-                placeholderTextColor={isDark ? '#666' : '#999'}
-              />
-
-              <View style={styles.formButtons}>
-                <TouchableOpacity
-                  style={[styles.cancelButton, { borderColor: isDark ? '#444' : '#E0E0E0' }]}
-                  onPress={() => setShowChargeModal(false)}
-                >
-                  <Text style={[styles.cancelButtonText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                    {t.cancel}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
+            <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
+              <View style={styles.form}>
+                <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
+                  {t.amount}
+                </Text>
+                <View
                   style={[
-                    styles.submitButton,
-                    { opacity: currencyToFloat(chargeAmount) > 0 && chargeCategory ? 1 : 0.5 },
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                    },
                   ]}
-                  onPress={handleAddCharge}
-                  disabled={currencyToFloat(chargeAmount) <= 0 || !chargeCategory}
                 >
-                  <Text style={styles.submitButtonText}>{t.save}</Text>
-                </TouchableOpacity>
+                  <CurrencyInput
+                    value={chargeAmount}
+                    onChangeValue={setChargeAmount}
+                    currency={settings.currency}
+                    textColor={isDark ? '#FFFFFF' : '#111827'}
+                    prefixColor={isDark ? '#A0A0A0' : '#6B7280'}
+                  />
+                </View>
+
+                <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
+                  {t.installments}
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipList}>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
+                    <TouchableOpacity
+                      key={num}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: chargeInstallments === String(num)
+                            ? '#6366F1'
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                          borderColor: chargeInstallments === String(num)
+                            ? '#6366F1'
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                        },
+                      ]}
+                      onPress={() => setChargeInstallments(String(num))}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          { color: chargeInstallments === String(num) ? '#FFFFFF' : isDark ? '#FFFFFF' : '#111827' },
+                        ]}
+                      >
+                        {num}x
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
+                  {t.category}
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipList}>
+                  {categories.expenseCategories.map((cat) => (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: chargeCategory === cat
+                            ? '#6366F1'
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                          borderColor: chargeCategory === cat
+                            ? '#6366F1'
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                        },
+                      ]}
+                      onPress={() => setChargeCategory(cat)}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          { color: chargeCategory === cat ? '#FFFFFF' : isDark ? '#FFFFFF' : '#111827' },
+                        ]}
+                      >
+                        {translateCategory(cat, settings.language)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
+                  {t.month}
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipList}>
+                  {monthOptions.map((monthKey) => (
+                    <TouchableOpacity
+                      key={monthKey}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: chargeMonth === monthKey
+                            ? '#6366F1'
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                          borderColor: chargeMonth === monthKey
+                            ? '#6366F1'
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                        },
+                      ]}
+                      onPress={() => setChargeMonth(monthKey)}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          { color: chargeMonth === monthKey ? '#FFFFFF' : isDark ? '#FFFFFF' : '#111827' },
+                        ]}
+                      >
+                        {formatMonthKey(monthKey, settings.language)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
+                  {t.note}
+                </Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                      color: isDark ? '#FFFFFF' : '#111827',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                    },
+                  ]}
+                  value={chargeNote}
+                  onChangeText={setChargeNote}
+                  placeholder={t.note}
+                  placeholderTextColor={isDark ? '#666' : '#999'}
+                />
+
+                <View style={styles.formButtons}>
+                  <TouchableOpacity
+                    style={[styles.cancelButton, { borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)' }]}
+                    onPress={() => setShowChargeModal(false)}
+                  >
+                    <Text style={[styles.cancelButtonText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                      {t.cancel}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.submitButtonContainer, { opacity: currencyToFloat(chargeAmount) > 0 && chargeCategory ? 1 : 0.5 }]}
+                    onPress={handleAddCharge}
+                    disabled={currencyToFloat(chargeAmount) <= 0 || !chargeCategory}
+                  >
+                    <LinearGradient
+                      colors={['#6366F1', '#8B5CF6']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.submitButton}
+                    >
+                      <Text style={styles.submitButtonText}>{t.save}</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -676,19 +750,28 @@ export default function CardsScreen() {
           <View
             style={[
               styles.chargesModalContent,
-              { backgroundColor: isDark ? '#1A1A1A' : '#fff' },
+              { backgroundColor: isDark ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)' },
             ]}
           >
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                {viewingCard?.name} - {t.charges}
-              </Text>
+              <View style={styles.modalTitleRow}>
+                <LinearGradient
+                  colors={['#6366F1', '#8B5CF6']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.modalIconContainer}
+                >
+                  <IconSymbol name="creditcard.fill" size={18} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {viewingCard?.name} - {t.charges}
+                </Text>
+              </View>
               <TouchableOpacity onPress={() => setShowChargesViewModal(false)}>
-                <IconSymbol name="xmark" size={24} color={isDark ? '#999' : '#666'} />
+                <IconSymbol name="xmark" size={24} color={isDark ? '#A0A0A0' : '#6B7280'} />
               </TouchableOpacity>
             </View>
 
-            {/* Month Selector */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -699,18 +782,22 @@ export default function CardsScreen() {
                 <TouchableOpacity
                   key={monthKey}
                   style={[
-                    styles.monthChip,
+                    styles.chip,
                     {
-                      backgroundColor: viewMonth === monthKey ? '#007AFF' : isDark ? '#333' : '#F5F5F5',
-                      borderColor: viewMonth === monthKey ? '#007AFF' : isDark ? '#444' : '#E0E0E0',
+                      backgroundColor: viewMonth === monthKey
+                        ? '#6366F1'
+                        : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                      borderColor: viewMonth === monthKey
+                        ? '#6366F1'
+                        : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                     },
                   ]}
                   onPress={() => handleViewMonthChange(monthKey)}
                 >
                   <Text
                     style={[
-                      styles.monthChipText,
-                      { color: viewMonth === monthKey ? '#fff' : isDark ? '#ECEDEE' : '#11181C' },
+                      styles.chipText,
+                      { color: viewMonth === monthKey ? '#FFFFFF' : isDark ? '#FFFFFF' : '#111827' },
                     ]}
                   >
                     {formatMonthKey(monthKey, settings.language)}
@@ -719,10 +806,9 @@ export default function CardsScreen() {
               ))}
             </ScrollView>
 
-            {/* Total */}
             {filteredCharges.length > 0 && (
-              <View style={[styles.chargesTotal, { borderColor: isDark ? '#333' : '#E0E0E0' }]}>
-                <Text style={[styles.chargesTotalLabel, { color: isDark ? '#999' : '#666' }]}>
+              <View style={[styles.chargesTotal, { borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }]}>
+                <Text style={[styles.chargesTotalLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
                   {t.total}
                 </Text>
                 <Text style={[styles.chargesTotalValue, { color: '#EF4444' }]}>
@@ -731,10 +817,9 @@ export default function CardsScreen() {
               </View>
             )}
 
-            {/* Charges List */}
             {filteredCharges.length === 0 ? (
               <View style={styles.noChargesContainer}>
-                <IconSymbol name="doc.text" size={32} color={isDark ? '#666' : '#999'} />
+                <IconSymbol name="creditcard" size={32} color={isDark ? '#666' : '#999'} />
                 <Text style={[styles.noChargesText, { color: isDark ? '#666' : '#999' }]}>
                   {t.noCharges}
                 </Text>
@@ -743,6 +828,7 @@ export default function CardsScreen() {
               <ScrollView
                 style={styles.chargesList}
                 contentContainerStyle={styles.chargesListContent}
+                showsVerticalScrollIndicator={false}
               >
                 {filteredCharges.map((charge) => (
                   <View
@@ -750,18 +836,18 @@ export default function CardsScreen() {
                     style={[
                       styles.chargeItem,
                       {
-                        backgroundColor: isDark ? '#252525' : '#F5F5F5',
-                        borderColor: isDark ? '#333' : '#E0E0E0',
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
                       },
                     ]}
                   >
                     <View style={styles.chargeItemHeader}>
                       <View style={styles.chargeItemInfo}>
-                        <Text style={[styles.chargeCategory, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                        <Text style={[styles.chargeCategory, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                           {translateCategory(charge.category, settings.language)}
                         </Text>
                         {charge.note && (
-                          <Text style={[styles.chargeNote, { color: isDark ? '#999' : '#666' }]}>
+                          <Text style={[styles.chargeNote, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
                             {charge.note}
                           </Text>
                         )}
@@ -797,30 +883,46 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: 20,
     gap: 16,
-    paddingBottom: 80,
+    paddingBottom: 100,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 48,
-    gap: 12,
+    paddingVertical: 60,
+    gap: 16,
+  },
+  emptyIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 8,
+    fontSize: 20,
+    fontWeight: '700',
   },
   emptyDesc: {
-    fontSize: 14,
+    fontSize: 15,
     textAlign: 'center',
   },
   cardItem: {
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
     padding: 16,
     gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -830,11 +932,26 @@ const styles = StyleSheet.create({
   cardTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
+  },
+  cardIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cardName: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  deleteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cardInfo: {
     gap: 4,
@@ -874,65 +991,81 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
+    gap: 8,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#333',
-    marginTop: 4,
   },
   addChargeText: {
-    color: '#007AFF',
+    color: '#6366F1',
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  fab: {
+  fabContainer: {
     position: 'absolute',
     right: 20,
     bottom: 20,
+  },
+  fab: {
     width: 56,
     height: 56,
-    borderRadius: 28,
-    backgroundColor: '#007AFF',
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: '85%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '90%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+  },
+  modalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  modalIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
+    flex: 1,
+  },
+  formScroll: {
+    maxHeight: 400,
   },
   form: {
-    gap: 12,
+    gap: 16,
   },
   inputLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 14,
     fontSize: 16,
   },
   row: {
@@ -941,68 +1074,34 @@ const styles = StyleSheet.create({
   },
   halfInput: {
     flex: 1,
-    gap: 4,
+    gap: 8,
   },
-  categoryList: {
+  chipList: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  categoryChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
     borderWidth: 1,
     marginRight: 8,
   },
-  categoryChipText: {
-    fontSize: 14,
-  },
-  monthList: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  monthChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginRight: 8,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  monthChipText: {
-    fontSize: 13,
-    textTransform: 'capitalize',
-  },
-  installmentsList: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  installmentChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginRight: 8,
-    minWidth: 44,
-    alignItems: 'center',
-  },
-  installmentChipText: {
+  chipText: {
     fontSize: 14,
     fontWeight: '500',
   },
   chargesModalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
     maxHeight: '85%',
     minHeight: 300,
   },
   chargesMonthSelector: {
     flexGrow: 0,
     flexShrink: 0,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   chargesMonthSelectorContent: {
     paddingRight: 20,
@@ -1012,8 +1111,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    marginBottom: 12,
+    paddingVertical: 16,
+    marginBottom: 16,
     borderBottomWidth: 1,
   },
   chargesTotalLabel: {
@@ -1021,14 +1120,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   chargesTotalValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '700',
   },
   chargesList: {
     flexGrow: 1,
   },
   chargesListContent: {
     paddingBottom: 20,
+    gap: 10,
   },
   noChargesContainer: {
     alignItems: 'center',
@@ -1037,13 +1137,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   noChargesText: {
-    fontSize: 14,
+    fontSize: 15,
   },
   chargeItem: {
-    padding: 12,
-    borderRadius: 8,
+    padding: 14,
+    borderRadius: 14,
     borderWidth: 1,
-    marginBottom: 8,
   },
   chargeItemHeader: {
     flexDirection: 'row',
@@ -1052,7 +1151,7 @@ const styles = StyleSheet.create({
   },
   chargeItemInfo: {
     flex: 1,
-    gap: 2,
+    gap: 4,
   },
   chargeItemActions: {
     flexDirection: 'row',
@@ -1061,18 +1160,23 @@ const styles = StyleSheet.create({
   },
   chargeCategory: {
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   chargeAmount: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   chargeNote: {
     fontSize: 13,
     fontStyle: 'italic',
   },
   chargeDeleteButton: {
-    padding: 4,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   formButtons: {
     flexDirection: 'row',
@@ -1081,25 +1185,26 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    padding: 14,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  submitButtonContainer: {
+    flex: 1,
   },
   submitButton: {
-    flex: 1,
-    backgroundColor: '#007AFF',
-    padding: 14,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 14,
     alignItems: 'center',
   },
   submitButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

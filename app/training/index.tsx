@@ -3,16 +3,19 @@ import {
   StyleSheet,
   ScrollView,
   View,
+  Text,
   TouchableOpacity,
   Modal,
   TextInput,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { RippleBackground } from '@/components/ui/ripple-background';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSettings } from '@/contexts/settings-context';
 import { useAccount } from '@/contexts/account-context';
@@ -43,6 +46,7 @@ export default function TrainingScreen() {
     getSessionsByDate,
     createExercise,
     logSession,
+    isLoading,
   } = useTraining();
 
   // Modal states
@@ -63,11 +67,11 @@ export default function TrainingScreen() {
 
   const sessionsByDate = getSessionsByDate();
 
-  // Generate last 64 days for a complete grid (8x8)
-  const last64Days = useMemo(() => {
+  // Generate last 70 days for a complete grid (7x10)
+  const last70Days = useMemo(() => {
     const days: string[] = [];
     const today = new Date();
-    for (let i = 63; i >= 0; i--) {
+    for (let i = 69; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -179,25 +183,110 @@ export default function TrainingScreen() {
     setShowSessionModal(true);
   };
 
+  if (isLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <RippleBackground isDark={isDark} rippleCount={6} />
+        <View style={styles.loadingContainer}>
+          <LinearGradient
+            colors={['#4CAF50', '#45A049']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.loadingGradient}
+          >
+            <ActivityIndicator size="large" color="#FFFFFF" />
+          </LinearGradient>
+        </View>
+      </ThemedView>
+    );
+  }
+
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <RippleBackground isDark={isDark} rippleCount={6} />
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Summary Cards */}
         <View style={styles.summaryRow}>
-          <View style={[styles.summaryCard, { backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9', borderColor: isDark ? '#333' : '#E0E0E0' }]}>
-            <ThemedText style={styles.summaryLabel}>{t('sessions', language)}</ThemedText>
-            <ThemedText style={styles.summaryValue}>{totalSessions}</ThemedText>
+          <View
+            style={[
+              styles.summaryCard,
+              {
+                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              },
+            ]}
+          >
+            <LinearGradient
+              colors={['#4CAF50', '#45A049']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.statIcon}
+            >
+              <IconSymbol name="dumbbell.fill" size={16} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.summaryValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {totalSessions}
+            </Text>
+            <Text style={[styles.summaryLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
+              {t('sessions', language)}
+            </Text>
           </View>
-          <View style={[styles.summaryCard, { backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9', borderColor: isDark ? '#333' : '#E0E0E0' }]}>
-            <ThemedText style={styles.summaryLabel}>{t('totalVolume', language)}</ThemedText>
-            <ThemedText style={styles.summaryValue}>{formatNumber(totalVolume)}</ThemedText>
+          <View
+            style={[
+              styles.summaryCard,
+              {
+                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              },
+            ]}
+          >
+            <LinearGradient
+              colors={['#4CAF50', '#45A049']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.statIcon}
+            >
+              <IconSymbol name="chart.bar.fill" size={16} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.summaryValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {formatNumber(totalVolume)}
+            </Text>
+            <Text style={[styles.summaryLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
+              {t('totalVolume', language)}
+            </Text>
           </View>
         </View>
 
         {/* Heatmap */}
-        <View style={[styles.heatmapSection, { backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9', borderColor: isDark ? '#333' : '#E0E0E0' }]}>
+        <View
+          style={[
+            styles.heatmapSection,
+            {
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            },
+          ]}
+        >
+          <View style={styles.heatmapHeader}>
+            <LinearGradient
+              colors={['#4CAF50', '#45A049']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cardIcon}
+            >
+              <IconSymbol name="calendar" size={14} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.heatmapTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {language === 'pt' ? 'Atividade' : 'Activity'}
+            </Text>
+          </View>
           <View style={styles.heatmapGrid}>
-            {last64Days.map((day) => {
+            {last70Days.map((day) => {
               const count = sessionsByDate[day] || 0;
               const intensity = count / maxCount;
               return (
@@ -207,8 +296,8 @@ export default function TrainingScreen() {
                     styles.heatmapCell,
                     {
                       backgroundColor: count > 0
-                        ? `rgba(76, 175, 80, ${0.2 + intensity * 0.8})`
-                        : isDark ? '#333' : '#E0E0E0',
+                        ? `rgba(76, 175, 80, ${0.25 + intensity * 0.75})`
+                        : isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
                     },
                   ]}
                 />
@@ -219,63 +308,130 @@ export default function TrainingScreen() {
 
         {/* Quick Stats */}
         <View style={styles.quickStatsRow}>
-          <View style={[styles.quickStatCard, { backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9', borderColor: isDark ? '#333' : '#E0E0E0' }]}>
-            <ThemedText style={styles.quickStatLabel}>{t('today', language)}</ThemedText>
-            <ThemedText style={styles.quickStatValue}>{todaySessions} {t('sessions', language).toLowerCase()}</ThemedText>
+          <View
+            style={[
+              styles.quickStatCard,
+              {
+                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              },
+            ]}
+          >
+            <Text style={[styles.quickStatLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
+              {t('today', language)}
+            </Text>
+            <Text style={[styles.quickStatValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {todaySessions} {t('sessions', language).toLowerCase()}
+            </Text>
           </View>
-          <View style={[styles.quickStatCard, { backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9', borderColor: isDark ? '#333' : '#E0E0E0' }]}>
-            <ThemedText style={styles.quickStatLabel}>{t('thisWeek', language)}</ThemedText>
-            <ThemedText style={styles.quickStatValue}>{weekSessions} | {formatNumber(weekVolume)} {t('volume', language)}</ThemedText>
+          <View
+            style={[
+              styles.quickStatCard,
+              {
+                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              },
+            ]}
+          >
+            <Text style={[styles.quickStatLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
+              {t('thisWeek', language)}
+            </Text>
+            <Text style={[styles.quickStatValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {weekSessions} | {formatNumber(weekVolume)}
+            </Text>
           </View>
         </View>
 
         {/* Action Buttons */}
         <View style={styles.actionRow}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: '#007AFF' }]}
+            style={styles.actionButton}
             onPress={handleOpenSessionModal}
+            activeOpacity={0.8}
           >
-            <IconSymbol name="plus" size={20} color="#fff" />
-            <ThemedText style={styles.actionButtonText}>{t('logSession', language)}</ThemedText>
+            <LinearGradient
+              colors={['#4CAF50', '#45A049']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.actionButtonGradient}
+            >
+              <IconSymbol name="plus" size={18} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>{t('logSession', language)}</Text>
+            </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: isDark ? '#333' : '#E0E0E0' }]}
+            style={[
+              styles.secondaryButton,
+              {
+                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              },
+            ]}
             onPress={() => setShowExerciseModal(true)}
+            activeOpacity={0.8}
           >
-            <IconSymbol name="plus" size={20} color={isDark ? '#fff' : '#11181C'} />
-            <ThemedText style={[styles.actionButtonText, { color: isDark ? '#fff' : '#11181C' }]}>
+            <IconSymbol name="plus" size={18} color={isDark ? '#FFFFFF' : '#111827'} />
+            <Text style={[styles.secondaryButtonText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
               {t('newExercise', language)}
-            </ThemedText>
+            </Text>
           </TouchableOpacity>
         </View>
 
         {/* Recent Sessions */}
-        <View style={[styles.section, { backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9', borderColor: isDark ? '#333' : '#E0E0E0' }]}>
-          <ThemedText style={styles.sectionTitle}>{t('recentSessions', language)}</ThemedText>
+        <View
+          style={[
+            styles.section,
+            {
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            },
+          ]}
+        >
+          <View style={styles.sectionHeader}>
+            <LinearGradient
+              colors={['#4CAF50', '#45A049']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cardIcon}
+            >
+              <IconSymbol name="clock.fill" size={14} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {t('recentSessions', language)}
+            </Text>
+          </View>
+
           {recentSessions.length === 0 ? (
-            <ThemedText style={styles.emptyText}>{t('noSessions', language)}</ThemedText>
+            <Text style={[styles.emptyText, { color: isDark ? '#666' : '#9CA3AF' }]}>
+              {t('noSessions', language)}
+            </Text>
           ) : (
             recentSessions.slice(0, 8).map((session) => (
               <TouchableOpacity
                 key={session.id}
-                style={[styles.sessionRow, { borderBottomColor: isDark ? '#333' : '#E0E0E0' }]}
+                style={[
+                  styles.sessionRow,
+                  { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' },
+                ]}
                 onPress={() => router.push(`/training/${session.exerciseId}`)}
                 activeOpacity={0.7}
               >
                 <View style={styles.sessionInfo}>
-                  <ThemedText style={styles.sessionDate}>
+                  <Text style={[styles.sessionDate, { color: isDark ? '#808080' : '#6B7280' }]}>
                     {formatShortDate(session.date, language)}
-                  </ThemedText>
-                  <ThemedText style={styles.sessionExercise}>{session.exerciseName}</ThemedText>
-                  <ThemedText style={styles.sessionDetails}>
+                  </Text>
+                  <Text style={[styles.sessionExercise, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                    {session.exerciseName}
+                  </Text>
+                  <Text style={[styles.sessionDetails, { color: isDark ? '#808080' : '#6B7280' }]}>
                     {session.load}kg × {session.reps}
-                  </ThemedText>
+                  </Text>
                 </View>
                 <View style={styles.sessionRight}>
-                  <ThemedText style={styles.sessionVolume}>
-                    {formatNumber(session.volume)} {t('volume', language)}
-                  </ThemedText>
-                  <IconSymbol name="chevron.right" size={16} color={isDark ? '#666' : '#999'} />
+                  <Text style={styles.sessionVolume}>
+                    {formatNumber(session.volume)}
+                  </Text>
+                  <IconSymbol name="chevron.right" size={16} color={isDark ? '#666' : '#9CA3AF'} />
                 </View>
               </TouchableOpacity>
             ))
@@ -284,11 +440,30 @@ export default function TrainingScreen() {
 
         {/* View All Exercises */}
         <TouchableOpacity
-          style={[styles.viewAllButton, { borderColor: isDark ? '#333' : '#E0E0E0' }]}
+          style={[
+            styles.viewAllButton,
+            {
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            },
+          ]}
           onPress={() => router.push('/training/exercises')}
+          activeOpacity={0.8}
         >
-          <ThemedText style={styles.viewAllText}>{t('viewAllExercises', language)}</ThemedText>
-          <IconSymbol name="chevron.right" size={20} color={isDark ? '#999' : '#666'} />
+          <View style={styles.viewAllLeft}>
+            <LinearGradient
+              colors={['#4CAF50', '#45A049']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cardIcon}
+            >
+              <IconSymbol name="list.bullet" size={14} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.viewAllText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {t('viewAllExercises', language)}
+            </Text>
+          </View>
+          <IconSymbol name="chevron.right" size={20} color={isDark ? '#808080' : '#6B7280'} />
         </TouchableOpacity>
       </ScrollView>
 
@@ -300,11 +475,13 @@ export default function TrainingScreen() {
         onRequestClose={() => setShowExerciseModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1A1A1A' : '#fff' }]}>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
-              <ThemedText style={styles.modalTitle}>{t('newExercise', language)}</ThemedText>
+              <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t('newExercise', language)}
+              </Text>
               <TouchableOpacity onPress={() => setShowExerciseModal(false)}>
-                <IconSymbol name="xmark.circle.fill" size={28} color={isDark ? '#666' : '#999'} />
+                <IconSymbol name="xmark.circle.fill" size={28} color={isDark ? '#666' : '#9CA3AF'} />
               </TouchableOpacity>
             </View>
 
@@ -312,23 +489,30 @@ export default function TrainingScreen() {
               style={[
                 styles.input,
                 {
-                  backgroundColor: isDark ? '#333' : '#F5F5F5',
-                  color: isDark ? '#fff' : '#000',
-                  borderColor: isDark ? '#444' : '#E0E0E0',
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                  color: isDark ? '#FFFFFF' : '#111827',
                 },
               ]}
               placeholder={t('exerciseName', language)}
-              placeholderTextColor={isDark ? '#888' : '#999'}
+              placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
               value={exerciseName}
               onChangeText={setExerciseName}
               autoFocus
             />
 
             <TouchableOpacity
-              style={[styles.modalButton, { backgroundColor: '#007AFF' }]}
+              style={styles.modalButton}
               onPress={handleCreateExercise}
+              activeOpacity={0.8}
             >
-              <ThemedText style={styles.modalButtonText}>{t('create', language)}</ThemedText>
+              <LinearGradient
+                colors={['#4CAF50', '#45A049']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.modalButtonGradient}
+              >
+                <Text style={styles.modalButtonText}>{t('create', language)}</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
@@ -342,73 +526,92 @@ export default function TrainingScreen() {
         onRequestClose={() => setShowSessionModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1A1A1A' : '#fff' }]}>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
-              <ThemedText style={styles.modalTitle}>{t('logSession', language)}</ThemedText>
+              <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t('logSession', language)}
+              </Text>
               <TouchableOpacity onPress={() => setShowSessionModal(false)}>
-                <IconSymbol name="xmark.circle.fill" size={28} color={isDark ? '#666' : '#999'} />
+                <IconSymbol name="xmark.circle.fill" size={28} color={isDark ? '#666' : '#9CA3AF'} />
               </TouchableOpacity>
             </View>
 
             {exercises.length === 0 ? (
               <View style={styles.emptyExercises}>
-                <ThemedText style={styles.emptyText}>{t('createExerciseFirst', language)}</ThemedText>
+                <Text style={[styles.emptyText, { color: isDark ? '#666' : '#9CA3AF' }]}>
+                  {t('createExerciseFirst', language)}
+                </Text>
                 <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: '#007AFF', marginTop: 16 }]}
+                  style={[styles.modalButton, { marginTop: 16 }]}
                   onPress={() => {
                     setShowSessionModal(false);
                     setShowExerciseModal(true);
                   }}
+                  activeOpacity={0.8}
                 >
-                  <ThemedText style={styles.modalButtonText}>{t('newExercise', language)}</ThemedText>
+                  <LinearGradient
+                    colors={['#4CAF50', '#45A049']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.modalButtonGradient}
+                  >
+                    <Text style={styles.modalButtonText}>{t('newExercise', language)}</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
             ) : (
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView style={styles.sessionFormContainer} showsVerticalScrollIndicator={false}>
                 {/* Exercise Search */}
-                <ThemedText style={styles.inputLabel}>{t('selectExercise', language)}</ThemedText>
-                <View style={[
-                  styles.searchContainer,
-                  {
-                    backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    borderColor: isDark ? '#444' : '#E0E0E0',
-                  },
-                ]}>
-                  <IconSymbol name="magnifyingglass" size={18} color={isDark ? '#888' : '#999'} />
+                <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t('selectExercise', language)}
+                </Text>
+                <View
+                  style={[
+                    styles.searchContainer,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                    },
+                  ]}
+                >
+                  <IconSymbol name="magnifyingglass" size={18} color={isDark ? '#666' : '#9CA3AF'} />
                   <TextInput
-                    style={[styles.searchInput, { color: isDark ? '#fff' : '#000' }]}
+                    style={[styles.searchInput, { color: isDark ? '#FFFFFF' : '#111827' }]}
                     placeholder={language === 'pt' ? 'Buscar exercício...' : 'Search exercise...'}
-                    placeholderTextColor={isDark ? '#888' : '#999'}
+                    placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
                     value={exerciseSearch}
                     onChangeText={setExerciseSearch}
                     autoCapitalize="none"
                   />
                   {exerciseSearch.length > 0 && (
                     <TouchableOpacity onPress={() => setExerciseSearch('')}>
-                      <IconSymbol name="xmark.circle.fill" size={18} color={isDark ? '#666' : '#999'} />
+                      <IconSymbol name="xmark.circle.fill" size={18} color={isDark ? '#666' : '#9CA3AF'} />
                     </TouchableOpacity>
                   )}
                 </View>
 
                 {/* Selected Exercise Display */}
                 {selectedExercise && (
-                  <View style={[styles.selectedExercise, { backgroundColor: isDark ? '#007AFF20' : '#007AFF10', borderColor: '#007AFF' }]}>
-                    <ThemedText style={styles.selectedExerciseText}>
+                  <View style={[styles.selectedExercise, { backgroundColor: 'rgba(76, 175, 80, 0.15)' }]}>
+                    <Text style={styles.selectedExerciseText}>
                       {selectedExercise.name}
-                    </ThemedText>
+                    </Text>
                     <TouchableOpacity onPress={() => setSelectedExerciseId('')}>
-                      <IconSymbol name="xmark.circle.fill" size={20} color="#007AFF" />
+                      <IconSymbol name="xmark.circle.fill" size={20} color="#4CAF50" />
                     </TouchableOpacity>
                   </View>
                 )}
 
-                {/* Exercise List */}
+                {/* Exercise List - Scrollable */}
                 {!selectedExercise && (
-                  <View style={styles.exerciseList}>
+                  <ScrollView
+                    style={styles.exerciseListScroll}
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator
+                  >
                     {filteredExercises.length === 0 ? (
-                      <ThemedText style={styles.noResultsText}>
+                      <Text style={[styles.noResultsText, { color: isDark ? '#666' : '#9CA3AF' }]}>
                         {language === 'pt' ? 'Nenhum exercício encontrado' : 'No exercises found'}
-                      </ThemedText>
+                      </Text>
                     ) : (
                       filteredExercises.map((exercise) => (
                         <TouchableOpacity
@@ -416,8 +619,7 @@ export default function TrainingScreen() {
                           style={[
                             styles.exerciseItem,
                             {
-                              backgroundColor: isDark ? '#252525' : '#F0F0F0',
-                              borderColor: isDark ? '#333' : '#E0E0E0',
+                              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
                             },
                           ]}
                           onPress={() => {
@@ -425,49 +627,53 @@ export default function TrainingScreen() {
                             setExerciseSearch('');
                           }}
                         >
-                          <ThemedText style={styles.exerciseItemName}>{exercise.name}</ThemedText>
-                          <ThemedText style={styles.exerciseItemStats}>
+                          <Text style={[styles.exerciseItemName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                            {exercise.name}
+                          </Text>
+                          <Text style={[styles.exerciseItemStats, { color: isDark ? '#808080' : '#6B7280' }]}>
                             {exercise.totalSessions} {t('sessions', language).toLowerCase()}
-                          </ThemedText>
+                          </Text>
                         </TouchableOpacity>
                       ))
                     )}
-                  </View>
+                  </ScrollView>
                 )}
 
                 {/* Load & Reps */}
                 <View style={styles.inputRow}>
                   <View style={styles.inputHalf}>
-                    <ThemedText style={styles.inputLabel}>{t('load', language)} (kg)</ThemedText>
+                    <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                      {t('load', language)} (kg)
+                    </Text>
                     <TextInput
                       style={[
                         styles.input,
                         {
-                          backgroundColor: isDark ? '#333' : '#F5F5F5',
-                          color: isDark ? '#fff' : '#000',
-                          borderColor: isDark ? '#444' : '#E0E0E0',
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                          color: isDark ? '#FFFFFF' : '#111827',
                         },
                       ]}
                       placeholder="0"
-                      placeholderTextColor={isDark ? '#888' : '#999'}
+                      placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
                       value={load}
                       onChangeText={setLoad}
                       keyboardType="decimal-pad"
                     />
                   </View>
                   <View style={styles.inputHalf}>
-                    <ThemedText style={styles.inputLabel}>{t('reps', language)}</ThemedText>
+                    <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                      {t('reps', language)}
+                    </Text>
                     <TextInput
                       style={[
                         styles.input,
                         {
-                          backgroundColor: isDark ? '#333' : '#F5F5F5',
-                          color: isDark ? '#fff' : '#000',
-                          borderColor: isDark ? '#444' : '#E0E0E0',
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                          color: isDark ? '#FFFFFF' : '#111827',
                         },
                       ]}
                       placeholder="0"
-                      placeholderTextColor={isDark ? '#888' : '#999'}
+                      placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
                       value={reps}
                       onChangeText={setReps}
                       keyboardType="number-pad"
@@ -476,47 +682,61 @@ export default function TrainingScreen() {
                 </View>
 
                 {/* Date Picker */}
-                <ThemedText style={styles.inputLabel}>{t('date', language)}</ThemedText>
+                <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t('date', language)}
+                </Text>
                 <TouchableOpacity
                   style={[
                     styles.datePickerButton,
                     {
-                      backgroundColor: isDark ? '#333' : '#F5F5F5',
-                      borderColor: isDark ? '#444' : '#E0E0E0',
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
                     },
                   ]}
                   onPress={() => setShowDatePicker(true)}
                 >
-                  <IconSymbol name="calendar" size={20} color={isDark ? '#ECEDEE' : '#11181C'} />
-                  <ThemedText style={styles.datePickerText}>
+                  <IconSymbol name="calendar" size={20} color={isDark ? '#FFFFFF' : '#111827'} />
+                  <Text style={[styles.datePickerText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                     {formatDateForDisplay(sessionDate)}
-                  </ThemedText>
+                  </Text>
                 </TouchableOpacity>
 
                 {/* Notes */}
-                <ThemedText style={styles.inputLabel}>{t('notesOptional', language)}</ThemedText>
+                <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t('notesOptional', language)}
+                </Text>
                 <TextInput
                   style={[
                     styles.input,
                     styles.notesInput,
                     {
-                      backgroundColor: isDark ? '#333' : '#F5F5F5',
-                      color: isDark ? '#fff' : '#000',
-                      borderColor: isDark ? '#444' : '#E0E0E0',
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                      color: isDark ? '#FFFFFF' : '#111827',
                     },
                   ]}
                   placeholder={t('notes', language)}
-                  placeholderTextColor={isDark ? '#888' : '#999'}
+                  placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
                   value={notes}
                   onChangeText={setNotes}
                   multiline
                 />
 
                 <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: '#007AFF' }]}
+                  style={[
+                    styles.modalButton,
+                    (!selectedExerciseId || !load || !reps) && styles.modalButtonDisabled,
+                  ]}
                   onPress={handleLogSession}
+                  activeOpacity={0.8}
+                  disabled={!selectedExerciseId || !load || !reps}
                 >
-                  <ThemedText style={styles.modalButtonText}>{t('addSession', language)}</ThemedText>
+                  <LinearGradient
+                    colors={(!selectedExerciseId || !load || !reps) ? ['#888', '#777'] : ['#4CAF50', '#45A049']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.modalButtonGradient}
+                  >
+                    <Text style={styles.modalButtonText}>{t('addSession', language)}</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               </ScrollView>
             )}
@@ -541,9 +761,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 32,
+    padding: 20,
+    paddingBottom: 40,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   summaryRow: {
     flexDirection: 'row',
@@ -553,35 +788,51 @@ const styles = StyleSheet.create({
   summaryCard: {
     flex: 1,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
+    alignItems: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  statIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   summaryLabel: {
-    fontSize: 14,
-    opacity: 0.7,
-    marginBottom: 4,
+    fontSize: 13,
+    fontWeight: '500',
   },
   summaryValue: {
     fontSize: 24,
     fontWeight: '700',
   },
-  section: {
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 16,
-  },
   heatmapSection: {
-    padding: 12,
-    borderRadius: 12,
+    padding: 16,
+    borderRadius: 20,
     borderWidth: 1,
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  sectionTitle: {
+  heatmapHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  heatmapTitle: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 12,
   },
   heatmapGrid: {
     flexDirection: 'row',
@@ -589,8 +840,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   heatmapCell: {
-    width: 16,
-    height: 16,
+    width: 18,
+    height: 18,
     borderRadius: 4,
   },
   quickStatsRow: {
@@ -600,13 +851,18 @@ const styles = StyleSheet.create({
   },
   quickStatCard: {
     flex: 1,
-    padding: 12,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 16,
     borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   quickStatLabel: {
     fontSize: 12,
-    opacity: 0.7,
+    fontWeight: '500',
     marginBottom: 4,
   },
   quickStatValue: {
@@ -620,16 +876,71 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  actionButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 14,
-    borderRadius: 12,
     gap: 8,
   },
   actionButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 15,
+    fontWeight: '600',
+  },
+  secondaryButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  secondaryButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  section: {
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  cardIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sectionTitle: {
+    fontSize: 16,
     fontWeight: '600',
   },
   sessionRow: {
@@ -649,7 +960,7 @@ const styles = StyleSheet.create({
   },
   sessionDate: {
     fontSize: 12,
-    opacity: 0.6,
+    marginBottom: 2,
   },
   sessionExercise: {
     fontSize: 15,
@@ -657,16 +968,15 @@ const styles = StyleSheet.create({
   },
   sessionDetails: {
     fontSize: 13,
-    opacity: 0.7,
+    marginTop: 2,
   },
   sessionVolume: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#10B981',
+    fontWeight: '600',
+    color: '#4CAF50',
   },
   emptyText: {
     fontSize: 14,
-    opacity: 0.6,
     textAlign: 'center',
     paddingVertical: 20,
   },
@@ -675,12 +985,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  viewAllLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   viewAllText: {
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   // Modal styles
   modalOverlay: {
@@ -689,10 +1009,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 20,
+    paddingBottom: 40,
     maxHeight: '85%',
+    minHeight: 300,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -705,17 +1027,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   input: {
-    borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 14,
     fontSize: 16,
     marginBottom: 12,
   },
   inputLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     marginBottom: 8,
-    opacity: 0.8,
   },
   inputRow: {
     flexDirection: 'row',
@@ -729,14 +1049,17 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   modalButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
+    borderRadius: 16,
+    overflow: 'hidden',
     marginTop: 8,
     marginBottom: 20,
   },
+  modalButtonGradient: {
+    padding: 16,
+    alignItems: 'center',
+  },
   modalButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -744,12 +1067,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
   },
+  sessionFormContainer: {
+    flexGrow: 1,
+    flexShrink: 1,
+  },
+  modalButtonDisabled: {
+    opacity: 0.6,
+  },
+  exerciseListScroll: {
+    maxHeight: 180,
+    marginBottom: 16,
+  },
   // Search styles
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 12,
     marginBottom: 12,
     gap: 8,
@@ -765,8 +1098,7 @@ const styles = StyleSheet.create({
   },
   exerciseItem: {
     padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 12,
     marginBottom: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -778,25 +1110,22 @@ const styles = StyleSheet.create({
   },
   exerciseItemStats: {
     fontSize: 12,
-    opacity: 0.6,
   },
   selectedExercise: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 12,
     marginBottom: 16,
   },
   selectedExerciseText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#007AFF',
+    color: '#4CAF50',
   },
   noResultsText: {
     fontSize: 14,
-    opacity: 0.6,
     textAlign: 'center',
     paddingVertical: 12,
   },
@@ -804,8 +1133,7 @@ const styles = StyleSheet.create({
   datePickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 14,
     gap: 10,
     marginBottom: 12,

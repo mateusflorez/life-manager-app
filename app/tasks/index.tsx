@@ -7,14 +7,15 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
 import { useTasks } from '@/contexts/tasks-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { RippleBackground } from '@/components/ui/ripple-background';
 import {
   TaskType,
   t,
@@ -24,6 +25,7 @@ import {
   isDueToday,
 } from '@/types/tasks';
 import { TaskWithStatus } from '@/services/tasks-storage';
+import { useAlert } from '@/contexts/alert-context';
 
 export default function TasksScreen() {
   const router = useRouter();
@@ -31,6 +33,7 @@ export default function TasksScreen() {
   const { settings } = useSettings();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { showConfirm } = useAlert();
 
   const [refreshing, setRefreshing] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<TaskType, boolean>>({
@@ -62,16 +65,20 @@ export default function TasksScreen() {
         ? 'Tem certeza que deseja excluir esta tarefa?'
         : 'Are you sure you want to delete this task?';
 
-    Alert.alert(lang === 'pt' ? 'Excluir Tarefa' : 'Delete Task', message, [
-      { text: t('cancel', lang), style: 'cancel' },
-      {
-        text: t('delete', lang),
-        style: 'destructive',
-        onPress: async () => {
-          await deleteTask(type, taskId);
+    showConfirm({
+      title: lang === 'pt' ? 'Excluir Tarefa' : 'Delete Task',
+      message,
+      buttons: [
+        { text: t('cancel', lang), style: 'cancel' },
+        {
+          text: t('delete', lang),
+          style: 'destructive',
+          onPress: async () => {
+            await deleteTask(type, taskId);
+          },
         },
-      },
-    ]);
+      ],
+    });
   };
 
   const renderTaskItem = (task: TaskWithStatus, type: TaskType) => {
@@ -95,36 +102,48 @@ export default function TasksScreen() {
         style={[
           styles.taskItem,
           {
-            backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-            borderColor: overdue ? '#EF4444' : isDark ? '#333' : '#E0E0E0',
+            backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+            borderColor: overdue
+              ? 'rgba(239, 68, 68, 0.5)'
+              : isDark
+              ? 'rgba(255, 255, 255, 0.1)'
+              : 'rgba(0, 0, 0, 0.05)',
             opacity: task.isCompleted ? 0.6 : 1,
           },
         ]}
         onPress={() => handleToggleTask(type, task.id)}
         onLongPress={() => handleDeleteTask(type, task.id)}
+        activeOpacity={0.8}
       >
-        <View style={styles.taskCheckbox}>
-          <View
-            style={[
-              styles.checkbox,
-              {
-                borderColor: task.isCompleted ? '#10B981' : isDark ? '#666' : '#999',
-                backgroundColor: task.isCompleted ? '#10B981' : 'transparent',
-              },
-            ]}
-          >
-            {task.isCompleted && (
+        <TouchableOpacity
+          style={styles.taskCheckbox}
+          onPress={() => handleToggleTask(type, task.id)}
+        >
+          {task.isCompleted ? (
+            <LinearGradient
+              colors={['#10B981', '#059669']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.checkboxCompleted}
+            >
               <IconSymbol name="checkmark" size={14} color="#fff" />
-            )}
-          </View>
-        </View>
+            </LinearGradient>
+          ) : (
+            <View
+              style={[
+                styles.checkbox,
+                { borderColor: isDark ? '#666' : '#999' },
+              ]}
+            />
+          )}
+        </TouchableOpacity>
 
         <View style={styles.taskContent}>
           <Text
             style={[
               styles.taskName,
               {
-                color: isDark ? '#ECEDEE' : '#11181C',
+                color: isDark ? '#FFFFFF' : '#111827',
                 textDecorationLine: task.isCompleted ? 'line-through' : 'none',
               },
             ]}
@@ -135,20 +154,20 @@ export default function TasksScreen() {
           {metaParts.length > 0 && (
             <View style={styles.taskMeta}>
               {overdue && (
-                <View style={styles.statusBadge}>
+                <View style={[styles.statusBadge, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
                   <Text style={[styles.statusText, { color: '#EF4444' }]}>
                     {t('overdue', lang)}
                   </Text>
                 </View>
               )}
               {dueToday && !overdue && (
-                <View style={[styles.statusBadge, { backgroundColor: '#FEF3C7' }]}>
-                  <Text style={[styles.statusText, { color: '#D97706' }]}>
+                <View style={[styles.statusBadge, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+                  <Text style={[styles.statusText, { color: '#F59E0B' }]}>
                     {t('dueToday', lang)}
                   </Text>
                 </View>
               )}
-              <Text style={[styles.taskMetaText, { color: isDark ? '#999' : '#666' }]}>
+              <Text style={[styles.taskMetaText, { color: isDark ? '#808080' : '#6B7280' }]}>
                 {metaParts.join(' • ')}
               </Text>
             </View>
@@ -161,7 +180,9 @@ export default function TasksScreen() {
   const renderSection = (
     type: TaskType,
     title: string,
-    taskList: TaskWithStatus[]
+    taskList: TaskWithStatus[],
+    gradientColors: [string, string],
+    iconName: string
   ) => {
     const isExpanded = expandedSections[type];
     const completedCount = taskList.filter((t) => t.isCompleted).length;
@@ -171,30 +192,53 @@ export default function TasksScreen() {
     return (
       <View key={type} style={styles.section}>
         <TouchableOpacity
-          style={styles.sectionHeader}
+          style={[
+            styles.sectionHeader,
+            {
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            },
+          ]}
           onPress={() => toggleSection(type)}
+          activeOpacity={0.8}
         >
-          <View style={styles.sectionTitleRow}>
-            <IconSymbol
-              name={isExpanded ? 'chevron.down' : 'chevron.right'}
-              size={16}
-              color={isDark ? '#999' : '#666'}
-            />
-            <Text style={[styles.sectionTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-              {title}
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.sectionIconContainer}
+          >
+            <IconSymbol name={iconName as any} size={16} color="#FFFFFF" />
+          </LinearGradient>
+
+          <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+            {title}
+          </Text>
+
+          <View
+            style={[
+              styles.countBadge,
+              {
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              },
+            ]}
+          >
+            <Text style={[styles.countText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {completedCount}/{taskList.length}
             </Text>
-            <View style={[styles.countBadge, { backgroundColor: isDark ? '#333' : '#E0E0E0' }]}>
-              <Text style={[styles.countText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                {completedCount}/{taskList.length}
-              </Text>
-            </View>
           </View>
+
+          <IconSymbol
+            name={isExpanded ? 'chevron.down' : 'chevron.right'}
+            size={16}
+            color={isDark ? '#808080' : '#6B7280'}
+          />
         </TouchableOpacity>
 
         {isExpanded && (
           <View style={styles.sectionContent}>
             {taskList.length === 0 ? (
-              <Text style={[styles.emptyText, { color: isDark ? '#666' : '#999' }]}>
+              <Text style={[styles.emptyText, { color: isDark ? '#666' : '#9CA3AF' }]}>
                 {t('noTasks', lang)}
               </Text>
             ) : (
@@ -212,8 +256,16 @@ export default function TasksScreen() {
   if (loading) {
     return (
       <ThemedView style={styles.container}>
+        <RippleBackground isDark={isDark} rippleCount={6} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <LinearGradient
+            colors={['#F59E0B', '#D97706']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.loadingGradient}
+          >
+            <ActivityIndicator size="large" color="#FFFFFF" />
+          </LinearGradient>
         </View>
       </ThemedView>
     );
@@ -222,11 +274,17 @@ export default function TasksScreen() {
   const totalTasks =
     tasks.todo.length + tasks.daily.length + tasks.weekly.length + tasks.monthly.length;
 
+  const progressPercent =
+    todayProgress.total > 0 ? (todayProgress.completed / todayProgress.total) * 100 : 0;
+
   return (
     <ThemedView style={styles.container}>
+      <RippleBackground isDark={isDark} rippleCount={6} />
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -236,65 +294,94 @@ export default function TasksScreen() {
           style={[
             styles.progressCard,
             {
-              backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-              borderColor: isDark ? '#333' : '#E0E0E0',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
             },
           ]}
         >
-          <Text style={[styles.progressLabel, { color: isDark ? '#999' : '#666' }]}>
-            {t('todayProgress', lang)}
-          </Text>
-          <View style={styles.progressBar}>
+          <View style={styles.cardHeader}>
+            <LinearGradient
+              colors={['#F59E0B', '#D97706']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cardIconContainer}
+            >
+              <IconSymbol name="flame.fill" size={18} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {t('todayProgress', lang)}
+            </Text>
+          </View>
+
+          <View style={styles.progressBarContainer}>
             <View
               style={[
-                styles.progressFill,
-                {
-                  width: `${
-                    todayProgress.total > 0
-                      ? (todayProgress.completed / todayProgress.total) * 100
-                      : 0
-                  }%`,
-                },
+                styles.progressBar,
+                { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' },
               ]}
-            />
+            >
+              <LinearGradient
+                colors={['#10B981', '#059669']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.progressFill, { width: `${progressPercent}%` }]}
+              />
+            </View>
           </View>
-          <Text style={[styles.progressText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-            {todayProgress.completed}/{todayProgress.total} {t('completedCount', lang)}
-          </Text>
-          {todayProgress.overdue > 0 && (
-            <Text style={styles.overdueText}>
-              {todayProgress.overdue} {t('overdueCount', lang)}
+
+          <View style={styles.progressStats}>
+            <Text style={[styles.progressText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {todayProgress.completed}/{todayProgress.total} {t('completedCount', lang)}
             </Text>
-          )}
+            {todayProgress.overdue > 0 && (
+              <View style={[styles.overdueBadge, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+                <Text style={styles.overdueText}>
+                  {todayProgress.overdue} {t('overdueCount', lang)}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Task Sections */}
         {totalTasks === 0 ? (
           <View style={styles.emptyState}>
-            <IconSymbol
-              name="checklist"
-              size={48}
-              color={isDark ? '#666' : '#999'}
-            />
-            <Text style={[styles.emptyTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+            <LinearGradient
+              colors={['#F59E0B', '#D97706']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.emptyIconContainer}
+            >
+              <IconSymbol name="checklist" size={40} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.emptyTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
               {t('noTasks', lang)}
             </Text>
-            <Text style={[styles.emptyDesc, { color: isDark ? '#999' : '#666' }]}>
+            <Text style={[styles.emptyDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
               {t('noPendingTasks', lang)}
             </Text>
             <TouchableOpacity
               style={styles.createButton}
               onPress={() => router.push('/tasks/add')}
+              activeOpacity={0.8}
             >
-              <Text style={styles.createButtonText}>{t('addTask', lang)}</Text>
+              <LinearGradient
+                colors={['#F59E0B', '#D97706']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.createButtonGradient}
+              >
+                <IconSymbol name="plus" size={18} color="#FFFFFF" />
+                <Text style={styles.createButtonText}>{t('addTask', lang)}</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         ) : (
           <>
-            {renderSection('todo', t('todo', lang), tasks.todo)}
-            {renderSection('daily', t('daily', lang), tasks.daily)}
-            {renderSection('weekly', t('weekly', lang), tasks.weekly)}
-            {renderSection('monthly', t('monthly', lang), tasks.monthly)}
+            {renderSection('todo', t('todo', lang), tasks.todo, ['#6366F1', '#8B5CF6'], 'checkmark.circle')}
+            {renderSection('daily', t('daily', lang), tasks.daily, ['#10B981', '#059669'], 'repeat')}
+            {renderSection('weekly', t('weekly', lang), tasks.weekly, ['#3B82F6', '#2563EB'], 'calendar.badge.clock')}
+            {renderSection('monthly', t('monthly', lang), tasks.monthly, ['#F59E0B', '#D97706'], 'calendar')}
           </>
         )}
       </ScrollView>
@@ -304,8 +391,16 @@ export default function TasksScreen() {
         <TouchableOpacity
           style={styles.fab}
           onPress={() => router.push('/tasks/add')}
+          activeOpacity={0.8}
         >
-          <IconSymbol name="plus" size={24} color="#fff" />
+          <LinearGradient
+            colors={['#F59E0B', '#D97706']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.fabGradient}
+          >
+            <IconSymbol name="plus" size={24} color="#fff" />
+          </LinearGradient>
         </TouchableOpacity>
       )}
     </ThemedView>
@@ -321,97 +416,158 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: 20,
     gap: 16,
-    paddingBottom: 80,
+    paddingBottom: 100,
   },
   progressCard: {
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 16,
-    gap: 8,
+    padding: 20,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
-  progressLabel: {
-    fontSize: 14,
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  cardIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  progressBarContainer: {
+    marginTop: 4,
   },
   progressBar: {
-    height: 8,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 4,
+    height: 10,
+    borderRadius: 5,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#10B981',
-    borderRadius: 4,
+    borderRadius: 5,
+  },
+  progressStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   progressText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  overdueBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   overdueText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#EF4444',
+    fontWeight: '600',
   },
   section: {
-    gap: 8,
+    gap: 10,
   },
   sectionHeader: {
-    paddingVertical: 8,
-  },
-  sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  sectionIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
     flex: 1,
   },
   countBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 10,
   },
   countText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
   sectionContent: {
     gap: 8,
-    paddingLeft: 24,
+    paddingLeft: 12,
   },
   taskItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
-    padding: 12,
+    padding: 14,
     gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   taskCheckbox: {
     paddingTop: 2,
   },
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxCompleted: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   taskContent: {
     flex: 1,
-    gap: 4,
+    gap: 6,
   },
   taskName: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   taskMeta: {
     flexDirection: 'row',
@@ -421,12 +577,12 @@ const styles = StyleSheet.create({
   },
   taskMetaText: {
     fontSize: 13,
+    fontWeight: '500',
   },
   statusBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   statusText: {
     fontSize: 11,
@@ -436,28 +592,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontStyle: 'italic',
     paddingVertical: 8,
+    paddingLeft: 12,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 48,
-    gap: 12,
+    paddingVertical: 60,
+    gap: 16,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     marginTop: 8,
   },
   emptyDesc: {
-    fontSize: 14,
+    fontSize: 15,
     textAlign: 'center',
+    lineHeight: 22,
   },
   createButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
     marginTop: 8,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  createButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
   },
   createButtonText: {
     color: '#fff',
@@ -468,16 +648,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 24,
     right: 24,
+    borderRadius: 28,
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  fabGradient: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
   },
 });

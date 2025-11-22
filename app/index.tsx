@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,6 +17,7 @@ import { type Account } from '@/types/account';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccount } from '@/contexts/account-context';
 import { useSettings } from '@/contexts/settings-context';
+import { useAlert } from '@/contexts/alert-context';
 import { RippleBackground } from '@/components/ui/ripple-background';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
@@ -27,6 +27,7 @@ export default function WelcomeScreen() {
   const isDark = colorScheme === 'dark';
   const { setAccount } = useAccount();
   const { settings } = useSettings();
+  const { showConfirm } = useAlert();
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,10 +106,10 @@ export default function WelcomeScreen() {
   };
 
   const handleDeleteAccount = (accountId: string, accountName: string) => {
-    Alert.alert(
-      t.deleteTitle,
-      t.deleteMessage(accountName),
-      [
+    showConfirm({
+      title: t.deleteTitle,
+      message: t.deleteMessage(accountName),
+      buttons: [
         {
           text: t.cancel,
           style: 'cancel',
@@ -126,8 +127,8 @@ export default function WelcomeScreen() {
             }
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   if (loading) {

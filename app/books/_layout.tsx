@@ -31,12 +31,6 @@ export default function BooksLayout() {
     </TouchableOpacity>
   );
 
-  const AddButton = () => (
-    <TouchableOpacity onPress={() => router.push('/books/add')} style={{ marginRight: 8 }}>
-      <IconSymbol name="plus" size={24} color={isDark ? '#ECEDEE' : '#11181C'} />
-    </TouchableOpacity>
-  );
-
   return (
     <Stack
       screenOptions={{
@@ -52,7 +46,6 @@ export default function BooksLayout() {
         name="index"
         options={{
           title: t.books,
-          headerRight: () => <AddButton />,
         }}
       />
       <Stack.Screen

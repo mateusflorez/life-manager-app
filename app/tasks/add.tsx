@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
-  Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
@@ -16,25 +16,27 @@ import { useTasks } from '@/contexts/tasks-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { RippleBackground } from '@/components/ui/ripple-background';
 import {
   TaskType,
   t,
-  getTodayKey,
   generateTagSlug,
 } from '@/types/tasks';
+import { useAlert } from '@/contexts/alert-context';
 
 type TaskTypeOption = {
   type: TaskType;
   labelKey: 'todo' | 'daily' | 'weekly' | 'monthly';
   icon: string;
   hasDate: boolean;
+  gradientColors: [string, string];
 };
 
 const TASK_TYPES: TaskTypeOption[] = [
-  { type: 'todo', labelKey: 'todo', icon: 'checkmark.circle', hasDate: true },
-  { type: 'daily', labelKey: 'daily', icon: 'repeat', hasDate: false },
-  { type: 'weekly', labelKey: 'weekly', icon: 'calendar.badge.clock', hasDate: true },
-  { type: 'monthly', labelKey: 'monthly', icon: 'calendar', hasDate: true },
+  { type: 'todo', labelKey: 'todo', icon: 'checkmark.circle', hasDate: true, gradientColors: ['#6366F1', '#8B5CF6'] },
+  { type: 'daily', labelKey: 'daily', icon: 'repeat', hasDate: false, gradientColors: ['#10B981', '#059669'] },
+  { type: 'weekly', labelKey: 'weekly', icon: 'calendar.badge.clock', hasDate: true, gradientColors: ['#3B82F6', '#2563EB'] },
+  { type: 'monthly', labelKey: 'monthly', icon: 'calendar', hasDate: true, gradientColors: ['#F59E0B', '#D97706'] },
 ];
 
 export default function AddTaskScreen() {
@@ -54,6 +56,7 @@ export default function AddTaskScreen() {
   const [saving, setSaving] = useState(false);
 
   const lang = settings.language;
+  const { showToast } = useAlert();
 
   const selectedTypeOption = TASK_TYPES.find((t) => t.type === selectedType)!;
 
@@ -104,10 +107,10 @@ export default function AddTaskScreen() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert(
-        lang === 'pt' ? 'Erro' : 'Error',
-        t('enterTaskName', lang)
-      );
+      showToast({
+        message: t('enterTaskName', lang),
+        type: 'warning',
+      });
       return;
     }
 
@@ -129,10 +132,10 @@ export default function AddTaskScreen() {
       router.back();
     } catch (error) {
       console.error('Error creating task:', error);
-      Alert.alert(
-        lang === 'pt' ? 'Erro' : 'Error',
-        t('errorSaving', lang)
-      );
+      showToast({
+        message: t('errorSaving', lang),
+        type: 'error',
+      });
     } finally {
       setSaving(false);
     }
@@ -140,12 +143,37 @@ export default function AddTaskScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <RippleBackground isDark={isDark} rippleCount={6} />
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Task Type Selector */}
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: isDark ? '#999' : '#666' }]}>
-            {t('selectType', lang)}
-          </Text>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            },
+          ]}
+        >
+          <View style={styles.cardHeader}>
+            <LinearGradient
+              colors={selectedTypeOption.gradientColors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cardIconContainer}
+            >
+              <IconSymbol name="list.bullet" size={18} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {t('selectType', lang)}
+            </Text>
+          </View>
+
           <View style={styles.typeSelector}>
             {TASK_TYPES.map((typeOption) => (
               <TouchableOpacity
@@ -153,91 +181,124 @@ export default function AddTaskScreen() {
                 style={[
                   styles.typeButton,
                   {
-                    backgroundColor:
-                      selectedType === typeOption.type
-                        ? '#007AFF'
-                        : isDark
-                        ? '#333'
-                        : '#F5F5F5',
                     borderColor:
                       selectedType === typeOption.type
-                        ? '#007AFF'
+                        ? typeOption.gradientColors[0]
                         : isDark
-                        ? '#444'
-                        : '#E0E0E0',
+                        ? 'rgba(255, 255, 255, 0.1)'
+                        : 'rgba(0, 0, 0, 0.1)',
                   },
                 ]}
                 onPress={() => setSelectedType(typeOption.type)}
+                activeOpacity={0.8}
               >
-                <IconSymbol
-                  name={typeOption.icon as any}
-                  size={18}
-                  color={selectedType === typeOption.type ? '#fff' : isDark ? '#ECEDEE' : '#11181C'}
-                />
-                <Text
-                  style={[
-                    styles.typeButtonText,
-                    {
-                      color:
-                        selectedType === typeOption.type
-                          ? '#fff'
-                          : isDark
-                          ? '#ECEDEE'
-                          : '#11181C',
-                    },
-                  ]}
-                >
-                  {t(typeOption.labelKey, lang)}
-                </Text>
+                {selectedType === typeOption.type ? (
+                  <LinearGradient
+                    colors={typeOption.gradientColors}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.typeButtonGradient}
+                  >
+                    <IconSymbol name={typeOption.icon as any} size={18} color="#fff" />
+                    <Text style={styles.typeButtonTextSelected}>
+                      {t(typeOption.labelKey, lang)}
+                    </Text>
+                  </LinearGradient>
+                ) : (
+                  <View
+                    style={[
+                      styles.typeButtonInner,
+                      { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' },
+                    ]}
+                  >
+                    <IconSymbol
+                      name={typeOption.icon as any}
+                      size={18}
+                      color={isDark ? '#808080' : '#6B7280'}
+                    />
+                    <Text
+                      style={[
+                        styles.typeButtonText,
+                        { color: isDark ? '#808080' : '#6B7280' },
+                      ]}
+                    >
+                      {t(typeOption.labelKey, lang)}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
         {/* Task Name */}
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: isDark ? '#999' : '#666' }]}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            },
+          ]}
+        >
+          <Text style={[styles.label, { color: isDark ? '#808080' : '#6B7280' }]}>
             {t('taskName', lang)} *
           </Text>
           <TextInput
             style={[
               styles.input,
               {
-                backgroundColor: isDark ? '#333' : '#F5F5F5',
-                color: isDark ? '#ECEDEE' : '#11181C',
-                borderColor: isDark ? '#444' : '#E0E0E0',
+                backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+                color: isDark ? '#FFFFFF' : '#111827',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
               },
             ]}
             value={name}
             onChangeText={setName}
             placeholder={t('enterTaskName', lang)}
-            placeholderTextColor={isDark ? '#666' : '#999'}
+            placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
           />
         </View>
 
         {/* Date (not for daily tasks) */}
         {selectedTypeOption.hasDate && (
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: isDark ? '#999' : '#666' }]}>
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              },
+            ]}
+          >
+            <Text style={[styles.label, { color: isDark ? '#808080' : '#6B7280' }]}>
               {t('date', lang)} ({t('optional', lang)})
             </Text>
             <TouchableOpacity
               style={[
                 styles.pickerButton,
                 {
-                  backgroundColor: isDark ? '#333' : '#F5F5F5',
-                  borderColor: isDark ? '#444' : '#E0E0E0',
+                  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                 },
               ]}
               onPress={() => setShowDatePicker(true)}
+              activeOpacity={0.8}
             >
-              <IconSymbol name="calendar" size={20} color={isDark ? '#ECEDEE' : '#11181C'} />
-              <Text style={[styles.pickerButtonText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+              <LinearGradient
+                colors={['#3B82F6', '#2563EB']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.pickerIcon}
+              >
+                <IconSymbol name="calendar" size={16} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={[styles.pickerButtonText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                 {date ? formatDateForDisplay(date) : lang === 'pt' ? 'Selecionar data' : 'Select date'}
               </Text>
               {date && (
                 <TouchableOpacity onPress={() => setDate(null)} style={styles.clearButton}>
-                  <IconSymbol name="xmark.circle.fill" size={18} color={isDark ? '#666' : '#999'} />
+                  <IconSymbol name="xmark.circle.fill" size={20} color={isDark ? '#666' : '#9CA3AF'} />
                 </TouchableOpacity>
               )}
             </TouchableOpacity>
@@ -245,52 +306,78 @@ export default function AddTaskScreen() {
         )}
 
         {/* Time */}
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: isDark ? '#999' : '#666' }]}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            },
+          ]}
+        >
+          <Text style={[styles.label, { color: isDark ? '#808080' : '#6B7280' }]}>
             {t('time', lang)} ({t('optional', lang)})
           </Text>
           <TouchableOpacity
             style={[
               styles.pickerButton,
               {
-                backgroundColor: isDark ? '#333' : '#F5F5F5',
-                borderColor: isDark ? '#444' : '#E0E0E0',
+                backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
               },
             ]}
             onPress={() => setShowTimePicker(true)}
+            activeOpacity={0.8}
           >
-            <IconSymbol name="clock" size={20} color={isDark ? '#ECEDEE' : '#11181C'} />
-            <Text style={[styles.pickerButtonText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+            <LinearGradient
+              colors={['#8B5CF6', '#7C3AED']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.pickerIcon}
+            >
+              <IconSymbol name="clock" size={16} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.pickerButtonText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
               {time ? formatTimeForDisplay(time) : lang === 'pt' ? 'Selecionar hora' : 'Select time'}
             </Text>
             {time && (
               <TouchableOpacity onPress={() => setTime(null)} style={styles.clearButton}>
-                <IconSymbol name="xmark.circle.fill" size={18} color={isDark ? '#666' : '#999'} />
+                <IconSymbol name="xmark.circle.fill" size={20} color={isDark ? '#666' : '#9CA3AF'} />
               </TouchableOpacity>
             )}
           </TouchableOpacity>
         </View>
 
         {/* Tag */}
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: isDark ? '#999' : '#666' }]}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            },
+          ]}
+        >
+          <Text style={[styles.label, { color: isDark ? '#808080' : '#6B7280' }]}>
             {t('tag', lang)} ({t('optional', lang)})
           </Text>
           <View style={styles.tagInputContainer}>
-            <Text style={[styles.tagPrefix, { color: isDark ? '#666' : '#999' }]}>#</Text>
+            <View style={styles.tagPrefixContainer}>
+              <Text style={[styles.tagPrefix, { color: '#6366F1' }]}>#</Text>
+            </View>
             <TextInput
               style={[
                 styles.tagInput,
                 {
-                  backgroundColor: isDark ? '#333' : '#F5F5F5',
-                  color: isDark ? '#ECEDEE' : '#11181C',
-                  borderColor: isDark ? '#444' : '#E0E0E0',
+                  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+                  color: isDark ? '#FFFFFF' : '#111827',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                 },
               ]}
               value={tag}
               onChangeText={setTag}
               placeholder={lang === 'pt' ? 'trabalho, pessoal, urgente...' : 'work, personal, urgent...'}
-              placeholderTextColor={isDark ? '#666' : '#999'}
+              placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
               autoCapitalize="none"
             />
           </View>
@@ -299,10 +386,14 @@ export default function AddTaskScreen() {
         {/* Buttons */}
         <View style={styles.buttons}>
           <TouchableOpacity
-            style={[styles.cancelButton, { borderColor: isDark ? '#444' : '#E0E0E0' }]}
+            style={[
+              styles.cancelButton,
+              { borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' },
+            ]}
             onPress={() => router.back()}
+            activeOpacity={0.8}
           >
-            <Text style={[styles.cancelButtonText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+            <Text style={[styles.cancelButtonText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
               {t('cancel', lang)}
             </Text>
           </TouchableOpacity>
@@ -310,10 +401,18 @@ export default function AddTaskScreen() {
             style={[styles.saveButton, { opacity: name.trim() && !saving ? 1 : 0.5 }]}
             onPress={handleSave}
             disabled={!name.trim() || saving}
+            activeOpacity={0.8}
           >
-            <Text style={styles.saveButtonText}>
-              {saving ? '...' : t('create', lang)}
-            </Text>
+            <LinearGradient
+              colors={selectedTypeOption.gradientColors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.saveButtonGradient}
+            >
+              <Text style={styles.saveButtonText}>
+                {saving ? '...' : t('create', lang)}
+              </Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -351,11 +450,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
-    gap: 20,
+    padding: 20,
+    gap: 16,
+    paddingBottom: 40,
   },
-  section: {
-    gap: 8,
+  card: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 18,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  cardIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: '600',
   },
   label: {
     fontSize: 14,
@@ -364,38 +488,65 @@ const styles = StyleSheet.create({
   typeSelector: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   typeButton: {
+    flex: 1,
+    minWidth: '45%',
+    borderRadius: 14,
+    borderWidth: 2,
+    overflow: 'hidden',
+  },
+  typeButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  typeButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   typeButtonText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  typeButtonTextSelected: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 14,
+    padding: 14,
     fontSize: 16,
   },
   pickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 14,
     padding: 12,
+  },
+  pickerIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   pickerButtonText: {
     flex: 1,
     fontSize: 16,
+    fontWeight: '500',
   },
   clearButton: {
     padding: 4,
@@ -403,17 +554,25 @@ const styles = StyleSheet.create({
   tagInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+  },
+  tagPrefixContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   tagPrefix: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginRight: 4,
+    fontSize: 18,
+    fontWeight: '700',
   },
   tagInput: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 14,
+    padding: 14,
     fontSize: 16,
   },
   buttons: {
@@ -423,20 +582,22 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    padding: 14,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   saveButton: {
     flex: 1,
-    backgroundColor: '#007AFF',
-    padding: 14,
-    borderRadius: 8,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  saveButtonGradient: {
+    padding: 16,
     alignItems: 'center',
   },
   saveButtonText: {

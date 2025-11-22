@@ -11,6 +11,7 @@ import {
   RefreshControl,
   Dimensions,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { LineChart } from 'react-native-chart-kit';
 import { useRouter } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
@@ -18,6 +19,7 @@ import { useInvestment } from '@/contexts/investment-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { RippleBackground } from '@/components/ui/ripple-background';
 import { CurrencyInput, currencyToFloat, floatToCurrency } from '@/components/ui/currency-input';
 import {
   t,
@@ -131,13 +133,13 @@ export default function InvestmentsOverviewScreen() {
   };
 
   const chartConfig = {
-    backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-    backgroundGradientFrom: isDark ? '#1A1A1A' : '#F9F9F9',
-    backgroundGradientTo: isDark ? '#1A1A1A' : '#F9F9F9',
+    backgroundColor: 'transparent',
+    backgroundGradientFrom: 'transparent',
+    backgroundGradientTo: 'transparent',
     decimalPlaces: 0,
     color: (opacity = 1) =>
       isDark ? `rgba(236, 237, 238, ${opacity})` : `rgba(17, 24, 28, ${opacity})`,
-    labelColor: () => (isDark ? '#999' : '#666'),
+    labelColor: () => (isDark ? '#808080' : '#6B7280'),
     style: {
       borderRadius: 16,
     },
@@ -154,8 +156,16 @@ export default function InvestmentsOverviewScreen() {
   if (loading) {
     return (
       <ThemedView style={styles.container}>
+        <RippleBackground isDark={isDark} rippleCount={6} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <LinearGradient
+            colors={['#6366F1', '#8B5CF6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.loadingGradient}
+          >
+            <ActivityIndicator size="large" color="#FFFFFF" />
+          </LinearGradient>
         </View>
       </ThemedView>
     );
@@ -163,31 +173,46 @@ export default function InvestmentsOverviewScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <RippleBackground isDark={isDark} rippleCount={6} />
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         {investments.length === 0 ? (
           <View style={styles.emptyState}>
-            <IconSymbol
-              name="chart.line.uptrend.xyaxis"
-              size={48}
-              color={isDark ? '#666' : '#999'}
-            />
-            <Text style={[styles.emptyTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+            <LinearGradient
+              colors={['#6366F1', '#8B5CF6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.emptyIconContainer}
+            >
+              <IconSymbol name="chart.line.uptrend.xyaxis" size={40} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.emptyTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
               {t('noInvestments', lang)}
             </Text>
-            <Text style={[styles.emptyDesc, { color: isDark ? '#999' : '#666' }]}>
+            <Text style={[styles.emptyDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
               {t('createFirstInvestment', lang)}
             </Text>
             <TouchableOpacity
               style={styles.createButton}
               onPress={() => setShowNewModal(true)}
+              activeOpacity={0.8}
             >
-              <Text style={styles.createButtonText}>{t('newInvestment', lang)}</Text>
+              <LinearGradient
+                colors={['#6366F1', '#8B5CF6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.createButtonGradient}
+              >
+                <IconSymbol name="plus" size={18} color="#FFFFFF" />
+                <Text style={styles.createButtonText}>{t('newInvestment', lang)}</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         ) : (
@@ -197,17 +222,29 @@ export default function InvestmentsOverviewScreen() {
               style={[
                 styles.summaryCard,
                 {
-                  backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-                  borderColor: isDark ? '#333' : '#E0E0E0',
+                  backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
                 },
               ]}
             >
-              <Text style={[styles.summaryLabel, { color: isDark ? '#999' : '#666' }]}>
-                {t('totalPortfolio', lang)}
-              </Text>
-              <Text style={[styles.portfolioValue, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+              <View style={styles.cardHeader}>
+                <LinearGradient
+                  colors={['#6366F1', '#8B5CF6']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.cardIconContainer}
+                >
+                  <IconSymbol name="chart.pie.fill" size={18} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t('totalPortfolio', lang)}
+                </Text>
+              </View>
+
+              <Text style={[styles.portfolioValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                 {formatCurrency(portfolioTotal)}
               </Text>
+
               {monthlyChange.amount !== 0 && (
                 <View style={styles.changeRow}>
                   <Text
@@ -229,7 +266,7 @@ export default function InvestmentsOverviewScreen() {
                       ({formatPercentChange(monthlyChange.percentChange)})
                     </Text>
                   )}
-                  <Text style={[styles.changeLabel, { color: isDark ? '#999' : '#666' }]}>
+                  <Text style={[styles.changeLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
                     {t('thisMonth', lang)}
                   </Text>
                 </View>
@@ -242,18 +279,28 @@ export default function InvestmentsOverviewScreen() {
                 style={[
                   styles.chartCard,
                   {
-                    backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-                    borderColor: isDark ? '#333' : '#E0E0E0',
+                    backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
                   },
                 ]}
               >
-                <Text style={[styles.cardTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                  {t('contributionTrend', lang)}
-                </Text>
+                <View style={styles.cardHeader}>
+                  <LinearGradient
+                    colors={['#3B82F6', '#2563EB']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.cardIconContainer}
+                  >
+                    <IconSymbol name="chart.line.uptrend.xyaxis" size={18} color="#FFFFFF" />
+                  </LinearGradient>
+                  <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                    {t('contributionTrend', lang)}
+                  </Text>
+                </View>
 
                 <LineChart
                   data={lineChartData}
-                  width={screenWidth - 64}
+                  width={screenWidth - 72}
                   height={200}
                   chartConfig={chartConfig}
                   bezier
@@ -270,7 +317,7 @@ export default function InvestmentsOverviewScreen() {
                   {chartData.datasets.map((ds, index) => (
                     <View key={index} style={styles.legendItem}>
                       <View style={[styles.legendDot, { backgroundColor: ds.color }]} />
-                      <Text style={[styles.legendText, { color: isDark ? '#999' : '#666' }]}>
+                      <Text style={[styles.legendText, { color: isDark ? '#808080' : '#6B7280' }]}>
                         {ds.name}
                       </Text>
                     </View>
@@ -282,14 +329,22 @@ export default function InvestmentsOverviewScreen() {
             {/* Investment Cards */}
             <View style={styles.investmentsSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                   {t('investments', lang)}
                 </Text>
                 <TouchableOpacity
                   style={styles.addButton}
                   onPress={() => setShowNewModal(true)}
+                  activeOpacity={0.8}
                 >
-                  <IconSymbol name="plus" size={20} color="#007AFF" />
+                  <LinearGradient
+                    colors={['#6366F1', '#8B5CF6']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.addButtonGradient}
+                  >
+                    <IconSymbol name="plus" size={18} color="#FFFFFF" />
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
 
@@ -299,29 +354,37 @@ export default function InvestmentsOverviewScreen() {
                   style={[
                     styles.investmentCard,
                     {
-                      backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-                      borderColor: isDark ? '#333' : '#E0E0E0',
-                      borderLeftColor: investment.color || '#36A2EB',
+                      backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
                     },
                   ]}
                   onPress={() => handleInvestmentPress(investment)}
+                  activeOpacity={0.8}
                 >
                   <View style={styles.investmentHeader}>
-                    <Text
-                      style={[styles.investmentName, { color: isDark ? '#ECEDEE' : '#11181C' }]}
-                    >
-                      {investment.name}
-                    </Text>
-                    <IconSymbol name="chevron.right" size={16} color={isDark ? '#666' : '#999'} />
+                    <View style={styles.investmentNameRow}>
+                      <View
+                        style={[
+                          styles.investmentColorDot,
+                          { backgroundColor: investment.color || '#6366F1' },
+                        ]}
+                      />
+                      <Text
+                        style={[styles.investmentName, { color: isDark ? '#FFFFFF' : '#111827' }]}
+                      >
+                        {investment.name}
+                      </Text>
+                    </View>
+                    <IconSymbol name="chevron.right" size={16} color={isDark ? '#808080' : '#6B7280'} />
                   </View>
 
-                  <Text style={[styles.investmentTotal, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                  <Text style={[styles.investmentTotal, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                     {formatCurrency(investment.total)}
                   </Text>
 
                   {investment.lastMovement && (
                     <View style={styles.lastMovementRow}>
-                      <Text style={[styles.lastMovementLabel, { color: isDark ? '#999' : '#666' }]}>
+                      <Text style={[styles.lastMovementLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
                         {t('lastContribution', lang)}:
                       </Text>
                       <Text
@@ -355,7 +418,7 @@ export default function InvestmentsOverviewScreen() {
                   )}
 
                   {investment.lastMovement && (
-                    <Text style={[styles.lastMovementDate, { color: isDark ? '#666' : '#999' }]}>
+                    <Text style={[styles.lastMovementDate, { color: isDark ? '#666' : '#9CA3AF' }]}>
                       {t('on', lang)} {formatDate(investment.lastMovement.date, lang)}
                     </Text>
                   )}
@@ -375,55 +438,55 @@ export default function InvestmentsOverviewScreen() {
       >
         <View style={styles.modalOverlay}>
           <View
-            style={[styles.modalContent, { backgroundColor: isDark ? '#1A1A1A' : '#fff' }]}
+            style={[styles.modalContent, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}
           >
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+              <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                 {t('newInvestment', lang)}
               </Text>
               <TouchableOpacity onPress={() => setShowNewModal(false)}>
-                <IconSymbol name="xmark" size={24} color={isDark ? '#999' : '#666'} />
+                <IconSymbol name="xmark" size={24} color={isDark ? '#808080' : '#6B7280'} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.form}>
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
+              <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
                 {t('investmentName', lang)}
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   {
-                    backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    color: isDark ? '#ECEDEE' : '#11181C',
-                    borderColor: isDark ? '#444' : '#E0E0E0',
+                    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+                    color: isDark ? '#FFFFFF' : '#111827',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                   },
                 ]}
                 value={newName}
                 onChangeText={setNewName}
                 placeholder={t('investmentName', lang)}
-                placeholderTextColor={isDark ? '#666' : '#999'}
+                placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
               />
 
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
+              <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
                 {t('description', lang)}
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   {
-                    backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    color: isDark ? '#ECEDEE' : '#11181C',
-                    borderColor: isDark ? '#444' : '#E0E0E0',
+                    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+                    color: isDark ? '#FFFFFF' : '#111827',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                   },
                 ]}
                 value={newDesc}
                 onChangeText={setNewDesc}
                 placeholder={t('description', lang)}
-                placeholderTextColor={isDark ? '#666' : '#999'}
+                placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
               />
 
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
+              <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
                 {t('initialValue', lang)}
               </Text>
               <CurrencyInput
@@ -433,21 +496,25 @@ export default function InvestmentsOverviewScreen() {
                 style={[
                   styles.input,
                   {
-                    backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    color: isDark ? '#ECEDEE' : '#11181C',
-                    borderColor: isDark ? '#444' : '#E0E0E0',
+                    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+                    color: isDark ? '#FFFFFF' : '#111827',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                   },
                 ]}
-                placeholderTextColor={isDark ? '#666' : '#999'}
+                placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
               />
 
               <View style={styles.formButtons}>
                 <TouchableOpacity
-                  style={[styles.cancelButton, { borderColor: isDark ? '#444' : '#E0E0E0' }]}
+                  style={[
+                    styles.cancelButton,
+                    { borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' },
+                  ]}
                   onPress={() => setShowNewModal(false)}
+                  activeOpacity={0.8}
                 >
                   <Text
-                    style={[styles.cancelButtonText, { color: isDark ? '#ECEDEE' : '#11181C' }]}
+                    style={[styles.cancelButtonText, { color: isDark ? '#FFFFFF' : '#111827' }]}
                   >
                     {t('cancel', lang)}
                   </Text>
@@ -459,10 +526,18 @@ export default function InvestmentsOverviewScreen() {
                   ]}
                   onPress={handleCreateInvestment}
                   disabled={!newName.trim() || creating}
+                  activeOpacity={0.8}
                 >
-                  <Text style={styles.submitButtonText}>
-                    {creating ? t('saving', lang) : t('create', lang)}
-                  </Text>
+                  <LinearGradient
+                    colors={['#6366F1', '#8B5CF6']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.submitButtonGradient}
+                  >
+                    <Text style={styles.submitButtonText}>
+                      {creating ? t('saving', lang) : t('create', lang)}
+                    </Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
             </View>
@@ -482,35 +557,67 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: 20,
+    paddingTop: 20,
     gap: 16,
-    paddingBottom: 32,
+    paddingBottom: 40,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 48,
-    gap: 12,
+    paddingVertical: 60,
+    gap: 16,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     marginTop: 8,
   },
   emptyDesc: {
-    fontSize: 14,
+    fontSize: 15,
     textAlign: 'center',
+    lineHeight: 22,
+    paddingHorizontal: 20,
   },
   createButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
     marginTop: 8,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  createButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
   },
   createButtonText: {
     color: '#fff',
@@ -518,18 +625,39 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   summaryCard: {
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 16,
-    gap: 8,
+    padding: 20,
+    gap: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    alignSelf: 'flex-start',
+  },
+  cardIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  summaryLabel: {
-    fontSize: 14,
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: '600',
   },
   portfolioValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 36,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    marginTop: 8,
   },
   changeRow: {
     flexDirection: 'row',
@@ -538,29 +666,30 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   changeAmount: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   changePercent: {
-    fontSize: 14,
+    fontSize: 15,
+    fontWeight: '500',
   },
   changeLabel: {
     fontSize: 14,
   },
   chartCard: {
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 16,
-    gap: 12,
+    padding: 20,
+    gap: 16,
     alignItems: 'center',
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    alignSelf: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   lineChart: {
-    borderRadius: 8,
+    borderRadius: 16,
     marginTop: 8,
   },
   legendContainer: {
@@ -568,7 +697,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     width: '100%',
     gap: 8,
-    marginTop: 12,
+    marginTop: 8,
     paddingHorizontal: 8,
   },
   legendItem: {
@@ -577,12 +706,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   legendDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   legendText: {
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '500',
     flexShrink: 1,
   },
   investmentsSection: {
@@ -592,33 +722,61 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 4,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
   },
   addButton: {
-    padding: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  addButtonGradient: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   investmentCard: {
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
-    borderLeftWidth: 4,
-    padding: 16,
-    gap: 8,
+    padding: 20,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   investmentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  investmentNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  investmentColorDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
   investmentName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
   },
   investmentTotal: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   lastMovementRow: {
     flexDirection: 'row',
@@ -628,16 +786,19 @@ const styles = StyleSheet.create({
   },
   lastMovementLabel: {
     fontSize: 13,
+    fontWeight: '500',
   },
   lastMovementAmount: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
   },
   lastMovementPercent: {
     fontSize: 13,
+    fontWeight: '500',
   },
   lastMovementDate: {
     fontSize: 12,
+    fontWeight: '500',
   },
   modalOverlay: {
     flex: 1,
@@ -645,8 +806,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 20,
     maxHeight: '80%',
   },
@@ -657,8 +818,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
   },
   form: {
     gap: 12,
@@ -669,8 +830,8 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 14,
+    padding: 14,
     fontSize: 16,
   },
   formButtons: {
@@ -680,20 +841,22 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    padding: 14,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   submitButton: {
     flex: 1,
-    backgroundColor: '#007AFF',
-    padding: 14,
-    borderRadius: 8,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  submitButtonGradient: {
+    padding: 16,
     alignItems: 'center',
   },
   submitButtonText: {

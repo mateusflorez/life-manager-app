@@ -11,12 +11,14 @@ import {
   RefreshControl,
   Dimensions,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { PieChart, LineChart } from 'react-native-chart-kit';
 import { ThemedView } from '@/components/themed-view';
 import { useFinance } from '@/contexts/finance-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { RippleBackground } from '@/components/ui/ripple-background';
 import { BankAccount, getMonthName, translateCategory } from '@/types/finance';
 
 const screenWidth = Dimensions.get('window').width;
@@ -137,22 +139,18 @@ export default function FinanceOverviewScreen() {
     const month = now.getMonth() + 1;
 
     try {
-      // Ensure current month exists and get summary
       const { financeMonth } = await ensureMonth(year, month);
       const monthSum = await getMonthSummary(financeMonth.id);
       setCurrentMonthSummary(monthSum);
 
-      // Get entries for pie chart
       const entries = await getFinanceEntries(financeMonth.id);
       const expenseEntries = entries.filter((e) => e.type === 'expense');
 
-      // Group by category
       const categoryTotals: Record<string, number> = {};
       expenseEntries.forEach((entry) => {
         categoryTotals[entry.category] = (categoryTotals[entry.category] || 0) + entry.amount;
       });
 
-      // Convert to pie chart data
       const pieData = Object.entries(categoryTotals)
         .map(([name, amount], index) => ({
           name,
@@ -164,7 +162,6 @@ export default function FinanceOverviewScreen() {
 
       setExpensesByCategory(pieData);
 
-      // Get year summary
       const yearSum = await getYearSummary(year);
       setYearSummary(yearSum);
     } catch (error) {
@@ -204,7 +201,6 @@ export default function FinanceOverviewScreen() {
   const currentMonthName = getMonthName(now.getMonth() + 1, settings.language);
   const currentYear = now.getFullYear();
 
-  // Prepare line chart data
   const monthLabels = yearSummary.months.map((m) =>
     getMonthName(m.month, settings.language).substring(0, 3)
   );
@@ -232,12 +228,12 @@ export default function FinanceOverviewScreen() {
   };
 
   const chartConfig = {
-    backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-    backgroundGradientFrom: isDark ? '#1A1A1A' : '#F9F9F9',
-    backgroundGradientTo: isDark ? '#1A1A1A' : '#F9F9F9',
+    backgroundColor: 'transparent',
+    backgroundGradientFrom: 'transparent',
+    backgroundGradientTo: 'transparent',
     decimalPlaces: 0,
     color: (opacity = 1) => (isDark ? `rgba(236, 237, 238, ${opacity})` : `rgba(17, 24, 28, ${opacity})`),
-    labelColor: () => (isDark ? '#999' : '#666'),
+    labelColor: () => (isDark ? '#808080' : '#6B7280'),
     style: {
       borderRadius: 16,
     },
@@ -251,8 +247,16 @@ export default function FinanceOverviewScreen() {
   if (loading) {
     return (
       <ThemedView style={styles.container}>
+        <RippleBackground isDark={isDark} rippleCount={6} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <LinearGradient
+            colors={['#10B981', '#059669']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.loadingGradient}
+          >
+            <ActivityIndicator size="large" color="#FFFFFF" />
+          </LinearGradient>
         </View>
       </ThemedView>
     );
@@ -260,9 +264,12 @@ export default function FinanceOverviewScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <RippleBackground isDark={isDark} rippleCount={6} />
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -272,37 +279,62 @@ export default function FinanceOverviewScreen() {
           style={[
             styles.accountSelector,
             {
-              backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-              borderColor: isDark ? '#333' : '#E0E0E0',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
             },
           ]}
           onPress={() => setShowAccountModal(true)}
+          activeOpacity={0.8}
         >
+          <LinearGradient
+            colors={['#10B981', '#059669']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.accountIconContainer}
+          >
+            <IconSymbol name="building.columns" size={20} color="#FFFFFF" />
+          </LinearGradient>
           <View style={styles.accountInfo}>
-            <Text style={[styles.accountLabel, { color: isDark ? '#999' : '#666' }]}>
+            <Text style={[styles.accountLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
               {t.account}
             </Text>
-            <Text style={[styles.accountName, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+            <Text style={[styles.accountName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
               {activeBankAccount?.name || t.selectAccount}
             </Text>
           </View>
-          <IconSymbol name="chevron.down" size={20} color={isDark ? '#999' : '#666'} />
+          <IconSymbol name="chevron.down" size={20} color={isDark ? '#808080' : '#6B7280'} />
         </TouchableOpacity>
 
         {!activeBankAccount ? (
           <View style={styles.emptyState}>
-            <IconSymbol name="building.columns" size={48} color={isDark ? '#666' : '#999'} />
-            <Text style={[styles.emptyTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+            <LinearGradient
+              colors={['#10B981', '#059669']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.emptyIconContainer}
+            >
+              <IconSymbol name="building.columns" size={40} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.emptyTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
               {t.noAccounts}
             </Text>
-            <Text style={[styles.emptyDesc, { color: isDark ? '#999' : '#666' }]}>
+            <Text style={[styles.emptyDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
               {t.createFirst}
             </Text>
             <TouchableOpacity
               style={styles.createButton}
               onPress={() => setShowNewAccountModal(true)}
+              activeOpacity={0.8}
             >
-              <Text style={styles.createButtonText}>{t.createAccount}</Text>
+              <LinearGradient
+                colors={['#10B981', '#059669']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.createButtonGradient}
+              >
+                <IconSymbol name="plus" size={18} color="#FFFFFF" />
+                <Text style={styles.createButtonText}>{t.createAccount}</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         ) : (
@@ -312,18 +344,28 @@ export default function FinanceOverviewScreen() {
               style={[
                 styles.summaryCard,
                 {
-                  backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-                  borderColor: isDark ? '#333' : '#E0E0E0',
+                  backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
                 },
               ]}
             >
-              <Text style={[styles.cardTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                {t.currentMonth} - {currentMonthName} {currentYear}
-              </Text>
+              <View style={styles.cardHeader}>
+                <LinearGradient
+                  colors={['#6366F1', '#8B5CF6']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.cardIconContainer}
+                >
+                  <IconSymbol name="calendar" size={18} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.currentMonth} - {currentMonthName} {currentYear}
+                </Text>
+              </View>
 
               <View style={styles.summaryRow}>
                 <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { color: isDark ? '#999' : '#666' }]}>
+                  <Text style={[styles.summaryLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
                     {t.income}
                   </Text>
                   <Text style={[styles.summaryValue, { color: '#10B981' }]}>
@@ -332,7 +374,7 @@ export default function FinanceOverviewScreen() {
                 </View>
 
                 <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { color: isDark ? '#999' : '#666' }]}>
+                  <Text style={[styles.summaryLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
                     {t.expenses}
                   </Text>
                   <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
@@ -341,8 +383,8 @@ export default function FinanceOverviewScreen() {
                 </View>
               </View>
 
-              <View style={styles.balanceContainer}>
-                <Text style={[styles.summaryLabel, { color: isDark ? '#999' : '#666' }]}>
+              <View style={[styles.balanceContainer, { borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                <Text style={[styles.summaryLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
                   {t.balance}
                 </Text>
                 <Text
@@ -363,17 +405,27 @@ export default function FinanceOverviewScreen() {
               style={[
                 styles.chartCard,
                 {
-                  backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-                  borderColor: isDark ? '#333' : '#E0E0E0',
+                  backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
                 },
               ]}
             >
-              <Text style={[styles.cardTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                {t.expensesByCategory}
-              </Text>
+              <View style={styles.cardHeader}>
+                <LinearGradient
+                  colors={['#F59E0B', '#D97706']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.cardIconContainer}
+                >
+                  <IconSymbol name="chart.pie.fill" size={18} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.expensesByCategory}
+                </Text>
+              </View>
 
               {expensesByCategory.length === 0 ? (
-                <Text style={[styles.noData, { color: isDark ? '#666' : '#999' }]}>
+                <Text style={[styles.noData, { color: isDark ? '#666' : '#9CA3AF' }]}>
                   {t.noData}
                 </Text>
               ) : (
@@ -415,23 +467,33 @@ export default function FinanceOverviewScreen() {
               style={[
                 styles.chartCard,
                 {
-                  backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-                  borderColor: isDark ? '#333' : '#E0E0E0',
+                  backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
                 },
               ]}
             >
-              <Text style={[styles.cardTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                {t.yearlyTrend} {currentYear}
-              </Text>
+              <View style={styles.cardHeader}>
+                <LinearGradient
+                  colors={['#3B82F6', '#2563EB']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.cardIconContainer}
+                >
+                  <IconSymbol name="chart.line.uptrend.xyaxis" size={18} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.yearlyTrend} {currentYear}
+                </Text>
+              </View>
 
               {yearSummary.months.length === 0 ? (
-                <Text style={[styles.noData, { color: isDark ? '#666' : '#999' }]}>
+                <Text style={[styles.noData, { color: isDark ? '#666' : '#9CA3AF' }]}>
                   {t.noData}
                 </Text>
               ) : (
                 <LineChart
                   data={lineChartData}
-                  width={screenWidth - 64}
+                  width={screenWidth - 72}
                   height={220}
                   chartConfig={chartConfig}
                   bezier
@@ -444,24 +506,23 @@ export default function FinanceOverviewScreen() {
                 />
               )}
 
-              {/* Legend */}
               {yearSummary.months.length > 0 && (
                 <View style={styles.legendContainer}>
                   <View style={styles.legendItem}>
                     <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
-                    <Text style={[styles.legendText, { color: isDark ? '#999' : '#666' }]}>
+                    <Text style={[styles.legendText, { color: isDark ? '#808080' : '#6B7280' }]}>
                       {t.income}
                     </Text>
                   </View>
                   <View style={styles.legendItem}>
                     <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
-                    <Text style={[styles.legendText, { color: isDark ? '#999' : '#666' }]}>
+                    <Text style={[styles.legendText, { color: isDark ? '#808080' : '#6B7280' }]}>
                       {t.expenses}
                     </Text>
                   </View>
                   <View style={styles.legendItem}>
                     <View style={[styles.legendDot, { backgroundColor: '#3B82F6' }]} />
-                    <Text style={[styles.legendText, { color: isDark ? '#999' : '#666' }]}>
+                    <Text style={[styles.legendText, { color: isDark ? '#808080' : '#6B7280' }]}>
                       {t.balance}
                     </Text>
                   </View>
@@ -474,24 +535,34 @@ export default function FinanceOverviewScreen() {
               style={[
                 styles.summaryCard,
                 {
-                  backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-                  borderColor: isDark ? '#333' : '#E0E0E0',
+                  backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
                 },
               ]}
             >
-              <Text style={[styles.cardTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                {t.yearSummary} {currentYear}
-              </Text>
+              <View style={styles.cardHeader}>
+                <LinearGradient
+                  colors={['#8B5CF6', '#7C3AED']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.cardIconContainer}
+                >
+                  <IconSymbol name="chart.bar.fill" size={18} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.yearSummary} {currentYear}
+                </Text>
+              </View>
 
               {yearSummary.months.length === 0 ? (
-                <Text style={[styles.noData, { color: isDark ? '#666' : '#999' }]}>
+                <Text style={[styles.noData, { color: isDark ? '#666' : '#9CA3AF' }]}>
                   {t.noData}
                 </Text>
               ) : (
                 <>
                   <View style={styles.summaryRow}>
                     <View style={styles.summaryItem}>
-                      <Text style={[styles.summaryLabel, { color: isDark ? '#999' : '#666' }]}>
+                      <Text style={[styles.summaryLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
                         {t.income}
                       </Text>
                       <Text style={[styles.summaryValue, { color: '#10B981' }]}>
@@ -500,7 +571,7 @@ export default function FinanceOverviewScreen() {
                     </View>
 
                     <View style={styles.summaryItem}>
-                      <Text style={[styles.summaryLabel, { color: isDark ? '#999' : '#666' }]}>
+                      <Text style={[styles.summaryLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
                         {t.expenses}
                       </Text>
                       <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
@@ -509,8 +580,8 @@ export default function FinanceOverviewScreen() {
                     </View>
                   </View>
 
-                  <View style={styles.balanceContainer}>
-                    <Text style={[styles.summaryLabel, { color: isDark ? '#999' : '#666' }]}>
+                  <View style={[styles.balanceContainer, { borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                    <Text style={[styles.summaryLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
                       {t.balance}
                     </Text>
                     <Text
@@ -542,15 +613,15 @@ export default function FinanceOverviewScreen() {
           <View
             style={[
               styles.modalContent,
-              { backgroundColor: isDark ? '#1A1A1A' : '#fff' },
+              { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' },
             ]}
           >
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+              <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                 {t.selectAccount}
               </Text>
               <TouchableOpacity onPress={() => setShowAccountModal(false)}>
-                <IconSymbol name="xmark" size={24} color={isDark ? '#999' : '#666'} />
+                <IconSymbol name="xmark" size={24} color={isDark ? '#808080' : '#6B7280'} />
               </TouchableOpacity>
             </View>
 
@@ -564,33 +635,39 @@ export default function FinanceOverviewScreen() {
                       backgroundColor:
                         activeBankAccount?.id === account.id
                           ? isDark
-                            ? '#333'
-                            : '#E8F4FD'
+                            ? 'rgba(99, 102, 241, 0.15)'
+                            : 'rgba(99, 102, 241, 0.1)'
                           : 'transparent',
-                      borderColor: isDark ? '#333' : '#E0E0E0',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
                     },
                   ]}
                   onPress={() => handleSelectAccount(account)}
+                  activeOpacity={0.8}
                 >
-                  <View style={[styles.accountAvatar, { backgroundColor: '#10B981' }]}>
+                  <LinearGradient
+                    colors={['#10B981', '#059669']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.accountAvatar}
+                  >
                     <Text style={styles.accountAvatarText}>
                       {account.name.charAt(0).toUpperCase()}
                     </Text>
-                  </View>
+                  </LinearGradient>
                   <View style={styles.accountItemInfo}>
                     <Text
-                      style={[styles.accountItemName, { color: isDark ? '#ECEDEE' : '#11181C' }]}
+                      style={[styles.accountItemName, { color: isDark ? '#FFFFFF' : '#111827' }]}
                     >
                       {account.name}
                     </Text>
                     {account.description && (
-                      <Text style={[styles.accountItemDesc, { color: isDark ? '#999' : '#666' }]}>
+                      <Text style={[styles.accountItemDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
                         {account.description}
                       </Text>
                     )}
                   </View>
                   {activeBankAccount?.id === account.id && (
-                    <IconSymbol name="checkmark" size={20} color="#007AFF" />
+                    <IconSymbol name="checkmark.circle.fill" size={20} color="#6366F1" />
                   )}
                 </TouchableOpacity>
               ))}
@@ -602,9 +679,17 @@ export default function FinanceOverviewScreen() {
                 setShowAccountModal(false);
                 setShowNewAccountModal(true);
               }}
+              activeOpacity={0.8}
             >
-              <IconSymbol name="plus.circle.fill" size={24} color="#007AFF" />
-              <Text style={styles.newAccountButtonText}>{t.newAccount}</Text>
+              <LinearGradient
+                colors={['#6366F1', '#8B5CF6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.newAccountButtonGradient}
+              >
+                <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
+                <Text style={styles.newAccountButtonText}>{t.newAccount}</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
@@ -621,61 +706,67 @@ export default function FinanceOverviewScreen() {
           <View
             style={[
               styles.modalContent,
-              { backgroundColor: isDark ? '#1A1A1A' : '#fff' },
+              { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' },
             ]}
           >
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+              <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                 {t.newAccount}
               </Text>
               <TouchableOpacity onPress={() => setShowNewAccountModal(false)}>
-                <IconSymbol name="xmark" size={24} color={isDark ? '#999' : '#666'} />
+                <IconSymbol name="xmark" size={24} color={isDark ? '#808080' : '#6B7280'} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.form}>
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
+              <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
                 {t.accountName}
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   {
-                    backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    color: isDark ? '#ECEDEE' : '#11181C',
-                    borderColor: isDark ? '#444' : '#E0E0E0',
+                    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+                    color: isDark ? '#FFFFFF' : '#111827',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                   },
                 ]}
                 value={newAccountName}
                 onChangeText={setNewAccountName}
                 placeholder={t.accountName}
-                placeholderTextColor={isDark ? '#666' : '#999'}
+                placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
               />
 
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
+              <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
                 {t.description}
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   {
-                    backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    color: isDark ? '#ECEDEE' : '#11181C',
-                    borderColor: isDark ? '#444' : '#E0E0E0',
+                    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+                    color: isDark ? '#FFFFFF' : '#111827',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                   },
                 ]}
                 value={newAccountDesc}
                 onChangeText={setNewAccountDesc}
                 placeholder={t.description}
-                placeholderTextColor={isDark ? '#666' : '#999'}
+                placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
               />
 
               <View style={styles.formButtons}>
                 <TouchableOpacity
-                  style={[styles.cancelButton, { borderColor: isDark ? '#444' : '#E0E0E0' }]}
+                  style={[
+                    styles.cancelButton,
+                    {
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                    },
+                  ]}
                   onPress={() => setShowNewAccountModal(false)}
+                  activeOpacity={0.8}
                 >
-                  <Text style={[styles.cancelButtonText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                  <Text style={[styles.cancelButtonText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                     {t.cancel}
                   </Text>
                 </TouchableOpacity>
@@ -686,8 +777,16 @@ export default function FinanceOverviewScreen() {
                   ]}
                   onPress={handleCreateAccount}
                   disabled={!newAccountName.trim()}
+                  activeOpacity={0.8}
                 >
-                  <Text style={styles.submitButtonText}>{t.create}</Text>
+                  <LinearGradient
+                    colors={['#10B981', '#059669']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.submitButtonGradient}
+                  >
+                    <Text style={styles.submitButtonText}>{t.create}</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
             </View>
@@ -707,53 +806,99 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: 20,
+    paddingTop: 20,
     gap: 16,
-    paddingBottom: 32,
+    paddingBottom: 40,
   },
   accountSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  accountIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   accountInfo: {
-    gap: 4,
+    flex: 1,
+    gap: 2,
   },
   accountLabel: {
     fontSize: 12,
+    fontWeight: '500',
   },
   accountName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 48,
-    gap: 12,
+    paddingVertical: 60,
+    gap: 16,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     marginTop: 8,
   },
   emptyDesc: {
-    fontSize: 14,
+    fontSize: 15,
     textAlign: 'center',
+    lineHeight: 22,
+    paddingHorizontal: 20,
   },
   createButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
     marginTop: 8,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  createButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
   },
   createButtonText: {
     color: '#fff',
@@ -761,22 +906,44 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   summaryCard: {
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 16,
+    padding: 20,
     gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   chartCard: {
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 16,
+    padding: 20,
+    gap: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
+    alignSelf: 'flex-start',
+  },
+  cardIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
-    alignSelf: 'flex-start',
   },
   summaryRow: {
     flexDirection: 'row',
@@ -788,34 +955,35 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 13,
+    fontWeight: '500',
   },
   summaryValue: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
   },
   balanceContainer: {
-    paddingTop: 12,
+    paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#333',
     gap: 4,
   },
   balanceValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   noData: {
     fontSize: 14,
     textAlign: 'center',
-    paddingVertical: 16,
+    paddingVertical: 24,
   },
   lineChart: {
-    borderRadius: 8,
+    borderRadius: 16,
     marginTop: 8,
   },
   legendContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 16,
+    gap: 20,
     marginTop: 8,
   },
   legendItem: {
@@ -830,6 +998,7 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
+    fontWeight: '500',
   },
   pieChartContainer: {
     alignItems: 'center',
@@ -840,22 +1009,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 8,
+    gap: 10,
     marginTop: 8,
   },
   pieLegendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     paddingHorizontal: 4,
   },
   pieLegendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   pieLegendText: {
-    fontSize: 11,
+    fontSize: 12,
+    fontWeight: '500',
   },
   modalOverlay: {
     flex: 1,
@@ -863,8 +1033,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 20,
     maxHeight: '80%',
   },
@@ -875,8 +1045,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
   },
   accountList: {
     maxHeight: 300,
@@ -884,47 +1054,49 @@ const styles = StyleSheet.create({
   accountItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
+    padding: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 8,
-    gap: 12,
+    marginBottom: 10,
+    gap: 14,
   },
   accountAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
   accountAvatarText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
   },
   accountItemInfo: {
     flex: 1,
+    gap: 2,
   },
   accountItemName: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   accountItemDesc: {
     fontSize: 13,
-    marginTop: 2,
   },
   newAccountButton: {
+    marginTop: 12,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  newAccountButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 16,
-    marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#333',
   },
   newAccountButtonText: {
-    color: '#007AFF',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -937,8 +1109,8 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 14,
+    padding: 14,
     fontSize: 16,
   },
   formButtons: {
@@ -948,20 +1120,22 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    padding: 14,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   submitButton: {
     flex: 1,
-    backgroundColor: '#007AFF',
-    padding: 14,
-    borderRadius: 8,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  submitButtonGradient: {
+    padding: 16,
     alignItems: 'center',
   },
   submitButtonText: {

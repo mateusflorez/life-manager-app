@@ -9,11 +9,13 @@ import {
   TextInput,
   RefreshControl,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedView } from '@/components/themed-view';
 import { useFinance } from '@/contexts/finance-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { RippleBackground } from '@/components/ui/ripple-background';
 import { CurrencyInput, currencyToFloat } from '@/components/ui/currency-input';
 import { getNextMonthKey, getMonthOptions, formatMonthKey, translateCategory } from '@/types/finance';
 
@@ -150,9 +152,17 @@ export default function RecurringScreen() {
   if (!activeBankAccount) {
     return (
       <ThemedView style={styles.container}>
+        <RippleBackground isDark={isDark} rippleCount={6} />
         <View style={styles.emptyState}>
-          <IconSymbol name="building.columns" size={48} color={isDark ? '#666' : '#999'} />
-          <Text style={[styles.emptyTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+          <LinearGradient
+            colors={['#6366F1', '#8B5CF6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.emptyIconContainer}
+          >
+            <IconSymbol name="building.columns" size={32} color="#FFFFFF" />
+          </LinearGradient>
+          <Text style={[styles.emptyTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
             {t.noAccount}
           </Text>
         </View>
@@ -162,9 +172,11 @@ export default function RecurringScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <RippleBackground isDark={isDark} rippleCount={6} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -175,14 +187,24 @@ export default function RecurringScreen() {
             style={[
               styles.summaryCard,
               {
-                backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-                borderColor: isDark ? '#333' : '#E0E0E0',
+                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
               },
             ]}
           >
-            <Text style={[styles.summaryLabel, { color: isDark ? '#999' : '#666' }]}>
-              {t.totalActive}
-            </Text>
+            <View style={styles.summaryHeader}>
+              <LinearGradient
+                colors={['#EF4444', '#DC2626']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.summaryIconContainer}
+              >
+                <IconSymbol name="arrow.2.squarepath" size={18} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={[styles.summaryLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
+                {t.totalActive}
+              </Text>
+            </View>
             <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
               {formatCurrency(totalActive)}{t.perMonth}
             </Text>
@@ -191,11 +213,18 @@ export default function RecurringScreen() {
 
         {recurringExpenses.length === 0 ? (
           <View style={styles.emptyState}>
-            <IconSymbol name="arrow.2.squarepath" size={48} color={isDark ? '#666' : '#999'} />
-            <Text style={[styles.emptyTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+            <LinearGradient
+              colors={['#6366F1', '#8B5CF6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.emptyIconContainer}
+            >
+              <IconSymbol name="arrow.2.squarepath" size={32} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.emptyTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
               {t.noExpenses}
             </Text>
-            <Text style={[styles.emptyDesc, { color: isDark ? '#999' : '#666' }]}>
+            <Text style={[styles.emptyDesc, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
               {t.addFirst}
             </Text>
           </View>
@@ -208,33 +237,36 @@ export default function RecurringScreen() {
                 style={[
                   styles.expenseItem,
                   {
-                    backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-                    borderColor: isDark ? '#333' : '#E0E0E0',
+                    backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
                     opacity: expense.isActive ? 1 : 0.6,
                   },
                 ]}
               >
                 <View style={styles.expenseHeader}>
                   <View style={styles.expenseTitleRow}>
-                    <IconSymbol
-                      name="arrow.2.squarepath"
-                      size={20}
-                      color={expense.isActive ? '#10B981' : '#999'}
-                    />
-                    <Text style={[styles.expenseTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                    <LinearGradient
+                      colors={expense.isActive ? ['#10B981', '#059669'] : ['#6B7280', '#4B5563']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.expenseIconContainer}
+                    >
+                      <IconSymbol name="arrow.2.squarepath" size={16} color="#FFFFFF" />
+                    </LinearGradient>
+                    <Text style={[styles.expenseTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                       {expense.title}
                     </Text>
                   </View>
                   <View
                     style={[
                       styles.statusBadge,
-                      { backgroundColor: expense.isActive ? '#10B98120' : '#99999920' },
+                      { backgroundColor: expense.isActive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(107, 114, 128, 0.15)' },
                     ]}
                   >
                     <Text
                       style={[
                         styles.statusText,
-                        { color: expense.isActive ? '#10B981' : '#999' },
+                        { color: expense.isActive ? '#10B981' : '#6B7280' },
                       ]}
                     >
                       {expense.isActive ? t.active : t.paused}
@@ -243,7 +275,7 @@ export default function RecurringScreen() {
                 </View>
 
                 <View style={styles.expenseInfo}>
-                  <Text style={[styles.expenseCategory, { color: isDark ? '#999' : '#666' }]}>
+                  <Text style={[styles.expenseCategory, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
                     {translateCategory(expense.category, settings.language)}
                   </Text>
                   <Text style={[styles.expenseAmount, { color: '#EF4444' }]}>
@@ -251,32 +283,30 @@ export default function RecurringScreen() {
                   </Text>
                 </View>
 
-                <Text style={[styles.expenseSince, { color: isDark ? '#666' : '#999' }]}>
-                  {t.since}: {expense.startMonth}
+                <Text style={[styles.expenseSince, { color: isDark ? '#666' : '#9CA3AF' }]}>
+                  {t.since}: {formatMonthKey(expense.startMonth, settings.language)}
                 </Text>
 
                 {expense.note && (
-                  <Text style={[styles.expenseNote, { color: isDark ? '#999' : '#666' }]}>
+                  <Text style={[styles.expenseNote, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
                     {expense.note}
                   </Text>
                 )}
 
                 <View style={styles.expenseActions}>
                   <TouchableOpacity
-                    style={[styles.actionButton, { borderColor: isDark ? '#444' : '#E0E0E0' }]}
+                    style={[styles.actionButton, { borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)' }]}
                     onPress={() => handleToggle(expense.id)}
                   >
-                    <Text style={[styles.actionButtonText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                    <Text style={[styles.actionButtonText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                       {expense.isActive ? t.pause : t.resume}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.actionButton, { borderColor: '#EF4444' }]}
+                    style={[styles.deleteActionButton]}
                     onPress={() => handleDelete(expense.id)}
                   >
-                    <Text style={[styles.actionButtonText, { color: '#EF4444' }]}>
-                      {t.delete}
-                    </Text>
+                    <Text style={styles.deleteActionButtonText}>{t.delete}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -286,10 +316,18 @@ export default function RecurringScreen() {
 
       {/* Floating Add Button */}
       <TouchableOpacity
-        style={styles.fab}
+        style={styles.fabContainer}
         onPress={() => setShowNewModal(true)}
+        activeOpacity={0.9}
       >
-        <IconSymbol name="plus" size={24} color="#fff" />
+        <LinearGradient
+          colors={['#6366F1', '#8B5CF6']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.fab}
+        >
+          <IconSymbol name="plus" size={24} color="#FFFFFF" />
+        </LinearGradient>
       </TouchableOpacity>
 
       {/* New Expense Modal */}
@@ -303,153 +341,177 @@ export default function RecurringScreen() {
           <View
             style={[
               styles.modalContent,
-              { backgroundColor: isDark ? '#1A1A1A' : '#fff' },
+              { backgroundColor: isDark ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)' },
             ]}
           >
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                {t.newExpense}
-              </Text>
+              <View style={styles.modalTitleRow}>
+                <LinearGradient
+                  colors={['#6366F1', '#8B5CF6']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.modalIconContainer}
+                >
+                  <IconSymbol name="arrow.2.squarepath" size={18} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.newExpense}
+                </Text>
+              </View>
               <TouchableOpacity onPress={() => setShowNewModal(false)}>
-                <IconSymbol name="xmark" size={24} color={isDark ? '#999' : '#666'} />
+                <IconSymbol name="xmark" size={24} color={isDark ? '#A0A0A0' : '#6B7280'} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.form}>
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
-                {t.title}
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    color: isDark ? '#ECEDEE' : '#11181C',
-                    borderColor: isDark ? '#444' : '#E0E0E0',
-                  },
-                ]}
-                value={title}
-                onChangeText={setTitle}
-                placeholder="Netflix, Spotify, etc."
-                placeholderTextColor={isDark ? '#666' : '#999'}
-              />
-
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
-                {t.amount}
-              </Text>
-              <View
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    borderColor: isDark ? '#444' : '#E0E0E0',
-                  },
-                ]}
-              >
-                <CurrencyInput
-                  value={amount}
-                  onChangeValue={setAmount}
-                  currency={settings.currency}
-                  textColor={isDark ? '#ECEDEE' : '#11181C'}
-                  prefixColor={isDark ? '#999' : '#666'}
-                />
-              </View>
-
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
-                {t.category}
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryList}>
-                {categories.expenseCategories.map((cat) => (
-                  <TouchableOpacity
-                    key={cat}
-                    style={[
-                      styles.categoryChip,
-                      {
-                        backgroundColor: category === cat ? '#007AFF' : isDark ? '#333' : '#F5F5F5',
-                        borderColor: category === cat ? '#007AFF' : isDark ? '#444' : '#E0E0E0',
-                      },
-                    ]}
-                    onPress={() => setCategory(cat)}
-                  >
-                    <Text
-                      style={[
-                        styles.categoryChipText,
-                        { color: category === cat ? '#fff' : isDark ? '#ECEDEE' : '#11181C' },
-                      ]}
-                    >
-                      {translateCategory(cat, settings.language)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
-                {t.startMonth}
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.monthList}>
-                {monthOptions.map((monthKey) => (
-                  <TouchableOpacity
-                    key={monthKey}
-                    style={[
-                      styles.monthChip,
-                      {
-                        backgroundColor: startMonth === monthKey ? '#007AFF' : isDark ? '#333' : '#F5F5F5',
-                        borderColor: startMonth === monthKey ? '#007AFF' : isDark ? '#444' : '#E0E0E0',
-                      },
-                    ]}
-                    onPress={() => setStartMonth(monthKey)}
-                  >
-                    <Text
-                      style={[
-                        styles.monthChipText,
-                        { color: startMonth === monthKey ? '#fff' : isDark ? '#ECEDEE' : '#11181C' },
-                      ]}
-                    >
-                      {formatMonthKey(monthKey, settings.language)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
-                {t.note}
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: isDark ? '#333' : '#F5F5F5',
-                    color: isDark ? '#ECEDEE' : '#11181C',
-                    borderColor: isDark ? '#444' : '#E0E0E0',
-                  },
-                ]}
-                value={note}
-                onChangeText={setNote}
-                placeholder={t.note}
-                placeholderTextColor={isDark ? '#666' : '#999'}
-              />
-
-              <View style={styles.formButtons}>
-                <TouchableOpacity
-                  style={[styles.cancelButton, { borderColor: isDark ? '#444' : '#E0E0E0' }]}
-                  onPress={() => setShowNewModal(false)}
-                >
-                  <Text style={[styles.cancelButtonText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-                    {t.cancel}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
+            <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
+              <View style={styles.form}>
+                <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
+                  {t.title}
+                </Text>
+                <TextInput
                   style={[
-                    styles.submitButton,
-                    { opacity: title.trim() && currencyToFloat(amount) > 0 && category ? 1 : 0.5 },
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                      color: isDark ? '#FFFFFF' : '#111827',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                    },
                   ]}
-                  onPress={handleCreate}
-                  disabled={!title.trim() || currencyToFloat(amount) <= 0 || !category}
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="Netflix, Spotify, etc."
+                  placeholderTextColor={isDark ? '#666' : '#999'}
+                />
+
+                <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
+                  {t.amount}
+                </Text>
+                <View
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                    },
+                  ]}
                 >
-                  <Text style={styles.submitButtonText}>{t.save}</Text>
-                </TouchableOpacity>
+                  <CurrencyInput
+                    value={amount}
+                    onChangeValue={setAmount}
+                    currency={settings.currency}
+                    textColor={isDark ? '#FFFFFF' : '#111827'}
+                    prefixColor={isDark ? '#A0A0A0' : '#6B7280'}
+                  />
+                </View>
+
+                <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
+                  {t.category}
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipList}>
+                  {categories.expenseCategories.map((cat) => (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: category === cat
+                            ? '#6366F1'
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                          borderColor: category === cat
+                            ? '#6366F1'
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                        },
+                      ]}
+                      onPress={() => setCategory(cat)}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          { color: category === cat ? '#FFFFFF' : isDark ? '#FFFFFF' : '#111827' },
+                        ]}
+                      >
+                        {translateCategory(cat, settings.language)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
+                  {t.startMonth}
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipList}>
+                  {monthOptions.map((monthKey) => (
+                    <TouchableOpacity
+                      key={monthKey}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: startMonth === monthKey
+                            ? '#6366F1'
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                          borderColor: startMonth === monthKey
+                            ? '#6366F1'
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                        },
+                      ]}
+                      onPress={() => setStartMonth(monthKey)}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          { color: startMonth === monthKey ? '#FFFFFF' : isDark ? '#FFFFFF' : '#111827' },
+                        ]}
+                      >
+                        {formatMonthKey(monthKey, settings.language)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
+                  {t.note}
+                </Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                      color: isDark ? '#FFFFFF' : '#111827',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                    },
+                  ]}
+                  value={note}
+                  onChangeText={setNote}
+                  placeholder={t.note}
+                  placeholderTextColor={isDark ? '#666' : '#999'}
+                />
+
+                <View style={styles.formButtons}>
+                  <TouchableOpacity
+                    style={[styles.cancelButton, { borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)' }]}
+                    onPress={() => setShowNewModal(false)}
+                  >
+                    <Text style={[styles.cancelButtonText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                      {t.cancel}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.submitButtonContainer, { opacity: title.trim() && currencyToFloat(amount) > 0 && category ? 1 : 0.5 }]}
+                    onPress={handleCreate}
+                    disabled={!title.trim() || currencyToFloat(amount) <= 0 || !category}
+                  >
+                    <LinearGradient
+                      colors={['#6366F1', '#8B5CF6']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.submitButton}
+                    >
+                      <Text style={styles.submitButtonText}>{t.save}</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -465,44 +527,78 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: 20,
     gap: 16,
-    paddingBottom: 80,
+    paddingBottom: 100,
   },
   summaryCard: {
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
     padding: 16,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 12,
+  },
+  summaryIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   summaryLabel: {
     fontSize: 14,
+    fontWeight: '500',
   },
   summaryValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 48,
-    gap: 12,
+    paddingVertical: 60,
+    gap: 16,
+  },
+  emptyIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 8,
+    fontSize: 20,
+    fontWeight: '700',
   },
   emptyDesc: {
-    fontSize: 14,
+    fontSize: 15,
     textAlign: 'center',
   },
   expenseItem: {
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
     padding: 16,
-    gap: 10,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   expenseHeader: {
     flexDirection: 'row',
@@ -512,20 +608,27 @@ const styles = StyleSheet.create({
   expenseTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
+  },
+  expenseIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   expenseTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
   statusText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   expenseInfo: {
     flexDirection: 'row',
@@ -536,8 +639,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   expenseAmount: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
   },
   expenseSince: {
     fontSize: 12,
@@ -553,93 +656,107 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    padding: 10,
-    borderRadius: 8,
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
   },
   actionButtonText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  fab: {
+  deleteActionButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    alignItems: 'center',
+  },
+  deleteActionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#EF4444',
+  },
+  fabContainer: {
     position: 'absolute',
     right: 20,
     bottom: 20,
+  },
+  fab: {
     width: 56,
     height: 56,
-    borderRadius: 28,
-    backgroundColor: '#007AFF',
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: '85%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '90%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+  },
+  modalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  modalIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  formScroll: {
+    maxHeight: 400,
   },
   form: {
-    gap: 12,
+    gap: 16,
   },
   inputLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 14,
     fontSize: 16,
   },
-  categoryList: {
+  chipList: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  categoryChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
     borderWidth: 1,
     marginRight: 8,
   },
-  categoryChipText: {
+  chipText: {
     fontSize: 14,
-  },
-  monthList: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  monthChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginRight: 8,
-  },
-  monthChipText: {
-    fontSize: 14,
-    textTransform: 'capitalize',
+    fontWeight: '500',
   },
   formButtons: {
     flexDirection: 'row',
@@ -648,25 +765,26 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    padding: 14,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  submitButtonContainer: {
+    flex: 1,
   },
   submitButton: {
-    flex: 1,
-    backgroundColor: '#007AFF',
-    padding: 14,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 14,
     alignItems: 'center',
   },
   submitButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

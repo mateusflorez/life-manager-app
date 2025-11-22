@@ -8,15 +8,17 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
 import { useInvestment } from '@/contexts/investment-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { RippleBackground } from '@/components/ui/ripple-background';
 import { CurrencyInput, currencyToFloat, floatToCurrency } from '@/components/ui/currency-input';
+import { useAlert } from '@/contexts/alert-context';
 import {
   t,
   formatDate,
@@ -34,6 +36,7 @@ export default function InvestmentDetailScreen() {
   const { settings } = useSettings();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { showToast, showConfirm } = useAlert();
 
   const [investment, setInvestment] = useState<InvestmentWithTotal | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,7 +87,7 @@ export default function InvestmentDetailScreen() {
     const newTotalFloat = currencyToFloat(newTotalValue);
     const delta = newTotalFloat - investment.total;
     if (Math.abs(delta) < 0.01) {
-      Alert.alert('', t('valueMatchesCurrent', lang));
+      showToast({ message: t('valueMatchesCurrent', lang), type: 'warning' });
       return;
     }
 
@@ -93,13 +96,13 @@ export default function InvestmentDetailScreen() {
       await addContribution(investment.id, newTotalFloat, newTag.trim() || undefined);
       setNewTag('');
       await loadInvestment();
-      Alert.alert('', t('contributionAdded', lang));
+      showToast({ message: t('contributionAdded', lang), type: 'success' });
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       if (errorMessage === 'VALUE_MATCHES_CURRENT') {
-        Alert.alert('', t('valueMatchesCurrent', lang));
+        showToast({ message: t('valueMatchesCurrent', lang), type: 'warning' });
       } else {
-        Alert.alert('', t('errorSaving', lang));
+        showToast({ message: t('errorSaving', lang), type: 'error' });
       }
     } finally {
       setSaving(false);
@@ -107,40 +110,48 @@ export default function InvestmentDetailScreen() {
   };
 
   const handleDeleteInvestment = () => {
-    Alert.alert(t('delete', lang), t('confirmDelete', lang), [
-      { text: t('cancel', lang), style: 'cancel' },
-      {
-        text: t('delete', lang),
-        style: 'destructive',
-        onPress: async () => {
-          if (!investment) return;
-          try {
-            await deleteInvestment(investment.id);
-            router.back();
-          } catch (error) {
-            console.error('Error deleting investment:', error);
-          }
+    showConfirm({
+      title: t('delete', lang),
+      message: t('confirmDelete', lang),
+      buttons: [
+        { text: t('cancel', lang), style: 'cancel' },
+        {
+          text: t('delete', lang),
+          style: 'destructive',
+          onPress: async () => {
+            if (!investment) return;
+            try {
+              await deleteInvestment(investment.id);
+              router.back();
+            } catch (error) {
+              console.error('Error deleting investment:', error);
+            }
+          },
         },
-      },
-    ]);
+      ],
+    });
   };
 
   const handleDeleteMovement = (movement: InvestmentMovement) => {
-    Alert.alert(t('delete', lang), `${formatCurrency(movement.amount)}?`, [
-      { text: t('cancel', lang), style: 'cancel' },
-      {
-        text: t('delete', lang),
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteMovement(movement.id);
-            await loadInvestment();
-          } catch (error) {
-            console.error('Error deleting movement:', error);
-          }
+    showConfirm({
+      title: t('delete', lang),
+      message: `${formatCurrency(movement.amount)}?`,
+      buttons: [
+        { text: t('cancel', lang), style: 'cancel' },
+        {
+          text: t('delete', lang),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteMovement(movement.id);
+              await loadInvestment();
+            } catch (error) {
+              console.error('Error deleting movement:', error);
+            }
+          },
         },
-      },
-    ]);
+      ],
+    });
   };
 
   // Calculate movements with running totals for display
@@ -166,8 +177,16 @@ export default function InvestmentDetailScreen() {
   if (loading) {
     return (
       <ThemedView style={styles.container}>
+        <RippleBackground isDark={isDark} rippleCount={6} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <LinearGradient
+            colors={['#6366F1', '#8B5CF6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.loadingGradient}
+          >
+            <ActivityIndicator size="large" color="#FFFFFF" />
+          </LinearGradient>
         </View>
       </ThemedView>
     );
@@ -176,8 +195,17 @@ export default function InvestmentDetailScreen() {
   if (!investment) {
     return (
       <ThemedView style={styles.container}>
+        <RippleBackground isDark={isDark} rippleCount={6} />
         <View style={styles.emptyState}>
-          <Text style={[styles.emptyTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+          <LinearGradient
+            colors={['#6366F1', '#8B5CF6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.emptyIconContainer}
+          >
+            <IconSymbol name="exclamationmark.triangle" size={40} color="#FFFFFF" />
+          </LinearGradient>
+          <Text style={[styles.emptyTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
             Investment not found
           </Text>
         </View>
@@ -189,6 +217,8 @@ export default function InvestmentDetailScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <RippleBackground isDark={isDark} rippleCount={6} />
+
       <Stack.Screen
         options={{
           title: investment.name,
@@ -203,6 +233,7 @@ export default function InvestmentDetailScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -212,15 +243,26 @@ export default function InvestmentDetailScreen() {
           style={[
             styles.summaryCard,
             {
-              backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-              borderColor: isDark ? '#333' : '#E0E0E0',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
             },
           ]}
         >
-          <Text style={[styles.summaryLabel, { color: isDark ? '#999' : '#666' }]}>
-            {t('totalInvested', lang)}
-          </Text>
-          <Text style={[styles.totalValue, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+          <View style={styles.cardHeader}>
+            <LinearGradient
+              colors={['#6366F1', '#8B5CF6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cardIconContainer}
+            >
+              <IconSymbol name="chart.pie.fill" size={18} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {t('totalInvested', lang)}
+            </Text>
+          </View>
+
+          <Text style={[styles.totalValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
             {formatCurrency(investment.total)}
           </Text>
 
@@ -245,16 +287,26 @@ export default function InvestmentDetailScreen() {
           style={[
             styles.formCard,
             {
-              backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-              borderColor: isDark ? '#333' : '#E0E0E0',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
             },
           ]}
         >
-          <Text style={[styles.cardTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
-            {t('addContribution', lang)}
-          </Text>
+          <View style={styles.cardHeader}>
+            <LinearGradient
+              colors={['#10B981', '#059669']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cardIconContainer}
+            >
+              <IconSymbol name="plus.circle.fill" size={18} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {t('addContribution', lang)}
+            </Text>
+          </View>
 
-          <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
+          <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
             {t('newTotalValue', lang)}
           </Text>
           <CurrencyInput
@@ -264,42 +316,54 @@ export default function InvestmentDetailScreen() {
             style={[
               styles.input,
               {
-                backgroundColor: isDark ? '#333' : '#F5F5F5',
-                color: isDark ? '#ECEDEE' : '#11181C',
-                borderColor: isDark ? '#444' : '#E0E0E0',
+                backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+                color: isDark ? '#FFFFFF' : '#111827',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
               },
             ]}
-            placeholderTextColor={isDark ? '#666' : '#999'}
+            placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
           />
 
           {Math.abs(currencyToFloat(newTotalValue) - investment.total) > 0.01 && (
-            <Text
+            <View
               style={[
-                styles.deltaPreview,
-                { color: currencyToFloat(newTotalValue) > investment.total ? '#10B981' : '#EF4444' },
+                styles.deltaPreviewContainer,
+                {
+                  backgroundColor:
+                    currencyToFloat(newTotalValue) > investment.total
+                      ? 'rgba(16, 185, 129, 0.1)'
+                      : 'rgba(239, 68, 68, 0.1)',
+                },
               ]}
             >
-              {currencyToFloat(newTotalValue) > investment.total ? '+' : ''}
-              {formatCurrency(currencyToFloat(newTotalValue) - investment.total)}
-            </Text>
+              <Text
+                style={[
+                  styles.deltaPreview,
+                  { color: currencyToFloat(newTotalValue) > investment.total ? '#10B981' : '#EF4444' },
+                ]}
+              >
+                {currencyToFloat(newTotalValue) > investment.total ? '+' : ''}
+                {formatCurrency(currencyToFloat(newTotalValue) - investment.total)}
+              </Text>
+            </View>
           )}
 
-          <Text style={[styles.inputLabel, { color: isDark ? '#999' : '#666' }]}>
+          <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
             {t('optionalTag', lang)}
           </Text>
           <TextInput
             style={[
               styles.input,
               {
-                backgroundColor: isDark ? '#333' : '#F5F5F5',
-                color: isDark ? '#ECEDEE' : '#11181C',
-                borderColor: isDark ? '#444' : '#E0E0E0',
+                backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+                color: isDark ? '#FFFFFF' : '#111827',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
               },
             ]}
             value={newTag}
             onChangeText={setNewTag}
             placeholder="bonus, dividends..."
-            placeholderTextColor={isDark ? '#666' : '#999'}
+            placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
           />
 
           <TouchableOpacity
@@ -309,16 +373,24 @@ export default function InvestmentDetailScreen() {
             ]}
             onPress={handleAddContribution}
             disabled={Math.abs(currencyToFloat(newTotalValue) - investment.total) < 0.01 || saving}
+            activeOpacity={0.8}
           >
-            <Text style={styles.submitButtonText}>
-              {saving ? t('saving', lang) : t('addContribution', lang)}
-            </Text>
+            <LinearGradient
+              colors={['#10B981', '#059669']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.submitButtonGradient}
+            >
+              <Text style={styles.submitButtonText}>
+                {saving ? t('saving', lang) : t('addContribution', lang)}
+              </Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
 
         {/* Movements History */}
         <View style={styles.movementsSection}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
             {t('movements', lang)}
           </Text>
 
@@ -327,12 +399,13 @@ export default function InvestmentDetailScreen() {
               style={[
                 styles.emptyMovements,
                 {
-                  backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-                  borderColor: isDark ? '#333' : '#E0E0E0',
+                  backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
                 },
               ]}
             >
-              <Text style={[styles.emptyMovementsText, { color: isDark ? '#999' : '#666' }]}>
+              <IconSymbol name="tray" size={32} color={isDark ? '#808080' : '#9CA3AF'} />
+              <Text style={[styles.emptyMovementsText, { color: isDark ? '#808080' : '#6B7280' }]}>
                 {t('noMovements', lang)}
               </Text>
             </View>
@@ -343,14 +416,21 @@ export default function InvestmentDetailScreen() {
                 style={[
                   styles.movementCard,
                   {
-                    backgroundColor: isDark ? '#1A1A1A' : '#F9F9F9',
-                    borderColor: isDark ? '#333' : '#E0E0E0',
+                    backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
                   },
                 ]}
                 onLongPress={() => handleDeleteMovement(movement)}
+                activeOpacity={0.8}
               >
                 <View style={styles.movementHeader}>
                   <View style={styles.movementAmountRow}>
+                    <View
+                      style={[
+                        styles.movementIndicator,
+                        { backgroundColor: movement.amount >= 0 ? '#10B981' : '#EF4444' },
+                      ]}
+                    />
                     <Text
                       style={[
                         styles.movementAmount,
@@ -371,7 +451,7 @@ export default function InvestmentDetailScreen() {
                       </Text>
                     )}
                   </View>
-                  <Text style={[styles.movementDate, { color: isDark ? '#999' : '#666' }]}>
+                  <Text style={[styles.movementDate, { color: isDark ? '#808080' : '#6B7280' }]}>
                     {formatDate(movement.date, lang)}
                   </Text>
                 </View>
@@ -383,10 +463,10 @@ export default function InvestmentDetailScreen() {
                         key={idx}
                         style={[
                           styles.tag,
-                          { backgroundColor: isDark ? '#333' : '#E8E8E8' },
+                          { backgroundColor: isDark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)' },
                         ]}
                       >
-                        <Text style={[styles.tagText, { color: isDark ? '#ECEDEE' : '#11181C' }]}>
+                        <Text style={[styles.tagText, { color: '#6366F1' }]}>
                           #{tag}
                         </Text>
                       </View>
@@ -394,9 +474,14 @@ export default function InvestmentDetailScreen() {
                   </View>
                 )}
 
-                <Text style={[styles.movementTotal, { color: isDark ? '#666' : '#999' }]}>
-                  Total: {formatCurrency(movement.newTotal)}
-                </Text>
+                <View style={[styles.movementTotalRow, { borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+                  <Text style={[styles.movementTotalLabel, { color: isDark ? '#666' : '#9CA3AF' }]}>
+                    Total:
+                  </Text>
+                  <Text style={[styles.movementTotal, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                    {formatCurrency(movement.newTotal)}
+                  </Text>
+                </View>
               </TouchableOpacity>
             ))
           )}
@@ -415,13 +500,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: 20,
+    paddingTop: 20,
     gap: 16,
-    paddingBottom: 32,
+    paddingBottom: 40,
   },
   headerButton: {
     padding: 8,
@@ -430,61 +523,102 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 16,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
   },
   summaryCard: {
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
     padding: 20,
     alignItems: 'center',
-    gap: 8,
-  },
-  summaryLabel: {
-    fontSize: 14,
-  },
-  totalValue: {
-    fontSize: 36,
-    fontWeight: 'bold',
-  },
-  changeText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  formCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
     gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    alignSelf: 'flex-start',
+  },
+  cardIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
-    marginBottom: 4,
+  },
+  totalValue: {
+    fontSize: 40,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    marginTop: 8,
+  },
+  changeText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  formCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 20,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: '500',
+    marginTop: 4,
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 14,
+    padding: 14,
     fontSize: 16,
   },
+  deltaPreviewContainer: {
+    padding: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
   deltaPreview: {
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '700',
   },
   submitButton: {
-    backgroundColor: '#007AFF',
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center',
+    borderRadius: 14,
+    overflow: 'hidden',
     marginTop: 4,
+  },
+  submitButtonGradient: {
+    padding: 16,
+    alignItems: 'center',
   },
   submitButtonText: {
     color: '#fff',
@@ -495,23 +629,36 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   emptyMovements: {
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 24,
+    padding: 32,
     alignItems: 'center',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   emptyMovementsText: {
-    fontSize: 14,
+    fontSize: 15,
+    fontWeight: '500',
   },
   movementCard: {
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 16,
-    gap: 8,
+    padding: 18,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   movementHeader: {
     flexDirection: 'row',
@@ -521,32 +668,52 @@ const styles = StyleSheet.create({
   movementAmountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+  },
+  movementIndicator: {
+    width: 4,
+    height: 24,
+    borderRadius: 2,
   },
   movementAmount: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
   },
   movementPercent: {
     fontSize: 14,
+    fontWeight: '500',
   },
   movementDate: {
     fontSize: 13,
+    fontWeight: '500',
   },
   tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 8,
   },
   tag: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
   tagText: {
     fontSize: 12,
+    fontWeight: '600',
+  },
+  movementTotalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  movementTotalLabel: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   movementTotal: {
-    fontSize: 12,
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

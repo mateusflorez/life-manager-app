@@ -38,13 +38,20 @@ const MAPPING = {
   'chart.line.uptrend.xyaxis': 'trending-up',
   'chart.xyaxis.line': 'show-chart',
   // Tasks icons
-  'checklist': 'checklist',
+  'checklist': 'playlist-add-check',
+  'flame.fill': 'local-fire-department',
+  'checkmark.circle': 'check-circle-outline',
+  'repeat': 'repeat',
+  'calendar.badge.clock': 'event',
+  'list.bullet': 'format-list-bulleted',
   // Books icons
   'book.fill': 'menu-book',
   // Mood icons
   'face.smiling.fill': 'mood',
   'magnifyingglass': 'search',
   'xmark.circle.fill': 'cancel',
+  'note.text': 'note',
+  'target': 'gps-fixed',
   // Training icons
   'dumbbell.fill': 'fitness-center',
   // Focus icons
@@ -54,6 +61,11 @@ const MAPPING = {
   'stopwatch': 'timer',
   'clock.badge.checkmark': 'schedule',
   'checkmark.circle.fill': 'check-circle',
+  'sun.max.fill': 'wb-sunny',
+  'play.fill': 'play-arrow',
+  'pause.fill': 'pause',
+  'stop.fill': 'stop',
+  'tag': 'label',
   // Achievements icons
   'trophy.fill': 'emoji-events',
   // Welcome/Logo icons
@@ -62,6 +74,18 @@ const MAPPING = {
   'square.and.arrow.down': 'file-download',
   'square.and.arrow.up': 'file-upload',
   'folder': 'folder',
+  // Settings icons
+  'globe': 'language',
+  // Profile icons
+  'camera.fill': 'photo-camera',
+  'star.fill': 'star',
+  // Chart icons
+  'chart.bar.fill': 'bar-chart',
+  // Alerts / confirmations
+  'exclamationmark.circle.fill': 'error-outline',
+  'exclamationmark.triangle.fill': 'warning',
+  'info.circle.fill': 'info',
+  'xmark.circle.fill': 'cancel',
 } as IconMapping;
 
 /**

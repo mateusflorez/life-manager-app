@@ -175,37 +175,6 @@ pnpm run reset-project
 
 ## Architecture and Key Concepts
 
-### System Architecture
-
-This is a **client-side React Native application** with:
-- **File-based routing** (Expo Router)
-- **Local-first data storage** (no backend API)
-- **Theming system** (automatic light/dark mode)
-- **Cross-platform support** (iOS, Android, Web)
-
-```
-┌─────────────────────────────────────┐
-│     app/_layout.tsx (Root)          │
-│  - Theme Provider                   │
-│  - Navigation Stack                 │
-└──────────────┬──────────────────────┘
-               │
-       ┌───────┴────────┐
-       │                │
-┌──────▼──────┐  ┌─────▼─────┐
-│ index.tsx   │  │  (tabs)/  │
-│ Welcome     │  │  Tab Nav  │
-│ Screen      │  │           │
-└─────────────┘  └─────┬─────┘
-                       │
-              ┌────────┴────────┐
-              │                 │
-        ┌─────▼─────┐   ┌──────▼──────┐
-        │ index.tsx │   │ explore.tsx │
-        │   Home    │   │   Explore   │
-        └───────────┘   └─────────────┘
-```
-
 ### 1. **File-Based Routing (Expo Router)**
 
 Expo Router uses the file system to define routes. Files in `app/` directory automatically become routes.
@@ -889,6 +858,13 @@ const styles = StyleSheet.create({
 import { MyComponent } from '@/components/my-component';
 ```
 
+### Alerts and Toasts
+
+- Do not call `Alert.alert` directly. Use `useAlert()` from `contexts/alert-context` for all prompts.
+- For confirmations, call `showConfirm` with `title`, optional `message`, and `buttons` (include `style: 'destructive'` for destructive actions).
+- For inline feedback and validation, call `showToast` with `message` and optional `type` (`success`, `error`, `info`, `warning`).
+- Keep button/label translations aligned with the screen's language helpers before invoking the alert utilities.
+
 ### Platform-Specific Code
 
 **File Extensions**:
@@ -1373,30 +1349,6 @@ import * as FileSystem from 'expo-file-system';
 - Use `React.memo` for expensive components
 - StyleSheet.create() helps with performance
 
----
-
-## Resources
-
-### Official Documentation
-- [Expo Documentation](https://docs.expo.dev/)
-- [Expo Router](https://docs.expo.dev/router/introduction/)
-- [React Native](https://reactnative.dev/)
-- [React Navigation](https://reactnavigation.org/)
-
-### Expo Modules
-- [Expo SDK Reference](https://docs.expo.dev/versions/latest/)
-- [Expo Router API](https://docs.expo.dev/router/reference/api/)
-
-### TypeScript
-- [React TypeScript Cheatsheet](https://react-typescript-cheatsheet.netlify.app/)
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
-
-### Design Resources
-- [SF Symbols](https://developer.apple.com/sf-symbols/) (iOS icons)
-- [Material Icons](https://fonts.google.com/icons) (Android icons)
-
----
-
 ## Next Steps for Development
 
 ### Immediate Priorities
@@ -1473,35 +1425,19 @@ A feature is complete when:
 - Documentation updated if needed
 
 ---
+## Visual Style Migration Checklist
 
-**Last Updated**: 2025-11-21
+This section tracks the progress of migrating all screens to the modern visual style defined in the reference screens.
 
-**Recent Changes**:
-- Added Achievements Module for milestone progress tracking
-  - Tracks 7 categories: levels, chapters, investments, tasks, training, focus, mood
-  - 5 tiers per category (35 total milestones)
-  - Color-coded tier cards with progress bars
-  - Overall completion summary at top
-  - Read-only module (pulls data from other contexts)
-  - Always visible in tab bar (cannot be disabled)
-  - Tab position: between Home and Config
-  - Added trophy.fill icon mapping for Material Icons
-- Added background notifications to Focus Module
-  - Persistent notification showing timer while app is in background
-  - Completion alerts with system notification sound
-  - Notifications for: focus phase end, break phase end, all cycles complete, timer complete
-  - Added expo-notifications and expo-av dependencies
-  - Created focus-notification.ts service for notification management
-- Added Focus Module for concentration sessions
-  - Three focus modes: Pomodoro (default), Countdown, Countup
-  - Pomodoro: Focus + break cycles with configurable intervals
-  - Countdown: Simple timer with target duration (no breaks)
-  - Countup: Stopwatch style, track time without limits
-  - Pause/resume functionality for all modes
-  - Session history with searchable list grouped by month
-  - Stats: total minutes, today's minutes, streak tracking
-  - XP rewards (+1 per focus minute)
-  - Extensible architecture for future focus modes
-- Added focus module toggle in settings
+### Reference Screens (Design System Source)
+- `app/index.tsx` - Welcome screen with RippleBackground, gradient cards
+- `app/(tabs)/index.tsx` - Home screen with profile card, module grid
+- `app/(tabs)/achievements.tsx` - Achievement cards with tier gradients
 
-**Note**: This document should be updated as the codebase evolves. When making significant architectural changes or adding new patterns, update this file accordingly.
+### Modern Style Patterns
+- **RippleBackground**: Animated background effect for main screens
+- **LinearGradient**: Used for accent elements, buttons, avatars
+- **Card Style**: `borderRadius: 20-24`, `rgba` backgrounds, subtle borders
+- **Shadows**: `shadowOpacity: 0.1`, `shadowRadius: 12`, `elevation: 5`
+- **Colors**: Theme-aware with `isDark` checks, gradient accents `['#6366F1', '#8B5CF6']`
+- **Typography**: Bold headers (700-800), consistent sizing

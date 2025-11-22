@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, Switch, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { StyleSheet, View, Text, ScrollView, Switch, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -9,16 +8,52 @@ import { type Language, type Currency, type ModulesConfig } from '@/types/settin
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { saveExportedData, importData, getDataStats } from '@/services/data-export';
 import { RippleBackground } from '@/components/ui/ripple-background';
+import { useAlert } from '@/contexts/alert-context';
+
+// Module configuration with icons and gradients
+const MODULE_CONFIG = {
+  finance: {
+    icon: 'dollarsign.circle.fill',
+    gradient: ['#10B981', '#059669'] as [string, string],
+  },
+  investments: {
+    icon: 'chart.line.uptrend.xyaxis',
+    gradient: ['#3B82F6', '#2563EB'] as [string, string],
+  },
+  tasks: {
+    icon: 'checklist',
+    gradient: ['#F59E0B', '#D97706'] as [string, string],
+  },
+  books: {
+    icon: 'book.fill',
+    gradient: ['#8B5CF6', '#7C3AED'] as [string, string],
+  },
+  mood: {
+    icon: 'face.smiling.fill',
+    gradient: ['#FBBF24', '#F59E0B'] as [string, string],
+  },
+  training: {
+    icon: 'dumbbell.fill',
+    gradient: ['#22C55E', '#16A34A'] as [string, string],
+  },
+  focus: {
+    icon: 'clock.fill',
+    gradient: ['#EF4444', '#DC2626'] as [string, string],
+  },
+};
 
 export default function ConfigScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { settings, updateSettings } = useSettings();
+  const { showToast, showConfirm } = useAlert();
 
   const [saveStatus, setSaveStatus] = useState<string>('');
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [dataStats, setDataStats] = useState<{ keys: number; sizeKB: number }>({ keys: 0, sizeKB: 0 });
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
 
   useEffect(() => {
     loadDataStats();
@@ -32,6 +67,7 @@ export default function ConfigScreen() {
   const handleLanguageChange = async (language: Language) => {
     try {
       await updateSettings({ language });
+      setShowLanguageModal(false);
       setSaveStatus(language === 'pt' ? 'Idioma atualizado!' : 'Language updated!');
       setTimeout(() => setSaveStatus(''), 3000);
     } catch (error) {
@@ -43,6 +79,7 @@ export default function ConfigScreen() {
   const handleCurrencyChange = async (currency: Currency) => {
     try {
       await updateSettings({ currency });
+      setShowCurrencyModal(false);
       setSaveStatus(
         settings.language === 'pt' ? 'Moeda atualizada!' : 'Currency updated!'
       );
@@ -76,33 +113,33 @@ export default function ConfigScreen() {
     try {
       const result = await saveExportedData();
       if (result.success) {
-        Alert.alert(
-          settings.language === 'pt' ? 'Sucesso' : 'Success',
-          settings.language === 'pt'
+        showToast({
+          message: settings.language === 'pt'
             ? 'Backup salvo com sucesso!'
-            : 'Backup saved successfully!'
-        );
+            : 'Backup saved successfully!',
+          type: 'success',
+        });
       }
     } catch (error) {
       console.error('Failed to export:', error);
-      Alert.alert(
-        settings.language === 'pt' ? 'Erro' : 'Error',
-        settings.language === 'pt'
+      showToast({
+        message: settings.language === 'pt'
           ? 'Falha ao exportar dados. Tente novamente.'
-          : 'Failed to export data. Please try again.'
-      );
+          : 'Failed to export data. Please try again.',
+        type: 'error',
+      });
     } finally {
       setIsExporting(false);
     }
   };
 
-  const handleImport = async () => {
-    Alert.alert(
-      settings.language === 'pt' ? 'Importar Dados' : 'Import Data',
-      settings.language === 'pt'
+  const handleImport = () => {
+    showConfirm({
+      title: settings.language === 'pt' ? 'Importar Dados' : 'Import Data',
+      message: settings.language === 'pt'
         ? 'Isso substituirá todos os dados existentes. Deseja continuar?'
         : 'This will replace all existing data. Do you want to continue?',
-      [
+      buttons: [
         {
           text: settings.language === 'pt' ? 'Cancelar' : 'Cancel',
           style: 'cancel',
@@ -116,28 +153,29 @@ export default function ConfigScreen() {
               const result = await importData();
               if (result.success) {
                 await loadDataStats();
-                Alert.alert(
-                  settings.language === 'pt' ? 'Sucesso' : 'Success',
-                  settings.language === 'pt'
+                showToast({
+                  message: settings.language === 'pt'
                     ? `${result.keysImported} itens importados. Reinicie o app para ver as mudanças.`
-                    : `${result.keysImported} items imported. Restart the app to see changes.`
-                );
+                    : `${result.keysImported} items imported. Restart the app to see changes.`,
+                  type: 'success',
+                  duration: 5000,
+                });
               }
             } catch (error) {
               console.error('Failed to import:', error);
-              Alert.alert(
-                settings.language === 'pt' ? 'Erro' : 'Error',
-                settings.language === 'pt'
+              showToast({
+                message: settings.language === 'pt'
                   ? 'Falha ao importar dados. Verifique se o arquivo é válido.'
-                  : 'Failed to import data. Please check if the file is valid.'
-              );
+                  : 'Failed to import data. Please check if the file is valid.',
+                type: 'error',
+              });
             } finally {
               setIsImporting(false);
             }
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   const translations = {
@@ -147,6 +185,16 @@ export default function ConfigScreen() {
       currencyLabel: 'Currency',
       languageHelp: 'Choose your preferred UI language',
       currencyHelp: 'Choose your preferred currency',
+      selectLanguage: 'Select Language',
+      selectCurrency: 'Select Currency',
+      english: 'English',
+      englishDesc: 'Use English for the interface',
+      portuguese: 'Português',
+      portugueseDesc: 'Use Portuguese for the interface',
+      usd: 'US Dollar',
+      usdDesc: 'Display values in USD ($)',
+      brl: 'Brazilian Real',
+      brlDesc: 'Display values in BRL (R$)',
       modulesTitle: 'Modules',
       modulesHelp: 'Enable or disable app modules. Disabling a module hides it from the home screen but keeps your data.',
       financeModule: 'Finance',
@@ -166,9 +214,9 @@ export default function ConfigScreen() {
       dataTitle: 'Data Management',
       dataHelp: 'Export your data to backup or transfer to another device. Import to restore from a backup.',
       exportData: 'Export Data',
-      exportDataDesc: 'Choose where to save your backup file',
+      exportDataDesc: 'Save backup to your device',
       importData: 'Import Data',
-      importDataDesc: 'Restore data from a backup file',
+      importDataDesc: 'Restore from backup file',
       dataStats: 'items stored',
       exporting: 'Exporting...',
       importing: 'Importing...',
@@ -179,6 +227,16 @@ export default function ConfigScreen() {
       currencyLabel: 'Moeda',
       languageHelp: 'Escolha seu idioma preferido',
       currencyHelp: 'Escolha sua moeda preferida',
+      selectLanguage: 'Selecionar Idioma',
+      selectCurrency: 'Selecionar Moeda',
+      english: 'English',
+      englishDesc: 'Usar inglês na interface',
+      portuguese: 'Português',
+      portugueseDesc: 'Usar português na interface',
+      usd: 'Dólar Americano',
+      usdDesc: 'Exibir valores em USD ($)',
+      brl: 'Real Brasileiro',
+      brlDesc: 'Exibir valores em BRL (R$)',
       modulesTitle: 'Módulos',
       modulesHelp: 'Habilite ou desabilite módulos do app. Desabilitar um módulo oculta ele da tela inicial mas mantém seus dados.',
       financeModule: 'Finanças',
@@ -198,9 +256,9 @@ export default function ConfigScreen() {
       dataTitle: 'Gerenciamento de Dados',
       dataHelp: 'Exporte seus dados para backup ou transferência para outro dispositivo. Importe para restaurar de um backup.',
       exportData: 'Exportar Dados',
-      exportDataDesc: 'Escolha onde salvar seu arquivo de backup',
+      exportDataDesc: 'Salvar backup no dispositivo',
       importData: 'Importar Dados',
-      importDataDesc: 'Restaure dados de um arquivo de backup',
+      importDataDesc: 'Restaurar de arquivo de backup',
       dataStats: 'itens armazenados',
       exporting: 'Exportando...',
       importing: 'Importando...',
@@ -209,9 +267,33 @@ export default function ConfigScreen() {
 
   const t = translations[settings.language];
 
+  // Module list configuration
+  const modules: Array<{
+    key: keyof ModulesConfig;
+    name: string;
+    desc: string;
+    isLast?: boolean;
+  }> = [
+    { key: 'finance', name: t.financeModule, desc: t.financeModuleDesc },
+    { key: 'investments', name: t.investmentsModule, desc: t.investmentsModuleDesc },
+    { key: 'tasks', name: t.tasksModule, desc: t.tasksModuleDesc },
+    { key: 'books', name: t.booksModule, desc: t.booksModuleDesc },
+    { key: 'mood', name: t.moodModule, desc: t.moodModuleDesc },
+    { key: 'training', name: t.trainingModule, desc: t.trainingModuleDesc },
+    { key: 'focus', name: t.focusModule, desc: t.focusModuleDesc, isLast: true },
+  ];
+
+  const getLanguageDisplay = () => {
+    return settings.language === 'en' ? 'English' : 'Português';
+  };
+
+  const getCurrencyDisplay = () => {
+    return settings.currency === 'USD' ? 'Dollar ($)' : 'Real (R$)';
+  };
+
   return (
     <ThemedView style={styles.container}>
-      <RippleBackground isDark={isDark} rippleCount={5} />
+      <RippleBackground isDark={isDark} rippleCount={6} />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={[styles.title, { color: isDark ? '#FFFFFF' : '#111827' }]}>
@@ -228,32 +310,48 @@ export default function ConfigScreen() {
             },
           ]}
         >
-          <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-            {t.languageLabel}
-          </Text>
-          <Text style={[styles.cardDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
-            {t.languageHelp}
-          </Text>
+          <View style={styles.cardHeader}>
+            <LinearGradient
+              colors={['#6366F1', '#8B5CF6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cardIconContainer}
+            >
+              <IconSymbol name="globe" size={18} color="#FFFFFF" />
+            </LinearGradient>
+            <View style={styles.cardHeaderText}>
+              <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t.languageLabel}
+              </Text>
+              <Text style={[styles.cardDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
+                {t.languageHelp}
+              </Text>
+            </View>
+          </View>
 
-          <View
+          <TouchableOpacity
             style={[
-              styles.pickerContainer,
+              styles.selector,
               {
-                backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
               },
             ]}
+            onPress={() => setShowLanguageModal(true)}
+            activeOpacity={0.7}
           >
-            <Picker
-              selectedValue={settings.language}
-              onValueChange={(value) => handleLanguageChange(value as Language)}
-              style={[styles.picker, { color: isDark ? '#FFFFFF' : '#111827' }]}
-              dropdownIconColor={isDark ? '#FFFFFF' : '#111827'}
+            <LinearGradient
+              colors={['#6366F1', '#8B5CF6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.selectorIcon}
             >
-              <Picker.Item label="English" value="en" />
-              <Picker.Item label="Português" value="pt" />
-            </Picker>
-          </View>
+              <Text style={styles.selectorEmoji}>{settings.language === 'en' ? '🇺🇸' : '🇧🇷'}</Text>
+            </LinearGradient>
+            <Text style={[styles.selectorText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {getLanguageDisplay()}
+            </Text>
+            <IconSymbol name="chevron.right" size={16} color={isDark ? '#808080' : '#6B7280'} />
+          </TouchableOpacity>
         </View>
 
         {/* Currency Section */}
@@ -266,32 +364,48 @@ export default function ConfigScreen() {
             },
           ]}
         >
-          <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-            {t.currencyLabel}
-          </Text>
-          <Text style={[styles.cardDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
-            {t.currencyHelp}
-          </Text>
+          <View style={styles.cardHeader}>
+            <LinearGradient
+              colors={['#10B981', '#059669']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cardIconContainer}
+            >
+              <IconSymbol name="dollarsign.circle.fill" size={18} color="#FFFFFF" />
+            </LinearGradient>
+            <View style={styles.cardHeaderText}>
+              <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t.currencyLabel}
+              </Text>
+              <Text style={[styles.cardDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
+                {t.currencyHelp}
+              </Text>
+            </View>
+          </View>
 
-          <View
+          <TouchableOpacity
             style={[
-              styles.pickerContainer,
+              styles.selector,
               {
-                backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
               },
             ]}
+            onPress={() => setShowCurrencyModal(true)}
+            activeOpacity={0.7}
           >
-            <Picker
-              selectedValue={settings.currency}
-              onValueChange={(value) => handleCurrencyChange(value as Currency)}
-              style={[styles.picker, { color: isDark ? '#FFFFFF' : '#111827' }]}
-              dropdownIconColor={isDark ? '#FFFFFF' : '#111827'}
+            <LinearGradient
+              colors={['#10B981', '#059669']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.selectorIcon}
             >
-              <Picker.Item label="Real (R$)" value="BRL" />
-              <Picker.Item label="Dollar ($)" value="USD" />
-            </Picker>
-          </View>
+              <Text style={styles.selectorEmoji}>{settings.currency === 'USD' ? '$' : 'R$'}</Text>
+            </LinearGradient>
+            <Text style={[styles.selectorText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {getCurrencyDisplay()}
+            </Text>
+            <IconSymbol name="chevron.right" size={16} color={isDark ? '#808080' : '#6B7280'} />
+          </TouchableOpacity>
         </View>
 
         {/* Modules Section */}
@@ -312,131 +426,46 @@ export default function ConfigScreen() {
             {t.modulesHelp}
           </Text>
 
-          {/* Finance Module */}
-          <View style={styles.moduleItem}>
-            <View style={styles.moduleInfo}>
-              <Text style={[styles.moduleName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                {t.financeModule}
-              </Text>
-              <Text style={[styles.moduleDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
-                {t.financeModuleDesc}
-              </Text>
-            </View>
-            <Switch
-              value={settings.modules?.finance ?? true}
-              onValueChange={(value) => handleModuleToggle('finance', value)}
-              trackColor={{ false: isDark ? '#333' : '#D0D0D0', true: '#818CF8' }}
-              thumbColor={settings.modules?.finance ? '#6366F1' : isDark ? '#666' : '#f4f3f4'}
-            />
-          </View>
+          {modules.map((module) => {
+            const config = MODULE_CONFIG[module.key];
+            const isEnabled = settings.modules?.[module.key] ?? true;
 
-          {/* Investments Module */}
-          <View style={styles.moduleItem}>
-            <View style={styles.moduleInfo}>
-              <Text style={[styles.moduleName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                {t.investmentsModule}
-              </Text>
-              <Text style={[styles.moduleDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
-                {t.investmentsModuleDesc}
-              </Text>
-            </View>
-            <Switch
-              value={settings.modules?.investments ?? true}
-              onValueChange={(value) => handleModuleToggle('investments', value)}
-              trackColor={{ false: isDark ? '#333' : '#D0D0D0', true: '#818CF8' }}
-              thumbColor={settings.modules?.investments ? '#6366F1' : isDark ? '#666' : '#f4f3f4'}
-            />
-          </View>
+            return (
+              <View
+                key={module.key}
+                style={[
+                  styles.moduleItem,
+                  module.isLast && styles.moduleItemLast,
+                ]}
+              >
+                <LinearGradient
+                  colors={isEnabled ? config.gradient : ['#4B5563', '#374151']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.moduleIconContainer}
+                >
+                  <IconSymbol name={config.icon as any} size={18} color="#FFFFFF" />
+                </LinearGradient>
 
-          {/* Tasks Module */}
-          <View style={styles.moduleItem}>
-            <View style={styles.moduleInfo}>
-              <Text style={[styles.moduleName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                {t.tasksModule}
-              </Text>
-              <Text style={[styles.moduleDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
-                {t.tasksModuleDesc}
-              </Text>
-            </View>
-            <Switch
-              value={settings.modules?.tasks ?? true}
-              onValueChange={(value) => handleModuleToggle('tasks', value)}
-              trackColor={{ false: isDark ? '#333' : '#D0D0D0', true: '#818CF8' }}
-              thumbColor={settings.modules?.tasks ? '#6366F1' : isDark ? '#666' : '#f4f3f4'}
-            />
-          </View>
+                <View style={styles.moduleInfo}>
+                  <Text style={[styles.moduleName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                    {module.name}
+                  </Text>
+                  <Text style={[styles.moduleDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
+                    {module.desc}
+                  </Text>
+                </View>
 
-          {/* Books Module */}
-          <View style={styles.moduleItem}>
-            <View style={styles.moduleInfo}>
-              <Text style={[styles.moduleName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                {t.booksModule}
-              </Text>
-              <Text style={[styles.moduleDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
-                {t.booksModuleDesc}
-              </Text>
-            </View>
-            <Switch
-              value={settings.modules?.books ?? true}
-              onValueChange={(value) => handleModuleToggle('books', value)}
-              trackColor={{ false: isDark ? '#333' : '#D0D0D0', true: '#818CF8' }}
-              thumbColor={settings.modules?.books ? '#6366F1' : isDark ? '#666' : '#f4f3f4'}
-            />
-          </View>
-
-          {/* Mood Module */}
-          <View style={styles.moduleItem}>
-            <View style={styles.moduleInfo}>
-              <Text style={[styles.moduleName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                {t.moodModule}
-              </Text>
-              <Text style={[styles.moduleDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
-                {t.moodModuleDesc}
-              </Text>
-            </View>
-            <Switch
-              value={settings.modules?.mood ?? true}
-              onValueChange={(value) => handleModuleToggle('mood', value)}
-              trackColor={{ false: isDark ? '#333' : '#D0D0D0', true: '#818CF8' }}
-              thumbColor={settings.modules?.mood ? '#6366F1' : isDark ? '#666' : '#f4f3f4'}
-            />
-          </View>
-
-          {/* Training Module */}
-          <View style={styles.moduleItem}>
-            <View style={styles.moduleInfo}>
-              <Text style={[styles.moduleName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                {t.trainingModule}
-              </Text>
-              <Text style={[styles.moduleDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
-                {t.trainingModuleDesc}
-              </Text>
-            </View>
-            <Switch
-              value={settings.modules?.training ?? true}
-              onValueChange={(value) => handleModuleToggle('training', value)}
-              trackColor={{ false: isDark ? '#333' : '#D0D0D0', true: '#818CF8' }}
-              thumbColor={settings.modules?.training ? '#6366F1' : isDark ? '#666' : '#f4f3f4'}
-            />
-          </View>
-
-          {/* Focus Module */}
-          <View style={[styles.moduleItem, { borderBottomWidth: 0, paddingBottom: 0 }]}>
-            <View style={styles.moduleInfo}>
-              <Text style={[styles.moduleName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                {t.focusModule}
-              </Text>
-              <Text style={[styles.moduleDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
-                {t.focusModuleDesc}
-              </Text>
-            </View>
-            <Switch
-              value={settings.modules?.focus ?? true}
-              onValueChange={(value) => handleModuleToggle('focus', value)}
-              trackColor={{ false: isDark ? '#333' : '#D0D0D0', true: '#818CF8' }}
-              thumbColor={settings.modules?.focus ? '#6366F1' : isDark ? '#666' : '#f4f3f4'}
-            />
-          </View>
+                <Switch
+                  value={isEnabled}
+                  onValueChange={(value) => handleModuleToggle(module.key, value)}
+                  trackColor={{ false: isDark ? '#3F3F46' : '#D1D5DB', true: '#818CF8' }}
+                  thumbColor={isEnabled ? '#6366F1' : isDark ? '#71717A' : '#F9FAFB'}
+                  ios_backgroundColor={isDark ? '#3F3F46' : '#D1D5DB'}
+                />
+              </View>
+            );
+          })}
         </View>
 
         {/* Data Management Section */}
@@ -458,8 +487,15 @@ export default function ConfigScreen() {
           </Text>
 
           {/* Data Stats */}
-          <View style={[styles.statsContainer, { backgroundColor: isDark ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)' }]}>
-            <IconSymbol name="chart.pie.fill" size={20} color="#6366F1" />
+          <View style={[styles.statsContainer, { backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)' }]}>
+            <LinearGradient
+              colors={['#6366F1', '#8B5CF6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.statsIconContainer}
+            >
+              <IconSymbol name="chart.pie.fill" size={16} color="#FFFFFF" />
+            </LinearGradient>
             <Text style={[styles.statsText, { color: '#6366F1' }]}>
               {dataStats.keys} {t.dataStats} ({dataStats.sizeKB} KB)
             </Text>
@@ -473,7 +509,7 @@ export default function ConfigScreen() {
             activeOpacity={0.8}
           >
             <LinearGradient
-              colors={['#10B981', '#059669']}
+              colors={isExporting ? ['#6B7280', '#4B5563'] : ['#10B981', '#059669']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.dataButtonGradient}
@@ -489,6 +525,7 @@ export default function ConfigScreen() {
                 </Text>
                 <Text style={styles.dataButtonDesc}>{t.exportDataDesc}</Text>
               </View>
+              <IconSymbol name="chevron.right" size={16} color="rgba(255, 255, 255, 0.6)" />
             </LinearGradient>
           </TouchableOpacity>
 
@@ -500,7 +537,7 @@ export default function ConfigScreen() {
             activeOpacity={0.8}
           >
             <LinearGradient
-              colors={['#3B82F6', '#2563EB']}
+              colors={isImporting ? ['#6B7280', '#4B5563'] : ['#3B82F6', '#2563EB']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.dataButtonGradient}
@@ -516,20 +553,191 @@ export default function ConfigScreen() {
                 </Text>
                 <Text style={styles.dataButtonDesc}>{t.importDataDesc}</Text>
               </View>
+              <IconSymbol name="chevron.right" size={16} color="rgba(255, 255, 255, 0.6)" />
             </LinearGradient>
           </TouchableOpacity>
         </View>
 
         {saveStatus ? (
           <View style={styles.statusContainer}>
-            <Text style={[styles.status, { color: '#6366F1' }]}>
-              {saveStatus}
-            </Text>
+            <LinearGradient
+              colors={['rgba(99, 102, 241, 0.15)', 'rgba(139, 92, 246, 0.15)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.statusGradient}
+            >
+              <IconSymbol name="checkmark.circle.fill" size={16} color="#6366F1" />
+              <Text style={[styles.status, { color: '#6366F1' }]}>
+                {saveStatus}
+              </Text>
+            </LinearGradient>
           </View>
         ) : null}
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Language Selection Modal */}
+      <Modal
+        visible={showLanguageModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowLanguageModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t.selectLanguage}
+              </Text>
+              <TouchableOpacity onPress={() => setShowLanguageModal(false)}>
+                <IconSymbol name="xmark.circle.fill" size={28} color={isDark ? '#666' : '#9CA3AF'} />
+              </TouchableOpacity>
+            </View>
+
+            {/* English Option */}
+            <TouchableOpacity
+              style={[
+                styles.modalOption,
+                settings.language === 'en' && styles.modalOptionSelected,
+              ]}
+              onPress={() => handleLanguageChange('en')}
+              activeOpacity={0.7}
+            >
+              <LinearGradient
+                colors={['#6366F1', '#8B5CF6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.modalOptionIcon}
+              >
+                <Text style={styles.modalOptionEmoji}>🇺🇸</Text>
+              </LinearGradient>
+              <View style={styles.modalOptionText}>
+                <Text style={[styles.modalOptionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.english}
+                </Text>
+                <Text style={[styles.modalOptionDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
+                  {t.englishDesc}
+                </Text>
+              </View>
+              {settings.language === 'en' && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color="#6366F1" />
+              )}
+            </TouchableOpacity>
+
+            {/* Portuguese Option */}
+            <TouchableOpacity
+              style={[
+                styles.modalOption,
+                settings.language === 'pt' && styles.modalOptionSelected,
+              ]}
+              onPress={() => handleLanguageChange('pt')}
+              activeOpacity={0.7}
+            >
+              <LinearGradient
+                colors={['#6366F1', '#8B5CF6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.modalOptionIcon}
+              >
+                <Text style={styles.modalOptionEmoji}>🇧🇷</Text>
+              </LinearGradient>
+              <View style={styles.modalOptionText}>
+                <Text style={[styles.modalOptionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.portuguese}
+                </Text>
+                <Text style={[styles.modalOptionDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
+                  {t.portugueseDesc}
+                </Text>
+              </View>
+              {settings.language === 'pt' && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color="#6366F1" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Currency Selection Modal */}
+      <Modal
+        visible={showCurrencyModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCurrencyModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t.selectCurrency}
+              </Text>
+              <TouchableOpacity onPress={() => setShowCurrencyModal(false)}>
+                <IconSymbol name="xmark.circle.fill" size={28} color={isDark ? '#666' : '#9CA3AF'} />
+              </TouchableOpacity>
+            </View>
+
+            {/* USD Option */}
+            <TouchableOpacity
+              style={[
+                styles.modalOption,
+                settings.currency === 'USD' && styles.modalOptionSelected,
+              ]}
+              onPress={() => handleCurrencyChange('USD')}
+              activeOpacity={0.7}
+            >
+              <LinearGradient
+                colors={['#10B981', '#059669']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.modalOptionIcon}
+              >
+                <Text style={styles.modalOptionCurrency}>$</Text>
+              </LinearGradient>
+              <View style={styles.modalOptionText}>
+                <Text style={[styles.modalOptionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.usd}
+                </Text>
+                <Text style={[styles.modalOptionDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
+                  {t.usdDesc}
+                </Text>
+              </View>
+              {settings.currency === 'USD' && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color="#10B981" />
+              )}
+            </TouchableOpacity>
+
+            {/* BRL Option */}
+            <TouchableOpacity
+              style={[
+                styles.modalOption,
+                settings.currency === 'BRL' && styles.modalOptionSelected,
+              ]}
+              onPress={() => handleCurrencyChange('BRL')}
+              activeOpacity={0.7}
+            >
+              <LinearGradient
+                colors={['#10B981', '#059669']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.modalOptionIcon}
+              >
+                <Text style={styles.modalOptionCurrency}>R$</Text>
+              </LinearGradient>
+              <View style={styles.modalOptionText}>
+                <Text style={[styles.modalOptionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.brl}
+                </Text>
+                <Text style={[styles.modalOptionDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
+                  {t.brlDesc}
+                </Text>
+              </View>
+              {settings.currency === 'BRL' && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color="#10B981" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -544,75 +752,121 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     paddingTop: 60,
+    gap: 16,
   },
   title: {
     fontSize: 32,
     fontWeight: '800',
-    marginBottom: 24,
+    marginBottom: 8,
     letterSpacing: -0.5,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
     marginTop: 8,
-    marginBottom: 16,
   },
   card: {
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    marginBottom: 16,
+  },
+  cardIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardHeaderText: {
+    flex: 1,
+    gap: 4,
   },
   cardTitle: {
     fontSize: 17,
     fontWeight: '600',
-    marginBottom: 4,
   },
   cardDesc: {
     fontSize: 14,
     lineHeight: 20,
   },
-  pickerContainer: {
-    borderWidth: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginTop: 12,
+  selector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 14,
+    gap: 12,
   },
-  picker: {
-    height: 50,
+  selectorIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectorEmoji: {
+    fontSize: 18,
+  },
+  selectorText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
   },
   moduleItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 14,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(128, 128, 128, 0.2)',
+    borderBottomColor: 'rgba(128, 128, 128, 0.15)',
+  },
+  moduleItemLast: {
+    borderBottomWidth: 0,
+    paddingBottom: 0,
+  },
+  moduleIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   moduleInfo: {
     flex: 1,
-    marginRight: 12,
+    gap: 2,
   },
   moduleName: {
     fontSize: 15,
     fontWeight: '600',
-    marginBottom: 2,
   },
   moduleDesc: {
     fontSize: 13,
+    lineHeight: 18,
   },
   statsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 12,
-    borderRadius: 12,
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
     marginBottom: 16,
+  },
+  statsIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   statsText: {
     fontSize: 14,
@@ -620,13 +874,19 @@ const styles = StyleSheet.create({
   },
   dataButton: {
     marginBottom: 12,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   dataButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
     padding: 16,
-    borderRadius: 14,
   },
   dataButtonText: {
     flex: 1,
@@ -645,8 +905,77 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
+  statusGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
   status: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    gap: 14,
+    backgroundColor: 'rgba(99, 102, 241, 0.05)',
+  },
+  modalOptionSelected: {
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+  },
+  modalOptionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalOptionEmoji: {
+    fontSize: 24,
+  },
+  modalOptionCurrency: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  modalOptionText: {
+    flex: 1,
+  },
+  modalOptionTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  modalOptionDesc: {
+    fontSize: 14,
+    marginTop: 4,
+    lineHeight: 18,
   },
 });

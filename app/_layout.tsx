@@ -14,8 +14,10 @@ import { BooksProvider } from '@/contexts/books-context';
 import { MoodProvider } from '@/contexts/mood-context';
 import { TrainingProvider } from '@/contexts/training-context';
 import { FocusProvider } from '@/contexts/focus-context';
+import { AlertProvider } from '@/contexts/alert-context';
 import { useSettings } from '@/contexts/settings-context';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { CustomAlert } from '@/components/ui/custom-alert';
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
@@ -78,7 +80,10 @@ export default function RootLayout() {
                 <MoodProvider>
                   <TrainingProvider>
                     <FocusProvider>
-                      <RootLayoutNav />
+                      <AlertProvider>
+                        <RootLayoutNav />
+                        <CustomAlert />
+                      </AlertProvider>
                     </FocusProvider>
                   </TrainingProvider>
                 </MoodProvider>
