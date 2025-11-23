@@ -3,6 +3,7 @@ import {
   Investment,
   InvestmentMovement,
   InvestmentWithTotal,
+  MovementType,
   generateId,
   getTodayKey,
   calculatePercentChange,
@@ -170,7 +171,8 @@ export async function saveMovement(
   investmentId: string,
   amount: number,
   date: string,
-  tags: string[] = []
+  tags: string[] = [],
+  movementType: MovementType = 'deposit'
 ): Promise<InvestmentMovement> {
   const newMovement: InvestmentMovement = {
     id: generateId(),
@@ -178,6 +180,7 @@ export async function saveMovement(
     amount,
     date,
     tags,
+    movementType,
     createdAt: new Date().toISOString(),
   };
 
@@ -320,7 +323,8 @@ export async function getMonthlyChange(accountId: string): Promise<{
 export async function addContributionByTotal(
   investmentId: string,
   newTotal: number,
-  tag?: string
+  tag?: string,
+  movementType: MovementType = 'deposit'
 ): Promise<InvestmentMovement> {
   try {
     const movements = await getMovements(investmentId);
@@ -336,7 +340,7 @@ export async function addContributionByTotal(
       tags.push(tag.trim().toLowerCase().replace(/\s+/g, '-'));
     }
 
-    return await saveMovement(investmentId, delta, getTodayKey(), tags);
+    return await saveMovement(investmentId, delta, getTodayKey(), tags, movementType);
   } catch (error) {
     console.error('Error adding contribution by total:', error);
     throw error;

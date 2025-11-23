@@ -14,6 +14,7 @@ import {
   FinanceMonth,
   FinanceEntry,
   FinanceCategories,
+  getCurrentMonthKey,
 } from '@/types/finance';
 import * as FinanceStorage from '@/services/finance-storage';
 import { useAccount } from './account-context';
@@ -59,7 +60,8 @@ type FinanceContextType = {
     category: string,
     amount: number,
     startMonth: string,
-    note?: string
+    note?: string,
+    endMonth?: string
   ) => Promise<RecurringExpense>;
   updateRecurringExpense: (expense: RecurringExpense) => Promise<void>;
   toggleRecurringExpense: (expenseId: string) => Promise<void>;
@@ -282,13 +284,50 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     statementMonth: string,
     note?: string
   ): Promise<CardCharge> => {
-    return FinanceStorage.saveCardCharge(
+    const charge = await FinanceStorage.saveCardCharge(
       cardId,
       amount,
       category,
       statementMonth,
       note
     );
+
+    // Auto-add to current month's entries if charge is for current month
+    const currentMonth = getCurrentMonthKey();
+    if (statementMonth === currentMonth && activeBankAccount) {
+      const [year, month] = currentMonth.split('-').map(Number);
+      const financeMonth = await FinanceStorage.getFinanceMonth(
+        activeBankAccount.id,
+        year,
+        month
+      );
+
+      if (financeMonth) {
+        // Get card name for the tag
+        const card = creditCards.find((c) => c.id === cardId);
+        const cardName = card?.name || 'Card';
+
+        // Check if entry already exists (to avoid duplicates)
+        const existingEntries = await FinanceStorage.getFinanceEntries(financeMonth.id);
+        const alreadyExists = existingEntries.some(
+          (e) => e.source === 'card' && e.sourceId === charge.id
+        );
+
+        if (!alreadyExists) {
+          await FinanceStorage.saveFinanceEntry(
+            financeMonth.id,
+            'expense',
+            category,
+            amount,
+            'card',
+            cardName,
+            charge.id
+          );
+        }
+      }
+    }
+
+    return charge;
   };
 
   const deleteCardCharge = async (chargeId: string): Promise<void> => {
@@ -307,7 +346,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     category: string,
     amount: number,
     startMonth: string,
-    note?: string
+    note?: string,
+    endMonth?: string
   ): Promise<RecurringExpense> => {
     if (!activeBankAccount) throw new Error('No bank account selected');
     const newExpense = await FinanceStorage.saveRecurringExpense(
@@ -316,9 +356,42 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       category,
       amount,
       startMonth,
-      note
+      note,
+      endMonth
     );
     setRecurringExpenses((prev) => [...prev, newExpense]);
+
+    // Auto-add to current month's entries if expense starts in current month
+    const currentMonth = getCurrentMonthKey();
+    if (startMonth === currentMonth) {
+      const [year, month] = currentMonth.split('-').map(Number);
+      const financeMonth = await FinanceStorage.getFinanceMonth(
+        activeBankAccount.id,
+        year,
+        month
+      );
+
+      if (financeMonth) {
+        // Check if entry already exists (to avoid duplicates)
+        const existingEntries = await FinanceStorage.getFinanceEntries(financeMonth.id);
+        const alreadyExists = existingEntries.some(
+          (e) => e.source === 'recurring' && e.sourceId === newExpense.id
+        );
+
+        if (!alreadyExists) {
+          await FinanceStorage.saveFinanceEntry(
+            financeMonth.id,
+            'expense',
+            category,
+            amount,
+            'recurring',
+            title,
+            newExpense.id
+          );
+        }
+      }
+    }
+
     return newExpense;
   };
 
@@ -360,7 +433,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const result = await FinanceStorage.ensureMonthWithAutoPopulate(
       activeBankAccount.id,
       year,
-      month
+      month,
+      account?.salary
     );
 
     // Update local state

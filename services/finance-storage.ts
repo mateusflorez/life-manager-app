@@ -375,7 +375,8 @@ export async function saveRecurringExpense(
   category: string,
   amount: number,
   startMonth: string,
-  note?: string
+  note?: string,
+  endMonth?: string
 ): Promise<RecurringExpense> {
   const now = new Date().toISOString();
   const newExpense: RecurringExpense = {
@@ -385,6 +386,7 @@ export async function saveRecurringExpense(
     category,
     amount,
     startMonth,
+    endMonth,
     isActive: true,
     note,
     createdAt: now,
@@ -708,7 +710,8 @@ export async function saveFinanceCategories(
 export async function ensureMonthWithAutoPopulate(
   accountId: string,
   year: number,
-  month: number
+  month: number,
+  salary?: number
 ): Promise<{ financeMonth: FinanceMonth; entriesAdded: number }> {
   try {
     // Get or create month
@@ -726,6 +729,26 @@ export async function ensureMonthWithAutoPopulate(
     // Auto-populate for new months
     const monthKey = `${year}-${String(month).padStart(2, '0')}`;
     let entriesAdded = 0;
+
+    // Add salary as income (if set)
+    if (salary && salary > 0) {
+      const existingEntries = await getFinanceEntries(financeMonth.id);
+      const salaryExists = existingEntries.some(
+        (e) => e.source === 'recurring' && e.tag === 'salary'
+      );
+
+      if (!salaryExists) {
+        await saveFinanceEntry(
+          financeMonth.id,
+          'income',
+          'salary',
+          salary,
+          'recurring',
+          'Salary'
+        );
+        entriesAdded++;
+      }
+    }
 
     // Add card charges
     const cardCharges = await getAllCardChargesByMonth(accountId, monthKey);

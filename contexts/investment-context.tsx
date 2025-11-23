@@ -10,6 +10,7 @@ import {
   Investment,
   InvestmentMovement,
   InvestmentWithTotal,
+  MovementType,
   calculateChartData,
 } from '@/types/investment';
 import * as InvestmentStorage from '@/services/investment-storage';
@@ -35,7 +36,8 @@ type InvestmentContextType = {
   addContribution: (
     investmentId: string,
     newTotal: number,
-    tag?: string
+    tag?: string,
+    movementType?: MovementType
   ) => Promise<InvestmentMovement>;
   deleteMovement: (movementId: string) => Promise<void>;
 
@@ -146,12 +148,14 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
   const addContribution = async (
     investmentId: string,
     newTotal: number,
-    tag?: string
+    tag?: string,
+    movementType: MovementType = 'deposit'
   ): Promise<InvestmentMovement> => {
     const movement = await InvestmentStorage.addContributionByTotal(
       investmentId,
       newTotal,
-      tag
+      tag,
+      movementType
     );
     await loadData();
     return movement;

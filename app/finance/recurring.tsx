@@ -41,6 +41,7 @@ export default function RecurringScreen() {
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [startMonth, setStartMonth] = useState(getNextMonthKey());
+  const [endMonth, setEndMonth] = useState<string | null>(null);
   const [note, setNote] = useState('');
 
   // Month options for selector
@@ -57,6 +58,8 @@ export default function RecurringScreen() {
       amount: 'Amount',
       category: 'Category',
       startMonth: 'Start month',
+      endMonth: 'End month (optional)',
+      noEndMonth: 'Indefinite',
       note: 'Note (optional)',
       cancel: 'Cancel',
       save: 'Save',
@@ -67,6 +70,7 @@ export default function RecurringScreen() {
       delete: 'Delete',
       perMonth: '/month',
       since: 'Since',
+      until: 'Until',
       totalActive: 'Total active',
     },
     pt: {
@@ -79,6 +83,8 @@ export default function RecurringScreen() {
       amount: 'Valor',
       category: 'Categoria',
       startMonth: 'Mês inicial',
+      endMonth: 'Mês final (opcional)',
+      noEndMonth: 'Indefinido',
       note: 'Nota (opcional)',
       cancel: 'Cancelar',
       save: 'Salvar',
@@ -89,6 +95,7 @@ export default function RecurringScreen() {
       delete: 'Excluir',
       perMonth: '/mês',
       since: 'Desde',
+      until: 'Até',
       totalActive: 'Total ativo',
     },
   };
@@ -118,12 +125,14 @@ export default function RecurringScreen() {
         category,
         amountValue,
         startMonth,
-        note.trim() || undefined
+        note.trim() || undefined,
+        endMonth || undefined
       );
       setTitle('');
       setAmount('');
       setCategory('');
       setNote('');
+      setEndMonth(null);
       setShowNewModal(false);
     } catch (error) {
       console.error('Error creating recurring expense:', error);
@@ -285,6 +294,7 @@ export default function RecurringScreen() {
 
                 <Text style={[styles.expenseSince, { color: isDark ? '#666' : '#9CA3AF' }]}>
                   {t.since}: {formatMonthKey(expense.startMonth, settings.language)}
+                  {expense.endMonth && ` • ${t.until}: ${formatMonthKey(expense.endMonth, settings.language)}`}
                 </Text>
 
                 {expense.note && (
@@ -454,12 +464,73 @@ export default function RecurringScreen() {
                             : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                         },
                       ]}
-                      onPress={() => setStartMonth(monthKey)}
+                      onPress={() => {
+                        setStartMonth(monthKey);
+                        // Reset endMonth if it's before the new startMonth
+                        if (endMonth && endMonth < monthKey) {
+                          setEndMonth(null);
+                        }
+                      }}
                     >
                       <Text
                         style={[
                           styles.chipText,
                           { color: startMonth === monthKey ? '#FFFFFF' : isDark ? '#FFFFFF' : '#111827' },
+                        ]}
+                      >
+                        {formatMonthKey(monthKey, settings.language)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
+                  {t.endMonth}
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipList}>
+                  <TouchableOpacity
+                    style={[
+                      styles.chip,
+                      {
+                        backgroundColor: endMonth === null
+                          ? '#6366F1'
+                          : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+                        borderColor: endMonth === null
+                          ? '#6366F1'
+                          : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                      },
+                    ]}
+                    onPress={() => setEndMonth(null)}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        { color: endMonth === null ? '#FFFFFF' : isDark ? '#FFFFFF' : '#111827' },
+                      ]}
+                    >
+                      {t.noEndMonth}
+                    </Text>
+                  </TouchableOpacity>
+                  {monthOptions.filter((m) => m >= startMonth).map((monthKey) => (
+                    <TouchableOpacity
+                      key={monthKey}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: endMonth === monthKey
+                            ? '#6366F1'
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+                          borderColor: endMonth === monthKey
+                            ? '#6366F1'
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                        },
+                      ]}
+                      onPress={() => setEndMonth(monthKey)}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          { color: endMonth === monthKey ? '#FFFFFF' : isDark ? '#FFFFFF' : '#111827' },
                         ]}
                       >
                         {formatMonthKey(monthKey, settings.language)}

@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
   ReactNode,
 } from 'react';
 import {
@@ -53,6 +54,9 @@ const TasksContext = createContext<TasksContextType | undefined>(undefined);
 
 export function TasksProvider({ children }: { children: ReactNode }) {
   const { account, updateAccount } = useAccount();
+  const accountRef = useRef(account);
+  accountRef.current = account;
+
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<{
     todo: TaskWithStatus[];
@@ -72,32 +76,36 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   });
 
   // Load initial data
-  const loadData = useCallback(async () => {
-    if (!account) {
+  const loadData = useCallback(async (showLoading = false) => {
+    const currentAccount = accountRef.current;
+    if (!currentAccount) {
       setTasks({ todo: [], daily: [], weekly: [], monthly: [] });
       setTodayProgress({ completed: 0, total: 0, overdue: 0 });
       setLoading(false);
       return;
     }
 
-    setLoading(true);
+    if (showLoading) {
+      setLoading(true);
+    }
     try {
       // Load tasks with status
-      const tasksData = await TasksStorage.getTasksWithStatus(account.id);
+      const tasksData = await TasksStorage.getTasksWithStatus(currentAccount.id);
       setTasks(tasksData);
 
       // Calculate today's progress
-      const progress = await TasksStorage.getTodayProgress(account.id);
+      const progress = await TasksStorage.getTodayProgress(currentAccount.id);
       setTodayProgress(progress);
     } catch (error) {
       console.error('Error loading tasks data:', error);
     } finally {
       setLoading(false);
     }
-  }, [account]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account?.id]);
 
   useEffect(() => {
-    loadData();
+    loadData(true);
   }, [loadData]);
 
   // Task CRUD operations
@@ -106,8 +114,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     name: string,
     options?: { date?: string; time?: string; tag?: string }
   ): Promise<Task> => {
-    if (!account) throw new Error('No account selected');
-    const newTask = await TasksStorage.saveTask(account.id, type, name, options);
+    const currentAccount = accountRef.current;
+    if (!currentAccount) throw new Error('No account selected');
+    const newTask = await TasksStorage.saveTask(currentAccount.id, type, name, options);
     await loadData();
     return newTask;
   };
@@ -124,7 +133,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
   // Task completion
   const toggleTask = async (type: TaskType, taskId: string): Promise<void> => {
-    if (!account) throw new Error('No account selected');
+    const currentAccount = accountRef.current;
+    if (!currentAccount) throw new Error('No account selected');
 
     // Find current status
     const taskList = tasks[type];
@@ -134,13 +144,13 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     const newStatus = !task.isCompleted;
 
     // Update status in storage
-    await TasksStorage.setTaskStatus(account.id, type, taskId, newStatus);
+    await TasksStorage.setTaskStatus(currentAccount.id, type, taskId, newStatus);
 
     // Award XP on completion
     if (newStatus) {
       await updateAccount({
-        xp: (account.xp || 0) + TASK_XP_REWARD,
-        completedTasks: (account.completedTasks || 0) + 1,
+        xp: (currentAccount.xp || 0) + TASK_XP_REWARD,
+        completedTasks: (currentAccount.completedTasks || 0) + 1,
       });
 
       // For todo tasks, remove after completion

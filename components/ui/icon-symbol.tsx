@@ -78,6 +78,7 @@ const MAPPING = {
   'folder': 'folder',
   // Settings icons
   'globe': 'language',
+  'banknote.fill': 'payments',
   // Profile icons
   'camera.fill': 'photo-camera',
   'star.fill': 'star',

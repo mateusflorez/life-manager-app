@@ -1273,20 +1273,6 @@ import * as FileSystem from 'expo-file-system';
 - Edge-to-edge display enabled
 - Predictive back gesture disabled (by config choice)
 
-**Web**:
-- Static output mode configured
-- Color scheme detection with hydration handling
-- Responsive design considerations needed
-
-### Known Technical Debt
-
-1. ~~**No Data Persistence Layer**~~: ✅ Implemented with AsyncStorage
-2. ~~**Welcome Screen Placeholder**~~: ✅ Account creation flow implemented
-3. **Example Components**: Some components (HelloWave, ParallaxScrollView) are examples and may not be needed.
-4. **No Error Boundaries**: App doesn't have error handling infrastructure.
-5. **No Testing**: No test files or testing setup.
-6. **Chart TypeScript Errors**: `formatYLabel` type mismatch in react-native-chart-kit (pre-existing library issue).
-
 ### Expo Configuration Notes
 
 **URL Scheme**: `lifemanagermobile://`
@@ -1327,62 +1313,7 @@ import * as FileSystem from 'expo-file-system';
 - **Issue**: Using `@react-native-async-storage/async-storage` without installation
 - **Fix**: Install when needed: `pnpm add @react-native-async-storage/async-storage`
 
-### Pro Tips
-
-**Fast Development**:
-- Use `pnpm start` and scan QR code with Expo Go for fastest iteration
-- Use web mode (`pnpm run web`) for UI development
-- Hot reload works most of the time, but restart if behavior is weird
-
-**Debugging**:
-- Add `console.log` liberally during development
-- Use React DevTools for component inspection
-- Press `m` in dev server to access dev menu on device
-
-**Theming**:
-- Test both light and dark modes during development
-- Device/emulator can toggle modes in system settings
-- Use `useColorScheme()` hook to detect current theme
-
-**Navigation**:
-- File-based routing is automatic - just create files in `app/`
-- Use route groups `(name)` for layouts without URL segments
-- `_layout.tsx` files control navigation structure
-
-**Performance**:
-- Reanimated for 60 FPS animations
-- Avoid heavy computations in render
-- Use `React.memo` for expensive components
-- StyleSheet.create() helps with performance
-
-## Next Steps for Development
-
-### Immediate Priorities
-
-1. **Implement Data Persistence**
-   - Choose storage solution (AsyncStorage, SQLite, or FileSystem)
-   - Create data models for notes, tasks, etc.
-   - Implement save/load functionality
-
-2. **Migrate Obsidian Content**
-   - Parse markdown files from `life-manager-old/`
-   - Convert to app data format
-   - Create import functionality
-
-3. **Build Core Features**
-   - Note creation and editing
-   - Task management
-   - Organization/categorization
-   - Search functionality
-
-4. **Implement Authentication** (if needed)
-   - User account system (or remove "Create account" button)
-   - Local authentication (PIN, biometric)
-
-5. **Add Testing**
-   - Set up Jest and React Native Testing Library
-   - Write tests for critical components
-   - Add E2E tests for main flows
+## Next Steps for Developments
 
 ### Future Enhancements
 
@@ -1447,3 +1378,7 @@ This section tracks the progress of migrating all screens to the modern visual s
 - **Shadows**: `shadowOpacity: 0.1`, `shadowRadius: 12`, `elevation: 5`
 - **Colors**: Theme-aware with `isDark` checks, gradient accents `['#6366F1', '#8B5CF6']`
 - **Typography**: Bold headers (700-800), consistent sizing
+
+### Settings Screen Notes
+- Salary card uses `IconSymbol` `banknote.fill`; always add new SF Symbol names to `components/ui/icon-symbol.tsx` so Android/web fallbacks render.
+- Salary input and save button row keeps `flexWrap` enabled to prevent overflow on compact devices; preserve this when adjusting layout.

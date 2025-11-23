@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TextInput, TextInputProps, View, Text, StyleSheet } from 'react-native';
+import { TextInput, TextInputProps, View, Text, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 
 interface CurrencyInputProps extends Omit<TextInputProps, 'value' | 'onChangeText'> {
   value: string;
@@ -7,6 +7,7 @@ interface CurrencyInputProps extends Omit<TextInputProps, 'value' | 'onChangeTex
   currency: 'BRL' | 'USD';
   textColor?: string;
   prefixColor?: string;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 export function CurrencyInput({
@@ -16,6 +17,7 @@ export function CurrencyInput({
   textColor = '#000',
   prefixColor = '#666',
   style,
+  containerStyle,
   ...props
 }: CurrencyInputProps) {
   const currencySymbol = currency === 'BRL' ? 'R$' : '$';
@@ -63,7 +65,7 @@ export function CurrencyInput({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       <Text style={[styles.prefix, { color: prefixColor }]}>{currencySymbol}</Text>
       <TextInput
         {...props}

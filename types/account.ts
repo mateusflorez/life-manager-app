@@ -5,4 +5,5 @@ export type Account = {
   avatar?: string;
   xp: number;
   completedTasks: number;
+  salary?: number; // Monthly salary for auto-income in finance
 };

@@ -10,12 +10,15 @@ export type Investment = {
   updatedAt: string;
 };
 
+export type MovementType = 'deposit' | 'dividend';
+
 export type InvestmentMovement = {
   id: string;
   investmentId: string;
   amount: number; // Delta amount (can be negative for withdrawals)
   date: string; // YYYY-MM-DD
   tags: string[]; // Optional tags like "bonus", "initial"
+  movementType: MovementType; // 'deposit' for contributions, 'dividend' for earnings
   createdAt: string;
 };
 
@@ -219,6 +222,9 @@ export const INVESTMENT_TRANSLATIONS = {
     thisMonth: 'this month',
     investment: 'investment',
     investmentsCount: 'investments',
+    movementType: 'Type',
+    deposit: 'Deposit',
+    dividend: 'Dividend',
   },
   pt: {
     investments: 'Investimentos',
@@ -252,6 +258,9 @@ export const INVESTMENT_TRANSLATIONS = {
     thisMonth: 'este mês',
     investment: 'investimento',
     investmentsCount: 'investimentos',
+    movementType: 'Tipo',
+    deposit: 'Depósito',
+    dividend: 'Provento',
   },
 };
 

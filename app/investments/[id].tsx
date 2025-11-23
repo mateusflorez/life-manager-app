@@ -26,6 +26,7 @@ import {
   calculatePercentChange,
   InvestmentWithTotal,
   InvestmentMovement,
+  MovementType,
 } from '@/types/investment';
 
 export default function InvestmentDetailScreen() {
@@ -43,6 +44,7 @@ export default function InvestmentDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [newTotalValue, setNewTotalValue] = useState('0');
   const [newTag, setNewTag] = useState('');
+  const [movementType, setMovementType] = useState<MovementType>('deposit');
   const [saving, setSaving] = useState(false);
 
   const lang = settings.language;
@@ -93,8 +95,9 @@ export default function InvestmentDetailScreen() {
 
     setSaving(true);
     try {
-      await addContribution(investment.id, newTotalFloat, newTag.trim() || undefined);
+      await addContribution(investment.id, newTotalFloat, newTag.trim() || undefined, movementType);
       setNewTag('');
+      setMovementType('deposit');
       await loadInvestment();
       showToast({ message: t('contributionAdded', lang), type: 'success' });
     } catch (error: unknown) {
@@ -349,6 +352,71 @@ export default function InvestmentDetailScreen() {
           )}
 
           <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
+            {t('movementType', lang)}
+          </Text>
+          <View style={styles.typeSelector}>
+            <TouchableOpacity
+              style={[
+                styles.typeOption,
+                {
+                  backgroundColor: movementType === 'deposit'
+                    ? 'rgba(16, 185, 129, 0.15)'
+                    : isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
+                  borderColor: movementType === 'deposit'
+                    ? '#10B981'
+                    : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                },
+              ]}
+              onPress={() => setMovementType('deposit')}
+              activeOpacity={0.8}
+            >
+              <IconSymbol
+                name="arrow.down.circle.fill"
+                size={18}
+                color={movementType === 'deposit' ? '#10B981' : isDark ? '#666' : '#9CA3AF'}
+              />
+              <Text
+                style={[
+                  styles.typeOptionText,
+                  { color: movementType === 'deposit' ? '#10B981' : isDark ? '#FFFFFF' : '#111827' },
+                ]}
+              >
+                {t('deposit', lang)}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.typeOption,
+                {
+                  backgroundColor: movementType === 'dividend'
+                    ? 'rgba(99, 102, 241, 0.15)'
+                    : isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
+                  borderColor: movementType === 'dividend'
+                    ? '#6366F1'
+                    : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                },
+              ]}
+              onPress={() => setMovementType('dividend')}
+              activeOpacity={0.8}
+            >
+              <IconSymbol
+                name="sparkles"
+                size={18}
+                color={movementType === 'dividend' ? '#6366F1' : isDark ? '#666' : '#9CA3AF'}
+              />
+              <Text
+                style={[
+                  styles.typeOptionText,
+                  { color: movementType === 'dividend' ? '#6366F1' : isDark ? '#FFFFFF' : '#111827' },
+                ]}
+              >
+                {t('dividend', lang)}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
             {t('optionalTag', lang)}
           </Text>
           <TextInput
@@ -456,23 +524,45 @@ export default function InvestmentDetailScreen() {
                   </Text>
                 </View>
 
-                {movement.tags.length > 0 && (
-                  <View style={styles.tagsRow}>
-                    {movement.tags.map((tag, idx) => (
-                      <View
-                        key={idx}
-                        style={[
-                          styles.tag,
-                          { backgroundColor: isDark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)' },
-                        ]}
-                      >
-                        <Text style={[styles.tagText, { color: '#6366F1' }]}>
-                          #{tag}
-                        </Text>
-                      </View>
-                    ))}
+                <View style={styles.tagsRow}>
+                  <View
+                    style={[
+                      styles.typeBadge,
+                      {
+                        backgroundColor: (movement.movementType || 'deposit') === 'deposit'
+                          ? 'rgba(16, 185, 129, 0.15)'
+                          : 'rgba(99, 102, 241, 0.15)',
+                      },
+                    ]}
+                  >
+                    <IconSymbol
+                      name={(movement.movementType || 'deposit') === 'deposit' ? 'arrow.down.circle.fill' : 'sparkles'}
+                      size={12}
+                      color={(movement.movementType || 'deposit') === 'deposit' ? '#10B981' : '#6366F1'}
+                    />
+                    <Text
+                      style={[
+                        styles.typeBadgeText,
+                        { color: (movement.movementType || 'deposit') === 'deposit' ? '#10B981' : '#6366F1' },
+                      ]}
+                    >
+                      {t((movement.movementType || 'deposit') as 'deposit' | 'dividend', lang)}
+                    </Text>
                   </View>
-                )}
+                  {movement.tags.map((tag, idx) => (
+                    <View
+                      key={idx}
+                      style={[
+                        styles.tag,
+                        { backgroundColor: isDark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)' },
+                      ]}
+                    >
+                      <Text style={[styles.tagText, { color: '#6366F1' }]}>
+                        #{tag}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
 
                 <View style={[styles.movementTotalRow, { borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
                   <Text style={[styles.movementTotalLabel, { color: isDark ? '#666' : '#9CA3AF' }]}>
@@ -714,6 +804,37 @@ const styles = StyleSheet.create({
   },
   movementTotal: {
     fontSize: 15,
+    fontWeight: '600',
+  },
+  typeSelector: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  typeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  typeOptionText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  typeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  typeBadgeText: {
+    fontSize: 11,
     fontWeight: '600',
   },
 });
