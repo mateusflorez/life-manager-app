@@ -1,5 +1,6 @@
 // Focus notification service
 // Handles persistent notifications during focus sessions and completion sounds
+// Uses Android Chronometer for real-time timer updates even when app is in background
 
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
@@ -58,7 +59,7 @@ function getNotificationText(key: NotificationKey, language: Language): string {
 
 // Configure notifications
 export async function configureFocusNotifications(): Promise<boolean> {
-  // Set notification handler
+  // Set notification handler - this determines how notifications are handled when app is in foreground
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
@@ -84,29 +85,42 @@ export async function configureFocusNotifications(): Promise<boolean> {
     return false;
   }
 
-  // Create notification channel for Android
+  // Create notification channel for Android with MAX importance for alarm-like behavior
   if (Platform.OS === 'android') {
+    // Delete and recreate channel to ensure settings are applied
+    try {
+      await Notifications.deleteNotificationChannelAsync(FOCUS_CHANNEL_ID);
+    } catch {
+      // Channel might not exist yet, ignore
+    }
+
     await Notifications.setNotificationChannelAsync(FOCUS_CHANNEL_ID, {
       name: 'Focus Timer',
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
+      description: 'Notifications for focus sessions, breaks, and timer completions',
+      importance: Notifications.AndroidImportance.MAX, // Changed from HIGH to MAX for alarm-like behavior
+      vibrationPattern: [0, 500, 200, 500], // More noticeable vibration
       sound: 'default',
       enableLights: true,
       lightColor: '#007AFF',
+      bypassDnd: true, // Try to bypass Do Not Disturb
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      enableVibrate: true,
     });
   }
 
   return true;
 }
 
-// Show or update ongoing notification (only updates when app is in foreground)
+// Show or update ongoing notification with Android chronometer for background support
+// The chronometer counts time natively on Android, without needing JS updates
 export async function showOngoingNotification(
   mode: FocusMode,
   phase: FocusPhase,
   displayTime: number,
   cyclesCompleted: number,
   cyclesTarget: number,
-  language: Language
+  language: Language,
+  endsAt?: number | null // timestamp when timer ends (for countdown modes)
 ): Promise<void> {
   if (phase === 'idle') {
     await dismissOngoingNotification();
@@ -118,27 +132,58 @@ export async function showOngoingNotification(
     ? getNotificationText('breakTitle', language)
     : getNotificationText('focusTitle', language);
 
-  let body = formatTimerDisplay(displayTime);
-
+  let body = '';
   if (mode === 'pomodoro') {
-    body += ` - ${getNotificationText('cycleInfo', language)} ${cyclesCompleted + 1}/${cyclesTarget}`;
+    body = `${getNotificationText('cycleInfo', language)} ${cyclesCompleted + 1}/${cyclesTarget}`;
+  } else if (mode === 'countdown') {
+    body = getNotificationText('focusBody', language);
+  } else {
+    body = getNotificationText('focusBody', language);
   }
 
   try {
-    await Notifications.scheduleNotificationAsync({
-      identifier: ONGOING_NOTIFICATION_ID,
-      content: {
+    // For Android, use chronometer for real-time timer updates in background
+    if (Platform.OS === 'android') {
+      const isCountdown = mode === 'pomodoro' || mode === 'countdown';
+
+      // Use type assertion for Android-specific notification options
+      // showChronometer, chronometerCountDown, when, usesChronometer, ongoing are valid Android options
+      // but not typed in expo-notifications
+      const androidContent = {
         title,
         body,
         sound: false,
-        sticky: true, // Android: cannot be dismissed by swipe
+        sticky: true,
         priority: Notifications.AndroidNotificationPriority.MAX,
-        ...(Platform.OS === 'android' && {
-          channelId: FOCUS_CHANNEL_ID,
-        }),
-      },
-      trigger: null, // Show immediately
-    });
+        channelId: FOCUS_CHANNEL_ID,
+        // Android-specific chronometer options
+        showChronometer: true,
+        chronometerCountDown: isCountdown,
+        // For countdown: when the timer ends. For countup: when the timer started
+        when: isCountdown && endsAt ? endsAt : Date.now() - displayTime,
+        usesChronometer: true,
+        ongoing: true,
+      } as Notifications.NotificationContentInput;
+
+      await Notifications.scheduleNotificationAsync({
+        identifier: ONGOING_NOTIFICATION_ID,
+        content: androidContent,
+        trigger: null,
+      });
+    } else {
+      // iOS fallback - just show the time (will only update when app is in foreground)
+      await Notifications.scheduleNotificationAsync({
+        identifier: ONGOING_NOTIFICATION_ID,
+        content: {
+          title,
+          body: `${formatTimerDisplay(displayTime)}${mode === 'pomodoro' ? ` - ${body}` : ''}`,
+          sound: false,
+          sticky: true,
+          priority: Notifications.AndroidNotificationPriority.MAX,
+        },
+        trigger: null,
+      });
+    }
   } catch (error) {
     console.warn('Failed to show ongoing notification:', error);
   }

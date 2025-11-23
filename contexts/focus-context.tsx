@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useRef,
 } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import {
   FocusEntry,
   FocusTimerState,
@@ -29,13 +30,16 @@ import {
 } from '@/services/focus-storage';
 import {
   configureFocusNotifications,
-  showOngoingNotification,
   showCompletionNotification,
-  scheduleCompletionNotification,
-  cancelScheduledNotification,
-  dismissOngoingNotification,
-  cleanupFocusNotifications,
 } from '@/services/focus-notification';
+import {
+  scheduleAllPhaseTransitions,
+  cancelAllScheduledPhases,
+  showOngoingNotification,
+  dismissOngoingNotification,
+  calculateCurrentState,
+  cleanupAllFocusNotifications,
+} from '@/services/focus-background-service';
 import { useAccount } from '@/contexts/account-context';
 import { useSettings } from '@/contexts/settings-context';
 
@@ -86,6 +90,28 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
   // Calculate stats from entries
   const stats = calculateStats(entries);
 
+  // Ref to track if we need to handle completion when timer expires in background
+  const needsCompletionHandlingRef = useRef(false);
+
+  // Sync display time from timer state (used when resuming from background)
+  const syncDisplayTime = useCallback((state: FocusTimerState) => {
+    if (!state.running || state.phase === 'idle') return;
+
+    const now = Date.now();
+    if ((state.mode === 'pomodoro' || state.mode === 'countdown') && state.endsAt) {
+      const remaining = Math.max(0, state.endsAt - now);
+      setDisplayTime(remaining);
+
+      // Mark for completion handling if timer expired while in background
+      if (remaining <= 0) {
+        needsCompletionHandlingRef.current = true;
+      }
+    } else if (state.mode === 'countup' && state.startedAt) {
+      const elapsed = now - state.startedAt - state.pausedDuration;
+      setDisplayTime(elapsed);
+    }
+  }, []);
+
   // Load initial data and configure notifications
   useEffect(() => {
     async function load() {
@@ -98,6 +124,9 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
         setEntries(loadedEntries);
         setTimerState(loadedState);
 
+        // Sync display time in case timer was running
+        syncDisplayTime(loadedState);
+
         // Configure notifications
         const enabled = await configureFocusNotifications();
         setNotificationsEnabled(enabled);
@@ -109,11 +138,85 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
     }
     load();
 
-    // Cleanup on unmount
+    // Cleanup on unmount - don't cleanup notifications so timer continues in background
     return () => {
-      cleanupFocusNotifications();
+      // Only cleanup if timer is not running
+      // cleanupAllFocusNotifications();
     };
-  }, []);
+  }, [syncDisplayTime]);
+
+  // Handle app state changes (background/foreground)
+  useEffect(() => {
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+      // App coming back to foreground
+      if (nextAppState === 'active') {
+        // Calculate current state based on elapsed time (handles phases that completed in background)
+        const { state: newState, completedSessions, phaseChanged, previousPhase } = calculateCurrentState(timerState);
+
+        if (completedSessions > 0 || newState.phase !== timerState.phase || newState.cyclesCompleted !== timerState.cyclesCompleted) {
+          // State changed while in background - update it
+          setTimerState(newState);
+
+          // Save completed sessions
+          for (let i = 0; i < completedSessions; i++) {
+            await saveSession(timerState, timerState.targetMinutes);
+          }
+
+          // Show completion notification if phase changed while in background
+          // This ensures the user gets notified even if the scheduled notification didn't fire
+          if (notificationsEnabled && phaseChanged) {
+            if (newState.phase === 'idle') {
+              // Session fully completed
+              if (timerState.mode === 'countdown') {
+                showCompletionNotification('timer', language);
+              } else {
+                showCompletionNotification('allCycles', language);
+              }
+            } else if (newState.phase === 'break' && previousPhase === 'focus') {
+              // Focus phase completed, now in break
+              showCompletionNotification('focus', language);
+            } else if (newState.phase === 'focus' && previousPhase === 'break') {
+              // Break phase completed, now in focus
+              showCompletionNotification('break', language);
+            }
+          }
+
+          // Update display time
+          if (newState.running && newState.phase !== 'idle') {
+            const now = Date.now();
+            if ((newState.mode === 'pomodoro' || newState.mode === 'countdown') && newState.endsAt) {
+              setDisplayTime(Math.max(0, newState.endsAt - now));
+            } else if (newState.mode === 'countup' && newState.startedAt) {
+              setDisplayTime(now - newState.startedAt - newState.pausedDuration);
+            }
+          } else {
+            setDisplayTime(0);
+          }
+
+          // Reschedule notifications for remaining phases
+          if (notificationsEnabled && newState.running && newState.phase !== 'idle') {
+            scheduleAllPhaseTransitions(newState, language);
+          }
+        } else {
+          // Just sync display time
+          syncDisplayTime(timerState);
+        }
+
+        // Update notification
+        if (notificationsEnabled && newState.running && newState.phase !== 'idle') {
+          showOngoingNotification(newState, language);
+        } else if (newState.phase === 'idle') {
+          dismissOngoingNotification();
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [timerState, notificationsEnabled, language, syncDisplayTime]);
 
   // Timer tick logic
   const tick = useCallback(() => {
@@ -139,17 +242,10 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
         setDisplayTime(newDisplayTime);
       }
 
-      // Update ongoing notification every second (not every tick)
-      if (notificationsEnabled && now - lastNotificationUpdateRef.current >= 1000) {
+      // Update ongoing notification every 5 seconds (chronometer handles real-time on Android)
+      if (notificationsEnabled && now - lastNotificationUpdateRef.current >= 5000) {
         lastNotificationUpdateRef.current = now;
-        showOngoingNotification(
-          prev.mode,
-          prev.phase,
-          newDisplayTime,
-          prev.cyclesCompleted,
-          prev.cyclesTarget,
-          language
-        );
+        showOngoingNotification(prev, language);
       }
 
       return prev;
@@ -197,7 +293,7 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
-      // Focus complete, start break - show notification
+      // Focus complete, start break - show notification (scheduled notifications already handle background)
       if (notificationsEnabled) {
         showCompletionNotification('focus', lang);
       }
@@ -205,10 +301,6 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
       // Start break phase
       if (state.breakMinutes > 0) {
         const breakEndsAt = Date.now() + state.breakMinutes * 60 * 1000;
-        // Schedule notification for break end
-        if (notificationsEnabled) {
-          scheduleCompletionNotification(breakEndsAt, 'break', lang);
-        }
         return {
           ...state,
           phase: 'break',
@@ -219,10 +311,6 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
 
       // No break, start next focus
       const focusEndsAt = Date.now() + state.targetMinutes * 60 * 1000;
-      // Schedule notification for next focus end
-      if (notificationsEnabled) {
-        scheduleCompletionNotification(focusEndsAt, 'focus', lang);
-      }
       return {
         ...state,
         phase: 'focus',
@@ -231,15 +319,11 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
         currentSessionStartISO: new Date().toISOString(),
       };
     } else if (state.phase === 'break') {
-      // Break complete, start focus - show notification
+      // Break complete, start focus - show notification (scheduled notifications already handle background)
       if (notificationsEnabled) {
         showCompletionNotification('break', lang);
       }
       const focusEndsAt = Date.now() + state.targetMinutes * 60 * 1000;
-      // Schedule notification for focus end
-      if (notificationsEnabled) {
-        scheduleCompletionNotification(focusEndsAt, 'focus', lang);
-      }
       return {
         ...state,
         phase: 'focus',
@@ -320,6 +404,14 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isLoading]);
 
+  // Handle timer completion that occurred while app was in background
+  useEffect(() => {
+    if (needsCompletionHandlingRef.current && timerState.running) {
+      needsCompletionHandlingRef.current = false;
+      setTimerState((prev) => handlePhaseComplete(prev, language));
+    }
+  }, [timerState.running, language]);
+
   // Actions
   const startTimer = useCallback(
     (mode: FocusMode, config?: TimerConfig) => {
@@ -354,22 +446,12 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
       setTimerState(newState);
       setDisplayTime(initialDisplayTime);
 
-      // Show initial ongoing notification and schedule completion
+      // Show initial ongoing notification and schedule all phase transitions
       if (notificationsEnabled) {
-        showOngoingNotification(
-          mode,
-          'focus',
-          initialDisplayTime,
-          0,
-          cyclesTarget,
-          language
-        );
+        showOngoingNotification(newState, language);
 
-        // Schedule completion notification for when phase ends
-        if (endsAt) {
-          const notifType = mode === 'countdown' ? 'timer' : 'focus';
-          scheduleCompletionNotification(endsAt, notifType, language);
-        }
+        // Schedule all phase transition notifications (will fire even in background)
+        scheduleAllPhaseTransitions(newState, language);
       }
     },
     [timerState, notificationsEnabled, language]
@@ -381,8 +463,8 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
       running: false,
       pausedAt: Date.now(),
     }));
-    // Cancel scheduled notification when paused
-    cancelScheduledNotification();
+    // Cancel all scheduled phase notifications when paused
+    cancelAllScheduledPhases();
   }, []);
 
   const resumeTimer = useCallback(() => {
@@ -391,20 +473,21 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
       const usesEndsAt = prev.mode === 'pomodoro' || prev.mode === 'countdown';
       const newEndsAt = usesEndsAt && prev.endsAt ? prev.endsAt + pausedTime : prev.endsAt;
 
-      // Reschedule completion notification with new end time
-      if (notificationsEnabled && newEndsAt) {
-        const notifType = prev.mode === 'countdown' ? 'timer' :
-                         prev.phase === 'break' ? 'break' : 'focus';
-        scheduleCompletionNotification(newEndsAt, notifType, language);
-      }
-
-      return {
+      const newState = {
         ...prev,
         running: true,
         pausedDuration: prev.pausedDuration + pausedTime,
         pausedAt: null,
         endsAt: newEndsAt,
       };
+
+      // Reschedule all phase transition notifications with adjusted times
+      if (notificationsEnabled) {
+        scheduleAllPhaseTransitions(newState, language);
+        showOngoingNotification(newState, language);
+      }
+
+      return newState;
     });
   }, [notificationsEnabled, language]);
 
@@ -412,7 +495,7 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
     setTimerState(getDefaultTimerState());
     setDisplayTime(0);
     // Dismiss and cancel all notifications
-    cleanupFocusNotifications();
+    cleanupAllFocusNotifications();
   }, []);
 
   const finishSession = useCallback(async () => {
@@ -438,7 +521,7 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
     setTimerState(getDefaultTimerState());
     setDisplayTime(0);
     // Dismiss and cancel all notifications
-    cleanupFocusNotifications();
+    cleanupAllFocusNotifications();
   }, [timerState, saveSession]);
 
   const deleteEntry = useCallback(async (id: string) => {
