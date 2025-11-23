@@ -102,12 +102,12 @@ export default function TasksScreen() {
         style={[
           styles.taskItem,
           {
-            backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+            backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
             borderColor: overdue
               ? 'rgba(239, 68, 68, 0.5)'
               : isDark
               ? 'rgba(255, 255, 255, 0.1)'
-              : 'rgba(0, 0, 0, 0.05)',
+              : 'rgba(0, 0, 0, 0.08)',
             opacity: task.isCompleted ? 0.6 : 1,
           },
         ]}
@@ -195,8 +195,8 @@ export default function TasksScreen() {
           style={[
             styles.sectionHeader,
             {
-              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
             },
           ]}
           onPress={() => toggleSection(type)}
@@ -219,7 +219,7 @@ export default function TasksScreen() {
             style={[
               styles.countBadge,
               {
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
               },
             ]}
           >
@@ -294,8 +294,8 @@ export default function TasksScreen() {
           style={[
             styles.progressCard,
             {
-              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
             },
           ]}
         >

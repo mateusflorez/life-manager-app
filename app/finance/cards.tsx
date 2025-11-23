@@ -308,8 +308,8 @@ export default function CardsScreen() {
                 style={[
                   styles.cardItem,
                   {
-                    backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                    backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                   },
                 ]}
                 onPress={() => openChargesViewModal(card)}
@@ -366,7 +366,7 @@ export default function CardsScreen() {
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.addChargeButton, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]}
+                  style={[styles.addChargeButton, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)' }]}
                   onPress={() => openChargeModal(card)}
                 >
                   <IconSymbol name="plus.circle.fill" size={18} color="#6366F1" />
@@ -435,7 +435,7 @@ export default function CardsScreen() {
                 style={[
                   styles.input,
                   {
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                     color: isDark ? '#FFFFFF' : '#111827',
                     borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                   },
@@ -453,7 +453,7 @@ export default function CardsScreen() {
                 style={[
                   styles.input,
                   {
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                     borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                   },
                 ]}
@@ -476,7 +476,7 @@ export default function CardsScreen() {
                     style={[
                       styles.input,
                       {
-                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                         color: isDark ? '#FFFFFF' : '#111827',
                         borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                       },
@@ -496,7 +496,7 @@ export default function CardsScreen() {
                     style={[
                       styles.input,
                       {
-                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                         color: isDark ? '#FFFFFF' : '#111827',
                         borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                       },
@@ -581,7 +581,7 @@ export default function CardsScreen() {
                   style={[
                     styles.input,
                     {
-                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                       borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                     },
                   ]}
@@ -607,7 +607,7 @@ export default function CardsScreen() {
                         {
                           backgroundColor: chargeInstallments === String(num)
                             ? '#6366F1'
-                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                           borderColor: chargeInstallments === String(num)
                             ? '#6366F1'
                             : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
@@ -639,7 +639,7 @@ export default function CardsScreen() {
                         {
                           backgroundColor: chargeCategory === cat
                             ? '#6366F1'
-                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                           borderColor: chargeCategory === cat
                             ? '#6366F1'
                             : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
@@ -671,7 +671,7 @@ export default function CardsScreen() {
                         {
                           backgroundColor: chargeMonth === monthKey
                             ? '#6366F1'
-                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                           borderColor: chargeMonth === monthKey
                             ? '#6366F1'
                             : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
@@ -698,7 +698,7 @@ export default function CardsScreen() {
                   style={[
                     styles.input,
                     {
-                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                       color: isDark ? '#FFFFFF' : '#111827',
                       borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                     },
@@ -786,7 +786,7 @@ export default function CardsScreen() {
                     {
                       backgroundColor: viewMonth === monthKey
                         ? '#6366F1'
-                        : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                        : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                       borderColor: viewMonth === monthKey
                         ? '#6366F1'
                         : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
@@ -837,7 +837,7 @@ export default function CardsScreen() {
                       styles.chargeItem,
                       {
                         backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                        borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                       },
                     ]}
                   >

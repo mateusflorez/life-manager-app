@@ -293,7 +293,7 @@ export default function MonthsScreen() {
                 {
                   backgroundColor: selectedYear === year
                     ? '#6366F1'
-                    : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                    : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                   borderColor: selectedYear === year
                     ? '#6366F1'
                     : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
@@ -356,8 +356,8 @@ export default function MonthsScreen() {
               style={[
                 styles.monthCard,
                 {
-                  backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                  backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                 },
               ]}
               onPress={() => openMonthDetail(month)}
@@ -503,7 +503,7 @@ export default function MonthsScreen() {
                         styles.entryItem,
                         {
                           backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                          borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                          borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                         },
                       ]}
                     >
@@ -575,7 +575,7 @@ export default function MonthsScreen() {
                         styles.entryItem,
                         {
                           backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                          borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                          borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                         },
                       ]}
                     >
@@ -674,7 +674,7 @@ export default function MonthsScreen() {
                         style={[
                           styles.typeButton,
                           {
-                            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                             borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                           },
                         ]}
@@ -706,7 +706,7 @@ export default function MonthsScreen() {
                         style={[
                           styles.typeButton,
                           {
-                            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                             borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                           },
                         ]}
@@ -726,7 +726,7 @@ export default function MonthsScreen() {
                   style={[
                     styles.input,
                     {
-                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                       borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                     },
                   ]}
@@ -752,7 +752,7 @@ export default function MonthsScreen() {
                         {
                           backgroundColor: entryCategory === cat
                             ? '#6366F1'
-                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                           borderColor: entryCategory === cat
                             ? '#6366F1'
                             : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
@@ -779,7 +779,7 @@ export default function MonthsScreen() {
                   style={[
                     styles.input,
                     {
-                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                       color: isDark ? '#FFFFFF' : '#111827',
                       borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                     },
@@ -871,7 +871,7 @@ export default function MonthsScreen() {
                         {
                           backgroundColor: newMonthYear === year
                             ? '#6366F1'
-                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                           borderColor: newMonthYear === year
                             ? '#6366F1'
                             : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
@@ -915,11 +915,11 @@ export default function MonthsScreen() {
                             ? '#6366F1'
                             : isDisabled
                             ? isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)'
-                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                           borderColor: isSelected
                             ? '#6366F1'
                             : isDisabled
-                            ? isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+                            ? isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.08)'
                             : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                           opacity: isDisabled ? 0.4 : 1,
                         },

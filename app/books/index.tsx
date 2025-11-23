@@ -78,8 +78,8 @@ export default function BooksScreen() {
         style={[
           styles.bookCard,
           {
-            backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
           },
         ]}
         onPress={() => router.push(`/books/${book.id}`)}
@@ -105,7 +105,7 @@ export default function BooksScreen() {
           <View
             style={[
               styles.chapterBadge,
-              { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' },
+              { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)' },
             ]}
           >
             <Text style={[styles.chapterCount, { color: isDark ? '#FFFFFF' : '#111827' }]}>
@@ -182,8 +182,8 @@ export default function BooksScreen() {
           style={[
             styles.sectionHeader,
             {
-              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
             },
           ]}
           onPress={() => toggleSection(key)}
@@ -205,7 +205,7 @@ export default function BooksScreen() {
           <View
             style={[
               styles.countBadge,
-              { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' },
+              { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)' },
             ]}
           >
             <Text style={[styles.countText, { color: isDark ? '#FFFFFF' : '#111827' }]}>

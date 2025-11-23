@@ -107,8 +107,8 @@ export default function LogMoodScreen() {
             style={[
               styles.headerCard,
               {
-                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
               },
             ]}
           >
@@ -135,8 +135,8 @@ export default function LogMoodScreen() {
             style={[
               styles.fieldCard,
               {
-                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
               },
             ]}
           >
@@ -195,8 +195,8 @@ export default function LogMoodScreen() {
             style={[
               styles.fieldCard,
               {
-                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
               },
             ]}
           >
@@ -263,8 +263,8 @@ export default function LogMoodScreen() {
             style={[
               styles.fieldCard,
               {
-                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
               },
             ]}
           >

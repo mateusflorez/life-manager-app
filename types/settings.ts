@@ -1,5 +1,6 @@
 export type Language = 'en' | 'pt';
 export type Currency = 'BRL' | 'USD';
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 export type ModulesConfig = {
   finance: boolean;
@@ -15,6 +16,7 @@ export type Settings = {
   language: Language;
   currency: Currency;
   modules: ModulesConfig;
+  theme: ThemeMode;
 };
 
 export const DEFAULT_MODULES: ModulesConfig = {
@@ -31,4 +33,5 @@ export const DEFAULT_SETTINGS: Settings = {
   language: 'pt',
   currency: 'BRL',
   modules: DEFAULT_MODULES,
+  theme: 'system',
 };

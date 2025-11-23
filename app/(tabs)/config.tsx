@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, Switch, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedView } from '@/components/themed-view';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useSettings } from '@/contexts/settings-context';
-import { type Language, type Currency, type ModulesConfig } from '@/types/settings';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { saveExportedData, importData, getDataStats } from '@/services/data-export';
 import { RippleBackground } from '@/components/ui/ripple-background';
 import { useAlert } from '@/contexts/alert-context';
+import { useSettings } from '@/contexts/settings-context';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { getDataStats, importData, saveExportedData } from '@/services/data-export';
+import { type Currency, type Language, type ModulesConfig, type ThemeMode } from '@/types/settings';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 
 // Module configuration with icons and gradients
 const MODULE_CONFIG = {
@@ -54,6 +54,7 @@ export default function ConfigScreen() {
   const [dataStats, setDataStats] = useState<{ keys: number; sizeKB: number }>({ keys: 0, sizeKB: 0 });
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const [showThemeModal, setShowThemeModal] = useState(false);
 
   useEffect(() => {
     loadDataStats();
@@ -86,6 +87,22 @@ export default function ConfigScreen() {
       setTimeout(() => setSaveStatus(''), 3000);
     } catch (error) {
       console.error('Failed to update currency:', error);
+      setSaveStatus(
+        settings.language === 'pt' ? 'Erro ao salvar' : 'Failed to save'
+      );
+    }
+  };
+
+  const handleThemeChange = async (theme: ThemeMode) => {
+    try {
+      await updateSettings({ theme });
+      setShowThemeModal(false);
+      setSaveStatus(
+        settings.language === 'pt' ? 'Tema atualizado!' : 'Theme updated!'
+      );
+      setTimeout(() => setSaveStatus(''), 3000);
+    } catch (error) {
+      console.error('Failed to update theme:', error);
       setSaveStatus(
         settings.language === 'pt' ? 'Erro ao salvar' : 'Failed to save'
       );
@@ -183,10 +200,13 @@ export default function ConfigScreen() {
       title: 'Settings',
       languageLabel: 'Language',
       currencyLabel: 'Currency',
+      themeLabel: 'Theme',
       languageHelp: 'Choose your preferred UI language',
       currencyHelp: 'Choose your preferred currency',
+      themeHelp: 'Choose your preferred appearance',
       selectLanguage: 'Select Language',
       selectCurrency: 'Select Currency',
+      selectTheme: 'Select Theme',
       english: 'English',
       englishDesc: 'Use English for the interface',
       portuguese: 'Português',
@@ -195,6 +215,12 @@ export default function ConfigScreen() {
       usdDesc: 'Display values in USD ($)',
       brl: 'Brazilian Real',
       brlDesc: 'Display values in BRL (R$)',
+      themeLight: 'Light',
+      themeLightDesc: 'Always use light mode',
+      themeDark: 'Dark',
+      themeDarkDesc: 'Always use dark mode',
+      themeSystem: 'System',
+      themeSystemDesc: 'Follow system settings',
       modulesTitle: 'Modules',
       modulesHelp: 'Enable or disable app modules. Disabling a module hides it from the home screen but keeps your data.',
       financeModule: 'Finance',
@@ -225,10 +251,13 @@ export default function ConfigScreen() {
       title: 'Configurações',
       languageLabel: 'Idioma',
       currencyLabel: 'Moeda',
+      themeLabel: 'Tema',
       languageHelp: 'Escolha seu idioma preferido',
       currencyHelp: 'Escolha sua moeda preferida',
+      themeHelp: 'Escolha a aparência do app',
       selectLanguage: 'Selecionar Idioma',
       selectCurrency: 'Selecionar Moeda',
+      selectTheme: 'Selecionar Tema',
       english: 'English',
       englishDesc: 'Usar inglês na interface',
       portuguese: 'Português',
@@ -237,6 +266,12 @@ export default function ConfigScreen() {
       usdDesc: 'Exibir valores em USD ($)',
       brl: 'Real Brasileiro',
       brlDesc: 'Exibir valores em BRL (R$)',
+      themeLight: 'Claro',
+      themeLightDesc: 'Sempre usar modo claro',
+      themeDark: 'Escuro',
+      themeDarkDesc: 'Sempre usar modo escuro',
+      themeSystem: 'Sistema',
+      themeSystemDesc: 'Seguir configuração do sistema',
       modulesTitle: 'Módulos',
       modulesHelp: 'Habilite ou desabilite módulos do app. Desabilitar um módulo oculta ele da tela inicial mas mantém seus dados.',
       financeModule: 'Finanças',
@@ -268,12 +303,12 @@ export default function ConfigScreen() {
   const t = translations[settings.language];
 
   // Module list configuration
-  const modules: Array<{
+  const modules: {
     key: keyof ModulesConfig;
     name: string;
     desc: string;
     isLast?: boolean;
-  }> = [
+  }[] = [
     { key: 'finance', name: t.financeModule, desc: t.financeModuleDesc },
     { key: 'investments', name: t.investmentsModule, desc: t.investmentsModuleDesc },
     { key: 'tasks', name: t.tasksModule, desc: t.tasksModuleDesc },
@@ -291,6 +326,20 @@ export default function ConfigScreen() {
     return settings.currency === 'USD' ? 'Dollar ($)' : 'Real (R$)';
   };
 
+  const getThemeDisplay = () => {
+    const theme = settings.theme ?? 'system';
+    if (theme === 'light') return t.themeLight;
+    if (theme === 'dark') return t.themeDark;
+    return t.themeSystem;
+  };
+
+  const getThemeIcon = () => {
+    const theme = settings.theme ?? 'system';
+    if (theme === 'light') return 'sun.max.fill';
+    if (theme === 'dark') return 'moon.fill';
+    return 'circle.lefthalf.filled';
+  };
+
   return (
     <ThemedView style={styles.container}>
       <RippleBackground isDark={isDark} rippleCount={6} />
@@ -305,8 +354,8 @@ export default function ConfigScreen() {
           style={[
             styles.card,
             {
-              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
             },
           ]}
         >
@@ -359,8 +408,8 @@ export default function ConfigScreen() {
           style={[
             styles.card,
             {
-              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
             },
           ]}
         >
@@ -408,6 +457,60 @@ export default function ConfigScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Theme Section */}
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+            },
+          ]}
+        >
+          <View style={styles.cardHeader}>
+            <LinearGradient
+              colors={['#F59E0B', '#D97706']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cardIconContainer}
+            >
+              <IconSymbol name={getThemeIcon() as any} size={18} color="#FFFFFF" />
+            </LinearGradient>
+            <View style={styles.cardHeaderText}>
+              <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t.themeLabel}
+              </Text>
+              <Text style={[styles.cardDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
+                {t.themeHelp}
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.selector,
+              {
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+              },
+            ]}
+            onPress={() => setShowThemeModal(true)}
+            activeOpacity={0.7}
+          >
+            <LinearGradient
+              colors={['#F59E0B', '#D97706']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.selectorIcon}
+            >
+              <IconSymbol name={getThemeIcon() as any} size={18} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.selectorText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {getThemeDisplay()}
+            </Text>
+            <IconSymbol name="chevron.right" size={16} color={isDark ? '#808080' : '#6B7280'} />
+          </TouchableOpacity>
+        </View>
+
         {/* Modules Section */}
         <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
           {t.modulesTitle}
@@ -417,8 +520,8 @@ export default function ConfigScreen() {
           style={[
             styles.card,
             {
-              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
             },
           ]}
         >
@@ -477,8 +580,8 @@ export default function ConfigScreen() {
           style={[
             styles.card,
             {
-              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
             },
           ]}
         >
@@ -733,6 +836,117 @@ export default function ConfigScreen() {
               </View>
               {settings.currency === 'BRL' && (
                 <IconSymbol name="checkmark.circle.fill" size={24} color="#10B981" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Theme Selection Modal */}
+      <Modal
+        visible={showThemeModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowThemeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t.selectTheme}
+              </Text>
+              <TouchableOpacity onPress={() => setShowThemeModal(false)}>
+                <IconSymbol name="xmark.circle.fill" size={28} color={isDark ? '#666' : '#9CA3AF'} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Light Option */}
+            <TouchableOpacity
+              style={[
+                styles.modalOption,
+                (settings.theme ?? 'system') === 'light' && styles.modalOptionSelected,
+              ]}
+              onPress={() => handleThemeChange('light')}
+              activeOpacity={0.7}
+            >
+              <LinearGradient
+                colors={['#F59E0B', '#D97706']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.modalOptionIcon}
+              >
+                <IconSymbol name="sun.max.fill" size={24} color="#FFFFFF" />
+              </LinearGradient>
+              <View style={styles.modalOptionText}>
+                <Text style={[styles.modalOptionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.themeLight}
+                </Text>
+                <Text style={[styles.modalOptionDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
+                  {t.themeLightDesc}
+                </Text>
+              </View>
+              {(settings.theme ?? 'system') === 'light' && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color="#F59E0B" />
+              )}
+            </TouchableOpacity>
+
+            {/* Dark Option */}
+            <TouchableOpacity
+              style={[
+                styles.modalOption,
+                (settings.theme ?? 'system') === 'dark' && styles.modalOptionSelected,
+              ]}
+              onPress={() => handleThemeChange('dark')}
+              activeOpacity={0.7}
+            >
+              <LinearGradient
+                colors={['#6366F1', '#4F46E5']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.modalOptionIcon}
+              >
+                <IconSymbol name="moon.fill" size={24} color="#FFFFFF" />
+              </LinearGradient>
+              <View style={styles.modalOptionText}>
+                <Text style={[styles.modalOptionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.themeDark}
+                </Text>
+                <Text style={[styles.modalOptionDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
+                  {t.themeDarkDesc}
+                </Text>
+              </View>
+              {(settings.theme ?? 'system') === 'dark' && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color="#6366F1" />
+              )}
+            </TouchableOpacity>
+
+            {/* System Option */}
+            <TouchableOpacity
+              style={[
+                styles.modalOption,
+                (settings.theme ?? 'system') === 'system' && styles.modalOptionSelected,
+              ]}
+              onPress={() => handleThemeChange('system')}
+              activeOpacity={0.7}
+            >
+              <LinearGradient
+                colors={['#8B5CF6', '#7C3AED']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.modalOptionIcon}
+              >
+                <IconSymbol name="circle.lefthalf.filled" size={24} color="#FFFFFF" />
+              </LinearGradient>
+              <View style={styles.modalOptionText}>
+                <Text style={[styles.modalOptionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.themeSystem}
+                </Text>
+                <Text style={[styles.modalOptionDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
+                  {t.themeSystemDesc}
+                </Text>
+              </View>
+              {(settings.theme ?? 'system') === 'system' && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color="#8B5CF6" />
               )}
             </TouchableOpacity>
           </View>

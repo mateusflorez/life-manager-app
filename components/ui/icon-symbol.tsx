@@ -62,6 +62,8 @@ const MAPPING = {
   'clock.badge.checkmark': 'schedule',
   'checkmark.circle.fill': 'check-circle',
   'sun.max.fill': 'wb-sunny',
+  'moon.fill': 'dark-mode',
+  'circle.lefthalf.filled': 'contrast',
   'play.fill': 'play-arrow',
   'pause.fill': 'pause',
   'stop.fill': 'stop',
@@ -85,7 +87,6 @@ const MAPPING = {
   'exclamationmark.circle.fill': 'error-outline',
   'exclamationmark.triangle.fill': 'warning',
   'info.circle.fill': 'info',
-  'xmark.circle.fill': 'cancel',
 } as IconMapping;
 
 /**

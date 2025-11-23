@@ -253,8 +253,8 @@ export default function BookDetailScreen() {
           style={[
             styles.card,
             {
-              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
             },
           ]}
         >
@@ -358,8 +358,8 @@ export default function BookDetailScreen() {
           style={[
             styles.card,
             {
-              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
             },
           ]}
         >
@@ -383,7 +383,7 @@ export default function BookDetailScreen() {
               style={[
                 styles.reviewInput,
                 {
-                  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+                  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
                   borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                   color: isDark ? '#FFFFFF' : '#111827',
                 },
@@ -405,7 +405,7 @@ export default function BookDetailScreen() {
                 style={[
                   styles.chapterInput,
                   {
-                    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+                    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
                     borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                     color: isDark ? '#FFFFFF' : '#111827',
                   },
@@ -423,7 +423,7 @@ export default function BookDetailScreen() {
                 style={[
                   styles.chapterInput,
                   {
-                    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+                    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
                     borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                     color: isDark ? '#FFFFFF' : '#111827',
                   },
@@ -458,17 +458,17 @@ export default function BookDetailScreen() {
 
           {/* Existing Reviews */}
           {book.reviews.length > 0 && (
-            <View style={[styles.reviewsList, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]}>
+            <View style={[styles.reviewsList, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)' }]}>
               {book.reviews.map((review) => (
                 <View
                   key={review.id}
                   style={[
                     styles.reviewItem,
-                    { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' },
+                    { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)' },
                   ]}
                 >
                   <View style={styles.reviewHeader}>
-                    <View style={[styles.reviewChapterBadge, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]}>
+                    <View style={[styles.reviewChapterBadge, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)' }]}>
                       <Text style={[styles.reviewChapterText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                         {formatReviewChapters(review)}
                       </Text>
@@ -503,8 +503,8 @@ export default function BookDetailScreen() {
           style={[
             styles.card,
             {
-              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
             },
           ]}
         >
@@ -533,7 +533,7 @@ export default function BookDetailScreen() {
               {chapters.map((chapter) => (
                 <View
                   key={chapter.id}
-                  style={[styles.chapterRow, { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]}
+                  style={[styles.chapterRow, { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)' }]}
                 >
                   <View style={styles.chapterInfo}>
                     <View style={[styles.chapterDot, { backgroundColor: '#6C5CE7' }]} />
