@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   StyleSheet,
   ScrollView,
@@ -6,8 +7,12 @@ import {
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -16,6 +21,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSettings } from '@/contexts/settings-context';
 import { useTraining } from '@/contexts/training-context';
 import { t, formatDate, calculateVolume } from '@/types/training';
+import type { TrainingSession } from '@/types/training';
 import { LineChart } from 'react-native-chart-kit';
 import { useAlert } from '@/contexts/alert-context';
 
@@ -28,10 +34,19 @@ export default function ExerciseDetailScreen() {
   const isDark = colorScheme === 'dark';
   const { settings } = useSettings();
   const language = settings.language;
-  const { showConfirm } = useAlert();
+  const { showConfirm, showToast } = useAlert();
 
-  const { getExerciseById, deleteExercise, deleteSession, isLoading } = useTraining();
+  const { getExerciseById, deleteExercise, deleteSession, updateSession, isLoading } = useTraining();
   const exercise = getExerciseById(id ?? '');
+
+  // Edit session state
+  const [editingSession, setEditingSession] = useState<TrainingSession | null>(null);
+  const [editLoad, setEditLoad] = useState('');
+  const [editReps, setEditReps] = useState('');
+  const [editDate, setEditDate] = useState<Date>(new Date());
+  const [editNotes, setEditNotes] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const handleDeleteExercise = () => {
     if (!exercise) return;
@@ -66,6 +81,68 @@ export default function ExerciseDetailScreen() {
         },
       ],
     });
+  };
+
+  const handleEditSession = (session: TrainingSession) => {
+    setEditingSession(session);
+    setEditLoad(session.load.toString());
+    setEditReps(session.reps.toString());
+    setEditDate(new Date(session.date + 'T12:00:00'));
+    setEditNotes(session.notes || '');
+  };
+
+  const handleCloseEdit = () => {
+    setEditingSession(null);
+    setEditLoad('');
+    setEditReps('');
+    setEditDate(new Date());
+    setEditNotes('');
+    setShowDatePicker(false);
+  };
+
+  const formatDateForStorage = (d: Date): string => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDateForDisplay = (d: Date): string => {
+    if (language === 'pt') {
+      return d.toLocaleDateString('pt-BR');
+    }
+    return d.toLocaleDateString('en-US');
+  };
+
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (event.type === 'set' && selectedDate) {
+      setEditDate(selectedDate);
+    }
+  };
+
+  const handleSaveSession = async () => {
+    if (!editingSession) return;
+
+    const loadNum = parseFloat(editLoad);
+    const repsNum = parseInt(editReps, 10);
+
+    if (isNaN(loadNum) || loadNum <= 0) return;
+    if (isNaN(repsNum) || repsNum <= 0) return;
+
+    setSaving(true);
+    try {
+      const dateStr = formatDateForStorage(editDate);
+      await updateSession(editingSession.id, loadNum, repsNum, dateStr, editNotes);
+      showToast({ message: t('sessionUpdated', language), type: 'success' });
+      handleCloseEdit();
+    } catch (error) {
+      console.error('Failed to update session:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const formatNumber = (num: number) => {
@@ -290,7 +367,7 @@ export default function ExerciseDetailScreen() {
             exercise.sessions.map((session, index) => {
               const volume = calculateVolume(session.load, session.reps);
               return (
-                <TouchableOpacity
+                <View
                   key={session.id}
                   style={[
                     styles.sessionRow,
@@ -299,8 +376,6 @@ export default function ExerciseDetailScreen() {
                       borderBottomWidth: index < exercise.sessions.length - 1 ? 1 : 0,
                     },
                   ]}
-                  onLongPress={() => handleDeleteSession(session.id)}
-                  activeOpacity={0.7}
                 >
                   <View style={styles.sessionInfo}>
                     <View style={styles.sessionMainRow}>
@@ -320,7 +395,23 @@ export default function ExerciseDetailScreen() {
                       </Text>
                     )}
                   </View>
-                </TouchableOpacity>
+                  <View style={styles.sessionActions}>
+                    <TouchableOpacity
+                      style={styles.editSessionButton}
+                      onPress={() => handleEditSession(session)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <IconSymbol name="pencil" size={16} color="#4CAF50" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deleteSessionButton}
+                      onPress={() => handleDeleteSession(session.id)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <IconSymbol name="trash" size={16} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
               );
             })
           )}
@@ -342,6 +433,142 @@ export default function ExerciseDetailScreen() {
           <Text style={styles.deleteButtonText}>{t('deleteExercise', language)}</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Edit Session Modal */}
+      <Modal
+        visible={editingSession !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={handleCloseEdit}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t('editSession', language)}
+              </Text>
+              <TouchableOpacity onPress={handleCloseEdit}>
+                <IconSymbol name="xmark.circle.fill" size={28} color={isDark ? '#666' : '#9CA3AF'} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Load & Reps */}
+              <View style={styles.inputRow}>
+                <View style={styles.inputHalf}>
+                  <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                    {t('load', language)} (kg)
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                        color: isDark ? '#FFFFFF' : '#111827',
+                      },
+                    ]}
+                    placeholder="0"
+                    placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                    value={editLoad}
+                    onChangeText={setEditLoad}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+                <View style={styles.inputHalf}>
+                  <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                    {t('reps', language)}
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                        color: isDark ? '#FFFFFF' : '#111827',
+                      },
+                    ]}
+                    placeholder="0"
+                    placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                    value={editReps}
+                    onChangeText={setEditReps}
+                    keyboardType="number-pad"
+                  />
+                </View>
+              </View>
+
+              {/* Date Picker */}
+              <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t('date', language)}
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.datePickerButton,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                  },
+                ]}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <IconSymbol name="calendar" size={20} color={isDark ? '#FFFFFF' : '#111827'} />
+                <Text style={[styles.datePickerText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {formatDateForDisplay(editDate)}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Notes */}
+              <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t('notesOptional', language)}
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.notesInput,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                    color: isDark ? '#FFFFFF' : '#111827',
+                  },
+                ]}
+                placeholder={t('notes', language)}
+                placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                value={editNotes}
+                onChangeText={setEditNotes}
+                multiline
+              />
+
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  (!editLoad || !editReps || saving) && styles.modalButtonDisabled,
+                ]}
+                onPress={handleSaveSession}
+                activeOpacity={0.8}
+                disabled={!editLoad || !editReps || saving}
+              >
+                <LinearGradient
+                  colors={(!editLoad || !editReps || saving) ? ['#888', '#777'] : ['#4CAF50', '#45A049']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.modalButtonGradient}
+                >
+                  <IconSymbol name="checkmark" size={18} color="#FFFFFF" />
+                  <Text style={styles.modalButtonText}>
+                    {saving ? (language === 'pt' ? 'Salvando...' : 'Saving...') : t('save', language)}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Date Picker */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={editDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleDateChange}
+        />
+      )}
     </ThemedView>
   );
 }
@@ -472,11 +699,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   sessionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 14,
   },
   sessionInfo: {
     flex: 1,
     gap: 4,
+  },
+  sessionActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginLeft: 12,
+  },
+  editSessionButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+  },
+  deleteSessionButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
   sessionMainRow: {
     flexDirection: 'row',
@@ -519,6 +764,85 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: '#EF4444',
     fontSize: 15,
+    fontWeight: '600',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 40,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  inputHalf: {
+    flex: 1,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  input: {
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+  },
+  notesInput: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+    marginBottom: 12,
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    padding: 14,
+    gap: 10,
+    marginBottom: 12,
+  },
+  datePickerText: {
+    fontSize: 16,
+    flex: 1,
+  },
+  modalButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  modalButtonDisabled: {
+    opacity: 0.6,
+  },
+  modalButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    gap: 8,
+  },
+  modalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

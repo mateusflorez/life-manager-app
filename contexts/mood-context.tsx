@@ -18,6 +18,7 @@ type MoodContextType = {
   entries: MoodEntry[];
   loading: boolean;
   addEntry: (date: string, mood: MoodScore, note?: string) => Promise<void>;
+  updateEntry: (entryId: string, mood: MoodScore, note?: string) => Promise<void>;
   deleteEntry: (entryId: string) => Promise<void>;
   getRecentEntries: (limit?: number) => MoodEntry[];
   getChartData: (language: 'en' | 'pt') => { labels: string[]; values: (number | null)[] };
@@ -66,6 +67,23 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
       await addXp(MOOD_XP);
     },
     [addXp]
+  );
+
+  const updateEntry = useCallback(
+    async (entryId: string, mood: MoodScore, note?: string) => {
+      const existing = entries.find((e) => e.id === entryId);
+      if (!existing) return;
+
+      const updatedEntry: MoodEntry = {
+        ...existing,
+        mood,
+        note: note?.trim() || undefined,
+      };
+
+      await saveEntry(updatedEntry);
+      setEntries((prev) => prev.map((e) => (e.id === entryId ? updatedEntry : e)));
+    },
+    [entries]
   );
 
   const deleteEntry = useCallback(async (entryId: string) => {
@@ -117,6 +135,7 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
       entries,
       loading,
       addEntry,
+      updateEntry,
       deleteEntry,
       getRecentEntries,
       getChartData,
@@ -129,6 +148,7 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
       entries,
       loading,
       addEntry,
+      updateEntry,
       deleteEntry,
       getRecentEntries,
       getChartData,

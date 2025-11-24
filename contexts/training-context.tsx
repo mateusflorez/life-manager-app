@@ -20,8 +20,10 @@ type TrainingContextType = {
   totalVolume: number;
   isLoading: boolean;
   createExercise: (name: string) => Promise<Exercise>;
+  updateExercise: (exerciseId: string, name: string) => Promise<void>;
   deleteExercise: (exerciseId: string) => Promise<void>;
   logSession: (exerciseId: string, load: number, reps: number, date: string, notes?: string) => Promise<TrainingSession>;
+  updateSession: (sessionId: string, load: number, reps: number, date: string, notes?: string) => Promise<void>;
   deleteSession: (sessionId: string) => Promise<void>;
   getExerciseById: (exerciseId: string) => ExerciseWithStats | undefined;
   getSessionsByDate: () => Record<string, number>;
@@ -122,6 +124,22 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     return newExercise;
   };
 
+  const updateExercise = async (exerciseId: string, name: string): Promise<void> => {
+    const trimmedName = name.trim();
+    const exists = exercises.some(
+      (e) => e.id !== exerciseId && e.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+    if (exists) {
+      throw new Error('Exercise already exists');
+    }
+
+    const updatedExercises = exercises.map((e) =>
+      e.id === exerciseId ? { ...e, name: trimmedName } : e
+    );
+    await saveExercises(updatedExercises);
+    setExercises(updatedExercises);
+  };
+
   const deleteExerciseHandler = async (exerciseId: string): Promise<void> => {
     const updatedExercises = exercises.filter((e) => e.id !== exerciseId);
     const updatedSessions = sessions.filter((s) => s.exerciseId !== exerciseId);
@@ -156,6 +174,22 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     await saveSessions(updatedSessions);
     setSessions(updatedSessions);
     return newSession;
+  };
+
+  const updateSession = async (
+    sessionId: string,
+    load: number,
+    reps: number,
+    date: string,
+    notes?: string
+  ): Promise<void> => {
+    const updatedSessions = sessions.map((s) =>
+      s.id === sessionId
+        ? { ...s, load, reps, date, notes: notes?.trim() || undefined }
+        : s
+    );
+    await saveSessions(updatedSessions);
+    setSessions(updatedSessions);
   };
 
   const deleteSession = async (sessionId: string): Promise<void> => {
@@ -196,8 +230,10 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
         totalVolume,
         isLoading,
         createExercise,
+        updateExercise,
         deleteExercise: deleteExerciseHandler,
         logSession,
+        updateSession,
         deleteSession,
         getExerciseById,
         getSessionsByDate,

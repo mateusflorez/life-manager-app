@@ -17,7 +17,9 @@ import { RippleBackground } from '@/components/ui/ripple-background';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSettings } from '@/contexts/settings-context';
 import { useTraining } from '@/contexts/training-context';
+import { useAlert } from '@/contexts/alert-context';
 import { t } from '@/types/training';
+import type { ExerciseWithStats } from '@/types/training';
 
 export default function ExercisesScreen() {
   const router = useRouter();
@@ -25,11 +27,17 @@ export default function ExercisesScreen() {
   const isDark = colorScheme === 'dark';
   const { settings } = useSettings();
   const language = settings.language;
+  const { showToast } = useAlert();
 
-  const { exercisesWithStats, createExercise, isLoading } = useTraining();
+  const { exercisesWithStats, createExercise, updateExercise, isLoading } = useTraining();
 
   const [showModal, setShowModal] = useState(false);
   const [exerciseName, setExerciseName] = useState('');
+
+  // Edit state
+  const [editingExercise, setEditingExercise] = useState<ExerciseWithStats | null>(null);
+  const [editName, setEditName] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const handleCreateExercise = async () => {
     if (!exerciseName.trim()) {
@@ -42,6 +50,30 @@ export default function ExercisesScreen() {
       setShowModal(false);
     } catch (error) {
       // Exercise already exists - silently ignore
+    }
+  };
+
+  const handleEditExercise = (exercise: ExerciseWithStats) => {
+    setEditingExercise(exercise);
+    setEditName(exercise.name);
+  };
+
+  const handleCloseEdit = () => {
+    setEditingExercise(null);
+    setEditName('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingExercise || !editName.trim()) return;
+    setSaving(true);
+    try {
+      await updateExercise(editingExercise.id, editName.trim());
+      showToast({ message: t('exerciseUpdated', language), type: 'success' });
+      handleCloseEdit();
+    } catch (error) {
+      // Exercise already exists
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -125,7 +157,7 @@ export default function ExercisesScreen() {
             </View>
           ) : (
             sortedExercises.map((exercise, index) => (
-              <TouchableOpacity
+              <View
                 key={exercise.id}
                 style={[
                   styles.exerciseRow,
@@ -134,19 +166,35 @@ export default function ExercisesScreen() {
                     borderBottomWidth: index < sortedExercises.length - 1 ? 1 : 0,
                   },
                 ]}
-                onPress={() => router.push(`/training/${exercise.id}`)}
-                activeOpacity={0.7}
               >
-                <View style={styles.exerciseInfo}>
+                <TouchableOpacity
+                  style={styles.exerciseInfo}
+                  onPress={() => router.push(`/training/${exercise.id}`)}
+                  activeOpacity={0.7}
+                >
                   <Text style={[styles.exerciseName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                     {exercise.name}
                   </Text>
                   <Text style={[styles.exerciseStats, { color: isDark ? '#808080' : '#6B7280' }]}>
                     {exercise.totalSessions} {t('sessions', language).toLowerCase()} · {formatNumber(exercise.totalVolume)} {t('volume', language)}
                   </Text>
+                </TouchableOpacity>
+                <View style={styles.exerciseActions}>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => handleEditExercise(exercise)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <IconSymbol name="pencil" size={16} color="#4CAF50" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => router.push(`/training/${exercise.id}`)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <IconSymbol name="chevron.right" size={20} color={isDark ? '#666' : '#9CA3AF'} />
+                  </TouchableOpacity>
                 </View>
-                <IconSymbol name="chevron.right" size={20} color={isDark ? '#666' : '#9CA3AF'} />
-              </TouchableOpacity>
+              </View>
             ))
           )}
         </View>
@@ -234,6 +282,76 @@ export default function ExercisesScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Edit Exercise Modal */}
+      <Modal
+        visible={editingExercise !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={handleCloseEdit}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t('editExercise', language)}
+              </Text>
+              <TouchableOpacity onPress={handleCloseEdit}>
+                <IconSymbol name="xmark.circle.fill" size={28} color={isDark ? '#666' : '#9CA3AF'} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <View style={styles.inputHeader}>
+                <LinearGradient
+                  colors={['#4CAF50', '#45A049']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.inputIcon}
+                >
+                  <IconSymbol name="pencil" size={12} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t('exerciseName', language)}
+                </Text>
+              </View>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                    color: isDark ? '#FFFFFF' : '#111827',
+                  },
+                ]}
+                placeholder={language === 'pt' ? 'Ex: Supino reto' : 'E.g., Bench press'}
+                placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                value={editName}
+                onChangeText={setEditName}
+                autoFocus
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.modalButton, saving && styles.modalButtonDisabled]}
+              onPress={handleSaveEdit}
+              activeOpacity={0.8}
+              disabled={saving}
+            >
+              <LinearGradient
+                colors={saving ? ['#888', '#777'] : ['#4CAF50', '#45A049']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.modalButtonGradient}
+              >
+                <IconSymbol name="checkmark" size={18} color="#FFFFFF" />
+                <Text style={styles.modalButtonText}>
+                  {saving ? (language === 'pt' ? 'Salvando...' : 'Saving...') : t('save', language)}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -304,6 +422,16 @@ const styles = StyleSheet.create({
   },
   exerciseStats: {
     fontSize: 13,
+  },
+  exerciseActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  editButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
   },
   emptyState: {
     alignItems: 'center',
@@ -400,6 +528,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginTop: 8,
+  },
+  modalButtonDisabled: {
+    opacity: 0.6,
   },
   modalButtonGradient: {
     flexDirection: 'row',

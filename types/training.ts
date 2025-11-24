@@ -147,7 +147,11 @@ type TranslationKey =
   | 'invalidLoad'
   | 'invalidReps'
   | 'enterExerciseName'
-  | 'exerciseExists';
+  | 'exerciseExists'
+  | 'editExercise'
+  | 'editSession'
+  | 'exerciseUpdated'
+  | 'sessionUpdated';
 
 const translations: Record<string, Record<TranslationKey, string>> = {
   en: {
@@ -191,6 +195,10 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     invalidReps: 'Enter valid reps',
     enterExerciseName: 'Enter exercise name',
     exerciseExists: 'Exercise already exists',
+    editExercise: 'Edit Exercise',
+    editSession: 'Edit Session',
+    exerciseUpdated: 'Exercise updated!',
+    sessionUpdated: 'Session updated!',
   },
   pt: {
     training: 'Treino',
@@ -233,6 +241,10 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     invalidReps: 'Informe repetições válidas',
     enterExerciseName: 'Digite o nome do exercício',
     exerciseExists: 'Exercício já existe',
+    editExercise: 'Editar Exercício',
+    editSession: 'Editar Treino',
+    exerciseUpdated: 'Exercício atualizado!',
+    sessionUpdated: 'Treino atualizado!',
   },
 };
 

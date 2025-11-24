@@ -7,25 +7,34 @@ import {
   TextInput,
   ActivityIndicator,
   TouchableOpacity,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Slider from '@react-native-community/slider';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { RippleBackground } from '@/components/ui/ripple-background';
 import { useMood } from '@/contexts/mood-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { formatDate, getMoodFace } from '@/types/mood';
+import { formatDate, getMoodFace, MOOD_FACES } from '@/types/mood';
+import type { MoodEntry, MoodScore } from '@/types/mood';
 import { useAlert } from '@/contexts/alert-context';
 
 export default function MoodHistoryScreen() {
-  const { loading, getGroupedEntries, deleteEntry } = useMood();
+  const { loading, getGroupedEntries, deleteEntry, updateEntry } = useMood();
   const { settings } = useSettings();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const { showConfirm } = useAlert();
+  const { showConfirm, showToast } = useAlert();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingEntry, setEditingEntry] = useState<MoodEntry | null>(null);
+  const [editMood, setEditMood] = useState<number>(3);
+  const [editNote, setEditNote] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const translations = {
     en: {
@@ -36,6 +45,13 @@ export default function MoodHistoryScreen() {
       delete: 'Delete',
       deleteConfirm: 'Are you sure you want to delete this entry?',
       cancel: 'Cancel',
+      editEntry: 'Edit Entry',
+      moodScore: 'Mood score',
+      noteLabel: 'Note (optional)',
+      notePlaceholder: 'How was your day?',
+      save: 'Save',
+      saving: 'Saving...',
+      editSuccess: 'Entry updated successfully',
     },
     pt: {
       searchPlaceholder: 'Buscar notas...',
@@ -45,6 +61,13 @@ export default function MoodHistoryScreen() {
       delete: 'Excluir',
       deleteConfirm: 'Tem certeza que deseja excluir este registro?',
       cancel: 'Cancelar',
+      editEntry: 'Editar Registro',
+      moodScore: 'Nota do humor',
+      noteLabel: 'Nota (opcional)',
+      notePlaceholder: 'Como foi seu dia?',
+      save: 'Salvar',
+      saving: 'Salvando...',
+      editSuccess: 'Registro atualizado com sucesso',
     },
   };
 
@@ -76,6 +99,32 @@ export default function MoodHistoryScreen() {
         },
       ],
     });
+  };
+
+  const handleEdit = (entry: MoodEntry) => {
+    setEditingEntry(entry);
+    setEditMood(entry.mood);
+    setEditNote(entry.note || '');
+  };
+
+  const handleCloseEdit = () => {
+    setEditingEntry(null);
+    setEditMood(3);
+    setEditNote('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingEntry) return;
+    setSaving(true);
+    try {
+      await updateEntry(editingEntry.id, Math.round(editMood) as MoodScore, editNote);
+      showToast({ message: t.editSuccess, type: 'success' });
+      handleCloseEdit();
+    } catch (error) {
+      console.error('Error updating mood entry:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -230,13 +279,22 @@ export default function MoodHistoryScreen() {
                           </Text>
                         </View>
                       </View>
-                      <TouchableOpacity
-                        onPress={() => handleDelete(entry.id)}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        style={styles.deleteButton}
-                      >
-                        <IconSymbol name="trash" size={16} color="#EF4444" />
-                      </TouchableOpacity>
+                      <View style={styles.actionButtons}>
+                        <TouchableOpacity
+                          onPress={() => handleEdit(entry)}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          style={styles.editButton}
+                        >
+                          <IconSymbol name="pencil" size={16} color="#FACC15" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleDelete(entry.id)}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          style={styles.deleteButton}
+                        >
+                          <IconSymbol name="trash" size={16} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                     {entry.note && (
                       <View
@@ -257,6 +315,154 @@ export default function MoodHistoryScreen() {
           ))
         )}
       </ScrollView>
+
+      {/* Edit Modal */}
+      <Modal
+        visible={editingEntry !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseEdit}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={handleCloseEdit}
+          />
+          <View
+            style={[
+              styles.modalContent,
+              {
+                backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+              },
+            ]}
+          >
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <View style={styles.modalTitleRow}>
+                <LinearGradient
+                  colors={['#FACC15', '#F59E0B']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.modalIcon}
+                >
+                  <IconSymbol name="pencil" size={16} color="#000000" />
+                </LinearGradient>
+                <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.editEntry}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={handleCloseEdit} style={styles.closeButton}>
+                <IconSymbol name="xmark" size={20} color={isDark ? '#808080' : '#6B7280'} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Date Display */}
+            {editingEntry && (
+              <View
+                style={[
+                  styles.dateDisplay,
+                  { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' },
+                ]}
+              >
+                <IconSymbol name="calendar" size={14} color={isDark ? '#808080' : '#6B7280'} />
+                <Text style={[styles.dateDisplayText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {formatDate(editingEntry.date, settings.language)}
+                </Text>
+              </View>
+            )}
+
+            {/* Mood Slider */}
+            <View style={styles.fieldSection}>
+              <Text style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t.moodScore}
+              </Text>
+              <View style={styles.moodDisplay}>
+                <Text style={styles.moodEmoji}>{getMoodFace(Math.round(editMood))}</Text>
+                <Text style={[styles.moodValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {Math.round(editMood)}/5
+                </Text>
+              </View>
+              <View style={styles.sliderContainer}>
+                <Text style={styles.sliderLabel}>{MOOD_FACES[1]}</Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={1}
+                  maximumValue={5}
+                  step={1}
+                  value={editMood}
+                  onValueChange={setEditMood}
+                  minimumTrackTintColor="#FACC15"
+                  maximumTrackTintColor={isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}
+                  thumbTintColor="#FACC15"
+                />
+                <Text style={styles.sliderLabel}>{MOOD_FACES[5]}</Text>
+              </View>
+              <View style={styles.moodScale}>
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <TouchableOpacity
+                    key={value}
+                    style={[
+                      styles.moodScaleItem,
+                      editMood === value && styles.moodScaleItemActive,
+                    ]}
+                    onPress={() => setEditMood(value)}
+                  >
+                    <Text style={[styles.moodScaleEmoji, editMood === value && styles.moodScaleEmojiActive]}>
+                      {MOOD_FACES[value as MoodScore]}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Note Field */}
+            <View style={styles.fieldSection}>
+              <Text style={[styles.fieldLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t.noteLabel}
+              </Text>
+              <TextInput
+                style={[
+                  styles.textArea,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                    color: isDark ? '#FFFFFF' : '#111827',
+                  },
+                ]}
+                placeholder={t.notePlaceholder}
+                placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                value={editNote}
+                onChangeText={setEditNote}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+
+            {/* Save Button */}
+            <TouchableOpacity
+              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+              onPress={handleSaveEdit}
+              disabled={saving}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#FACC15', '#F59E0B']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.saveButtonGradient}
+              >
+                <IconSymbol name="checkmark" size={18} color="#000000" />
+                <Text style={styles.saveButtonText}>{saving ? t.saving : t.save}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </ThemedView>
   );
 }
@@ -415,6 +621,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  editButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(250, 204, 21, 0.1)',
+  },
   deleteButton: {
     padding: 8,
     borderRadius: 8,
@@ -427,5 +642,149 @@ const styles = StyleSheet.create({
   entryNote: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: '90%',
+    maxWidth: 400,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 20,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  modalIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  closeButton: {
+    padding: 8,
+  },
+  dateDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  dateDisplayText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  fieldSection: {
+    gap: 10,
+  },
+  fieldLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  moodDisplay: {
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 4,
+  },
+  moodEmoji: {
+    fontSize: 40,
+  },
+  moodValue: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  sliderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  slider: {
+    flex: 1,
+    height: 40,
+  },
+  sliderLabel: {
+    fontSize: 18,
+  },
+  moodScale: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 4,
+  },
+  moodScaleItem: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  moodScaleItemActive: {
+    backgroundColor: 'rgba(250, 204, 21, 0.2)',
+  },
+  moodScaleEmoji: {
+    fontSize: 22,
+    opacity: 0.5,
+  },
+  moodScaleEmojiActive: {
+    opacity: 1,
+  },
+  textArea: {
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    minHeight: 80,
+  },
+  saveButton: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginTop: 4,
+    shadowColor: '#FACC15',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+  },
+  saveButtonText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
