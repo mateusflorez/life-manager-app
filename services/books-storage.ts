@@ -86,6 +86,43 @@ export const getChaptersForBook = async (bookId: string): Promise<BookChapter[]>
     .sort((a, b) => b.chapterNumber - a.chapterNumber);
 };
 
+export const setChaptersForBook = async (
+  bookId: string,
+  newCount: number,
+  generateId: () => string
+): Promise<BookChapter[]> => {
+  const allChapters = await loadChapters();
+  const bookChapters = allChapters.filter((c) => c.bookId === bookId);
+  const otherChapters = allChapters.filter((c) => c.bookId !== bookId);
+  const currentCount = bookChapters.length;
+
+  let updatedBookChapters: BookChapter[];
+
+  if (newCount > currentCount) {
+    // Add new chapters
+    const baseTime = new Date();
+    const newChapters: BookChapter[] = [];
+    for (let i = currentCount + 1; i <= newCount; i++) {
+      newChapters.push({
+        id: generateId(),
+        bookId,
+        chapterNumber: i,
+        finishedAt: new Date(baseTime.getTime() - (newCount - i) * 1000).toISOString(),
+      });
+    }
+    updatedBookChapters = [...bookChapters, ...newChapters];
+  } else if (newCount < currentCount) {
+    // Remove chapters with higher numbers
+    updatedBookChapters = bookChapters.filter((c) => c.chapterNumber <= newCount);
+  } else {
+    updatedBookChapters = bookChapters;
+  }
+
+  const finalChapters = [...otherChapters, ...updatedBookChapters];
+  await saveChapters(finalChapters);
+  return updatedBookChapters.sort((a, b) => b.chapterNumber - a.chapterNumber);
+};
+
 // Reviews
 export const loadReviews = async (): Promise<BookReview[]> => {
   try {

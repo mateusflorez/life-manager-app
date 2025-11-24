@@ -83,6 +83,7 @@ const MAPPING = {
   // Profile icons
   'camera.fill': 'photo-camera',
   'star.fill': 'star',
+  'star': 'star-border',
   // Chart icons
   'chart.bar.fill': 'bar-chart',
   // Bank account icons

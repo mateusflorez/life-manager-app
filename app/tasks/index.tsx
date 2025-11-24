@@ -59,6 +59,20 @@ export default function TasksScreen() {
     await toggleTask(type, taskId);
   };
 
+  const handleEditTask = (task: TaskWithStatus, type: TaskType) => {
+    router.push({
+      pathname: '/tasks/edit',
+      params: {
+        id: task.id,
+        type,
+        name: task.name,
+        tag: task.tag || '',
+        time: task.time || '',
+        date: 'date' in task ? task.date || '' : '',
+      },
+    });
+  };
+
   const handleDeleteTask = (type: TaskType, taskId: string) => {
     const message =
       lang === 'pt'
@@ -173,6 +187,14 @@ export default function TasksScreen() {
             </View>
           )}
         </View>
+
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => handleEditTask(task, type)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <IconSymbol name="pencil" size={16} color={isDark ? '#808080' : '#6B7280'} />
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
@@ -564,6 +586,10 @@ const styles = StyleSheet.create({
   taskContent: {
     flex: 1,
     gap: 6,
+  },
+  editButton: {
+    padding: 8,
+    alignSelf: 'flex-start',
   },
   taskName: {
     fontSize: 16,

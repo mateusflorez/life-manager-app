@@ -18,6 +18,7 @@ export type BookReview = {
   id: string;
   bookId: string;
   content: string;
+  rating: number | null;        // 1-5 stars, null = no rating
   chapterStart: number | null;  // null = general review (no specific chapter)
   chapterEnd: number | null;    // null = single chapter, otherwise range
   createdAt: string;

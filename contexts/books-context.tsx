@@ -7,6 +7,7 @@ import {
   deleteBook as deleteBookStorage,
   loadChapters,
   saveChapter,
+  setChaptersForBook,
   loadReviews,
   saveReview as saveReviewStorage,
   deleteReview as deleteReviewStorage,
@@ -19,10 +20,12 @@ type BooksContextType = {
   createBook: (name: string, totalChapters: number | null, currentChapter?: number) => Promise<Book>;
   logChapter: (bookId: string) => Promise<void>;
   dropBook: (bookId: string) => Promise<void>;
-  addReview: (bookId: string, content: string, chapterStart: number | null, chapterEnd: number | null) => Promise<void>;
+  addReview: (bookId: string, content: string, rating: number | null, chapterStart: number | null, chapterEnd: number | null) => Promise<void>;
+  updateReview: (reviewId: string, content: string, rating: number | null, chapterStart: number | null, chapterEnd: number | null) => Promise<void>;
   deleteReview: (reviewId: string) => Promise<void>;
   deleteBook: (bookId: string) => Promise<void>;
   updateBook: (bookId: string, updates: Partial<Book>) => Promise<void>;
+  setReadChapters: (bookId: string, newCount: number) => Promise<void>;
   getBook: (bookId: string) => BookWithProgress | undefined;
   inProgressBooks: BookWithProgress[];
   completedBooks: BookWithProgress[];
@@ -204,6 +207,7 @@ export function BooksProvider({ children }: { children: React.ReactNode }) {
   const addReview = useCallback(async (
     bookId: string,
     content: string,
+    rating: number | null,
     chapterStart: number | null,
     chapterEnd: number | null
   ) => {
@@ -213,6 +217,7 @@ export function BooksProvider({ children }: { children: React.ReactNode }) {
       id: generateId(),
       bookId,
       content,
+      rating,
       chapterStart,
       chapterEnd,
       createdAt: now,
@@ -222,6 +227,29 @@ export function BooksProvider({ children }: { children: React.ReactNode }) {
     await saveReviewStorage(review);
     setReviews((prev) => [...prev, review]);
   }, []);
+
+  const updateReview = useCallback(async (
+    reviewId: string,
+    content: string,
+    rating: number | null,
+    chapterStart: number | null,
+    chapterEnd: number | null
+  ) => {
+    const existingReview = reviews.find((r) => r.id === reviewId);
+    if (!existingReview) return;
+
+    const updatedReview: BookReview = {
+      ...existingReview,
+      content,
+      rating,
+      chapterStart,
+      chapterEnd,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await saveReviewStorage(updatedReview);
+    setReviews((prev) => prev.map((r) => (r.id === reviewId ? updatedReview : r)));
+  }, [reviews]);
 
   const deleteReview = useCallback(async (reviewId: string) => {
     await deleteReviewStorage(reviewId);
@@ -249,6 +277,16 @@ export function BooksProvider({ children }: { children: React.ReactNode }) {
     setRawBooks((prev) => prev.map((b) => (b.id === bookId ? updatedBook : b)));
   }, [rawBooks]);
 
+  const setReadChapters = useCallback(async (bookId: string, newCount: number) => {
+    if (newCount < 0) return;
+    const updatedChapters = await setChaptersForBook(bookId, newCount, generateId);
+    // Update local state
+    setChapters((prev) => {
+      const otherChapters = prev.filter((c) => c.bookId !== bookId);
+      return [...otherChapters, ...updatedChapters];
+    });
+  }, []);
+
   const getBook = useCallback(
     (bookId: string) => books.find((b) => b.id === bookId),
     [books]
@@ -262,9 +300,11 @@ export function BooksProvider({ children }: { children: React.ReactNode }) {
       logChapter,
       dropBook,
       addReview,
+      updateReview,
       deleteReview,
       deleteBook,
       updateBook,
+      setReadChapters,
       getBook,
       inProgressBooks,
       completedBooks,
@@ -279,9 +319,11 @@ export function BooksProvider({ children }: { children: React.ReactNode }) {
       logChapter,
       dropBook,
       addReview,
+      updateReview,
       deleteReview,
       deleteBook,
       updateBook,
+      setReadChapters,
       getBook,
       inProgressBooks,
       completedBooks,
