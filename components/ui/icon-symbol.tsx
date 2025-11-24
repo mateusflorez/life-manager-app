@@ -33,6 +33,7 @@ const MAPPING = {
   'xmark': 'close',
   'checkmark': 'check',
   'trash': 'delete',
+  'pencil': 'edit',
   'building.columns': 'account-balance',
   // Investment icons
   'chart.line.uptrend.xyaxis': 'trending-up',
@@ -84,6 +85,8 @@ const MAPPING = {
   'star.fill': 'star',
   // Chart icons
   'chart.bar.fill': 'bar-chart',
+  // Bank account icons
+  'briefcase.fill': 'work',
   // Alerts / confirmations
   'exclamationmark.circle.fill': 'error-outline',
   'exclamationmark.triangle.fill': 'warning',

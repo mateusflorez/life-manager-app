@@ -1,11 +1,64 @@
 // Finance module types
 
+export type BankAccountIcon =
+  | 'building.columns'
+  | 'creditcard.fill'
+  | 'banknote.fill'
+  | 'dollarsign.circle.fill'
+  | 'chart.pie.fill'
+  | 'star.fill'
+  | 'house.fill'
+  | 'briefcase.fill';
+
+export type BankAccountColor =
+  | 'green'
+  | 'blue'
+  | 'purple'
+  | 'orange'
+  | 'pink'
+  | 'cyan'
+  | 'yellow'
+  | 'red';
+
+export const BANK_ACCOUNT_ICONS: BankAccountIcon[] = [
+  'building.columns',
+  'creditcard.fill',
+  'banknote.fill',
+  'dollarsign.circle.fill',
+  'chart.pie.fill',
+  'star.fill',
+  'house.fill',
+  'briefcase.fill',
+];
+
+export const BANK_ACCOUNT_COLORS: {
+  key: BankAccountColor;
+  gradient: [string, string];
+}[] = [
+  { key: 'green', gradient: ['#10B981', '#059669'] },
+  { key: 'blue', gradient: ['#3B82F6', '#2563EB'] },
+  { key: 'purple', gradient: ['#8B5CF6', '#7C3AED'] },
+  { key: 'orange', gradient: ['#F97316', '#EA580C'] },
+  { key: 'pink', gradient: ['#EC4899', '#DB2777'] },
+  { key: 'cyan', gradient: ['#06B6D4', '#0891B2'] },
+  { key: 'yellow', gradient: ['#F59E0B', '#D97706'] },
+  { key: 'red', gradient: ['#EF4444', '#DC2626'] },
+];
+
+export function getAccountGradient(color?: BankAccountColor): [string, string] {
+  const found = BANK_ACCOUNT_COLORS.find((c) => c.key === color);
+  return found?.gradient || BANK_ACCOUNT_COLORS[0].gradient;
+}
+
 export type BankAccount = {
   id: string;
   userId: string;
   name: string;
   slug: string;
   description?: string;
+  salary?: number;
+  icon?: BankAccountIcon;
+  color?: BankAccountColor;
   createdAt: string;
   updatedAt: string;
 };

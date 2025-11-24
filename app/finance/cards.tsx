@@ -28,6 +28,7 @@ export default function CardsScreen() {
     getCardCharges,
     createCardCharge,
     deleteCardCharge,
+    updateCardCharge,
     getCardSummary,
     categories,
     refreshData,
@@ -60,6 +61,7 @@ export default function CardsScreen() {
   const [chargeMonth, setChargeMonth] = useState(getNextMonthKey());
   const [chargeNote, setChargeNote] = useState('');
   const [chargeInstallments, setChargeInstallments] = useState('1');
+  const [editingCharge, setEditingCharge] = useState<CardCharge | null>(null);
 
   // Month options for selector
   const monthOptions = getMonthOptions(12);
@@ -92,6 +94,8 @@ export default function CardsScreen() {
       charges: 'Charges',
       noCharges: 'No charges this month',
       total: 'Total',
+      editCharge: 'Edit Charge',
+      update: 'Update',
     },
     pt: {
       noAccount: 'Selecione uma conta primeiro',
@@ -120,6 +124,8 @@ export default function CardsScreen() {
       charges: 'Gastos',
       noCharges: 'Nenhum gasto neste mês',
       total: 'Total',
+      editCharge: 'Editar Gasto',
+      update: 'Atualizar',
     },
   };
 
@@ -176,31 +182,54 @@ export default function CardsScreen() {
 
   const handleAddCharge = async () => {
     const amount = currencyToFloat(chargeAmount);
-    const installments = Math.max(1, parseInt(chargeInstallments) || 1);
-    if (!selectedCard || amount <= 0 || !chargeCategory) return;
+    if (amount <= 0 || !chargeCategory) return;
+
     try {
-      for (let i = 0; i < installments; i++) {
-        const month = addMonthsToKey(chargeMonth, i);
-        const note = installments > 1
-          ? `${chargeNote.trim() ? chargeNote.trim() + ' - ' : ''}${i + 1}/${installments}`
-          : chargeNote.trim() || undefined;
-        await createCardCharge(
-          selectedCard.id,
+      if (editingCharge) {
+        // Update existing charge
+        await updateCardCharge(editingCharge.id, {
           amount,
-          chargeCategory,
-          month,
-          note
-        );
+          category: chargeCategory,
+          statementMonth: chargeMonth,
+          note: chargeNote.trim() || undefined,
+        });
+        // Refresh charges in view modal
+        if (viewingCard) {
+          const charges = await getCardCharges(viewingCard.id);
+          setCardCharges(charges);
+        }
+      } else {
+        // Create new charge(s)
+        if (!selectedCard) return;
+        const installments = Math.max(1, parseInt(chargeInstallments) || 1);
+        for (let i = 0; i < installments; i++) {
+          const month = addMonthsToKey(chargeMonth, i);
+          const note = installments > 1
+            ? `${chargeNote.trim() ? chargeNote.trim() + ' - ' : ''}${i + 1}/${installments}`
+            : chargeNote.trim() || undefined;
+          await createCardCharge(
+            selectedCard.id,
+            amount,
+            chargeCategory,
+            month,
+            note
+          );
+        }
       }
-      setChargeAmount('');
-      setChargeCategory('');
-      setChargeNote('');
-      setChargeInstallments('1');
+      resetChargeForm();
       setShowChargeModal(false);
       await loadCardSummaries();
     } catch (error) {
-      console.error('Error adding charge:', error);
+      console.error('Error saving charge:', error);
     }
+  };
+
+  const resetChargeForm = () => {
+    setChargeAmount('');
+    setChargeCategory('');
+    setChargeNote('');
+    setChargeInstallments('1');
+    setEditingCharge(null);
   };
 
   const handleDeleteCard = async (cardId: string) => {
@@ -215,7 +244,23 @@ export default function CardsScreen() {
     setSelectedCard(card);
     setChargeMonth(getNextMonthKey());
     setChargeInstallments('1');
+    setEditingCharge(null);
     setShowChargeModal(true);
+  };
+
+  const handleEditCharge = (charge: CardCharge) => {
+    setEditingCharge(charge);
+    setChargeAmount(charge.amount.toFixed(2).replace('.', ','));
+    setChargeCategory(charge.category);
+    setChargeMonth(charge.statementMonth);
+    setChargeNote(charge.note || '');
+    setChargeInstallments('1');
+    setShowChargeModal(true);
+  };
+
+  const handleCloseChargeModal = () => {
+    resetChargeForm();
+    setShowChargeModal(false);
   };
 
   const openChargesViewModal = async (card: CreditCard) => {
@@ -539,12 +584,12 @@ export default function CardsScreen() {
         </View>
       </Modal>
 
-      {/* Add Charge Modal */}
+      {/* Add/Edit Charge Modal */}
       <Modal
         visible={showChargeModal}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowChargeModal(false)}
+        onRequestClose={handleCloseChargeModal}
       >
         <View style={styles.modalOverlay}>
           <View
@@ -561,13 +606,13 @@ export default function CardsScreen() {
                   end={{ x: 1, y: 1 }}
                   style={styles.modalIconContainer}
                 >
-                  <IconSymbol name="plus.circle.fill" size={18} color="#FFFFFF" />
+                  <IconSymbol name={editingCharge ? 'pencil' : 'plus.circle.fill'} size={18} color="#FFFFFF" />
                 </LinearGradient>
                 <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                  {t.newCharge} - {selectedCard?.name}
+                  {editingCharge ? t.editCharge : t.newCharge} - {editingCharge ? viewingCard?.name : selectedCard?.name}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => setShowChargeModal(false)}>
+              <TouchableOpacity onPress={handleCloseChargeModal}>
                 <IconSymbol name="xmark" size={24} color={isDark ? '#A0A0A0' : '#6B7280'} />
               </TouchableOpacity>
             </View>
@@ -595,37 +640,41 @@ export default function CardsScreen() {
                   />
                 </View>
 
-                <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
-                  {t.installments}
-                </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipList}>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
-                    <TouchableOpacity
-                      key={num}
-                      style={[
-                        styles.chip,
-                        {
-                          backgroundColor: chargeInstallments === String(num)
-                            ? '#6366F1'
-                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
-                          borderColor: chargeInstallments === String(num)
-                            ? '#6366F1'
-                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-                        },
-                      ]}
-                      onPress={() => setChargeInstallments(String(num))}
-                    >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          { color: chargeInstallments === String(num) ? '#FFFFFF' : isDark ? '#FFFFFF' : '#111827' },
-                        ]}
-                      >
-                        {num}x
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                {!editingCharge && (
+                  <>
+                    <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
+                      {t.installments}
+                    </Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipList}>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
+                        <TouchableOpacity
+                          key={num}
+                          style={[
+                            styles.chip,
+                            {
+                              backgroundColor: chargeInstallments === String(num)
+                                ? '#6366F1'
+                                : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+                              borderColor: chargeInstallments === String(num)
+                                ? '#6366F1'
+                                : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                            },
+                          ]}
+                          onPress={() => setChargeInstallments(String(num))}
+                        >
+                          <Text
+                            style={[
+                              styles.chipText,
+                              { color: chargeInstallments === String(num) ? '#FFFFFF' : isDark ? '#FFFFFF' : '#111827' },
+                            ]}
+                          >
+                            {num}x
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </>
+                )}
 
                 <Text style={[styles.inputLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
                   {t.category}
@@ -712,7 +761,7 @@ export default function CardsScreen() {
                 <View style={styles.formButtons}>
                   <TouchableOpacity
                     style={[styles.cancelButton, { borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)' }]}
-                    onPress={() => setShowChargeModal(false)}
+                    onPress={handleCloseChargeModal}
                   >
                     <Text style={[styles.cancelButtonText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                       {t.cancel}
@@ -729,7 +778,7 @@ export default function CardsScreen() {
                       end={{ x: 1, y: 1 }}
                       style={styles.submitButton}
                     >
-                      <Text style={styles.submitButtonText}>{t.save}</Text>
+                      <Text style={styles.submitButtonText}>{editingCharge ? t.update : t.save}</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
@@ -856,6 +905,12 @@ export default function CardsScreen() {
                         <Text style={[styles.chargeAmount, { color: '#EF4444' }]}>
                           {formatCurrency(charge.amount)}
                         </Text>
+                        <TouchableOpacity
+                          style={styles.chargeEditButton}
+                          onPress={() => handleEditCharge(charge)}
+                        >
+                          <IconSymbol name="pencil" size={16} color="#6366F1" />
+                        </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.chargeDeleteButton}
                           onPress={() => handleDeleteCharge(charge.id)}
@@ -1169,6 +1224,14 @@ const styles = StyleSheet.create({
   chargeNote: {
     fontSize: 13,
     fontStyle: 'italic',
+  },
+  chargeEditButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   chargeDeleteButton: {
     width: 32,

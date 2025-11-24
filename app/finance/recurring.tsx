@@ -17,13 +17,14 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { RippleBackground } from '@/components/ui/ripple-background';
 import { CurrencyInput, currencyToFloat } from '@/components/ui/currency-input';
-import { getNextMonthKey, getMonthOptions, formatMonthKey, translateCategory } from '@/types/finance';
+import { getNextMonthKey, getMonthOptions, formatMonthKey, translateCategory, RecurringExpense } from '@/types/finance';
 
 export default function RecurringScreen() {
   const {
     activeBankAccount,
     recurringExpenses,
     createRecurringExpense,
+    updateRecurringExpense,
     toggleRecurringExpense,
     deleteRecurringExpense,
     categories,
@@ -35,6 +36,7 @@ export default function RecurringScreen() {
 
   const [showNewModal, setShowNewModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<RecurringExpense | null>(null);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -68,10 +70,13 @@ export default function RecurringScreen() {
       pause: 'Pause',
       resume: 'Resume',
       delete: 'Delete',
+      edit: 'Edit',
       perMonth: '/month',
       since: 'Since',
       until: 'Until',
       totalActive: 'Total active',
+      editExpense: 'Edit Recurring Expense',
+      update: 'Update',
     },
     pt: {
       noAccount: 'Selecione uma conta primeiro',
@@ -93,10 +98,13 @@ export default function RecurringScreen() {
       pause: 'Pausar',
       resume: 'Retomar',
       delete: 'Excluir',
+      edit: 'Editar',
       perMonth: '/mês',
       since: 'Desde',
       until: 'Até',
       totalActive: 'Total ativo',
+      editExpense: 'Editar Despesa Recorrente',
+      update: 'Atualizar',
     },
   };
 
@@ -120,23 +128,54 @@ export default function RecurringScreen() {
     const amountValue = currencyToFloat(amount);
     if (!title.trim() || amountValue <= 0 || !category) return;
     try {
-      await createRecurringExpense(
-        title.trim(),
-        category,
-        amountValue,
-        startMonth,
-        note.trim() || undefined,
-        endMonth || undefined
-      );
-      setTitle('');
-      setAmount('');
-      setCategory('');
-      setNote('');
-      setEndMonth(null);
-      setShowNewModal(false);
+      if (editingExpense) {
+        // Update existing expense
+        await updateRecurringExpense({
+          ...editingExpense,
+          title: title.trim(),
+          category,
+          amount: amountValue,
+          startMonth,
+          endMonth: endMonth || undefined,
+          note: note.trim() || undefined,
+        });
+      } else {
+        // Create new expense
+        await createRecurringExpense(
+          title.trim(),
+          category,
+          amountValue,
+          startMonth,
+          note.trim() || undefined,
+          endMonth || undefined
+        );
+      }
+      handleCloseModal();
     } catch (error) {
-      console.error('Error creating recurring expense:', error);
+      console.error('Error saving recurring expense:', error);
     }
+  };
+
+  const handleEditExpense = (expense: RecurringExpense) => {
+    setEditingExpense(expense);
+    setTitle(expense.title);
+    setAmount(expense.amount.toFixed(2).replace('.', ','));
+    setCategory(expense.category);
+    setStartMonth(expense.startMonth);
+    setEndMonth(expense.endMonth || null);
+    setNote(expense.note || '');
+    setShowNewModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowNewModal(false);
+    setEditingExpense(null);
+    setTitle('');
+    setAmount('');
+    setCategory('');
+    setStartMonth(getNextMonthKey());
+    setEndMonth(null);
+    setNote('');
   };
 
   const handleToggle = async (id: string) => {
@@ -313,6 +352,12 @@ export default function RecurringScreen() {
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
+                    style={[styles.editActionButton]}
+                    onPress={() => handleEditExpense(expense)}
+                  >
+                    <Text style={styles.editActionButtonText}>{t.edit}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     style={[styles.deleteActionButton]}
                     onPress={() => handleDelete(expense.id)}
                   >
@@ -340,12 +385,12 @@ export default function RecurringScreen() {
         </LinearGradient>
       </TouchableOpacity>
 
-      {/* New Expense Modal */}
+      {/* New/Edit Expense Modal */}
       <Modal
         visible={showNewModal}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowNewModal(false)}
+        onRequestClose={handleCloseModal}
       >
         <View style={styles.modalOverlay}>
           <View
@@ -357,18 +402,18 @@ export default function RecurringScreen() {
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleRow}>
                 <LinearGradient
-                  colors={['#6366F1', '#8B5CF6']}
+                  colors={editingExpense ? ['#6366F1', '#8B5CF6'] : ['#6366F1', '#8B5CF6']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.modalIconContainer}
                 >
-                  <IconSymbol name="arrow.2.squarepath" size={18} color="#FFFFFF" />
+                  <IconSymbol name={editingExpense ? 'pencil' : 'arrow.2.squarepath'} size={18} color="#FFFFFF" />
                 </LinearGradient>
                 <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                  {t.newExpense}
+                  {editingExpense ? t.editExpense : t.newExpense}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => setShowNewModal(false)}>
+              <TouchableOpacity onPress={handleCloseModal}>
                 <IconSymbol name="xmark" size={24} color={isDark ? '#A0A0A0' : '#6B7280'} />
               </TouchableOpacity>
             </View>
@@ -560,7 +605,7 @@ export default function RecurringScreen() {
                 <View style={styles.formButtons}>
                   <TouchableOpacity
                     style={[styles.cancelButton, { borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)' }]}
-                    onPress={() => setShowNewModal(false)}
+                    onPress={handleCloseModal}
                   >
                     <Text style={[styles.cancelButtonText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                       {t.cancel}
@@ -577,7 +622,7 @@ export default function RecurringScreen() {
                       end={{ x: 1, y: 1 }}
                       style={styles.submitButton}
                     >
-                      <Text style={styles.submitButtonText}>{t.save}</Text>
+                      <Text style={styles.submitButtonText}>{editingExpense ? t.update : t.save}</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
@@ -735,6 +780,18 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  editActionButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    alignItems: 'center',
+  },
+  editActionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6366F1',
   },
   deleteActionButton: {
     flex: 1,

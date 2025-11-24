@@ -19,7 +19,16 @@ import { useSettings } from '@/contexts/settings-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { RippleBackground } from '@/components/ui/ripple-background';
-import { BankAccount, getMonthName, translateCategory } from '@/types/finance';
+import {
+  BankAccount,
+  BankAccountIcon,
+  BankAccountColor,
+  BANK_ACCOUNT_ICONS,
+  BANK_ACCOUNT_COLORS,
+  getAccountGradient,
+  getMonthName,
+  translateCategory,
+} from '@/types/finance';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -34,6 +43,7 @@ export default function FinanceOverviewScreen() {
     activeBankAccount,
     setActiveBankAccount,
     createBankAccount,
+    updateBankAccount,
     ensureMonth,
     getMonthSummary,
     getYearSummary,
@@ -47,8 +57,14 @@ export default function FinanceOverviewScreen() {
 
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showNewAccountModal, setShowNewAccountModal] = useState(false);
+  const [showEditAccountModal, setShowEditAccountModal] = useState(false);
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountDesc, setNewAccountDesc] = useState('');
+  const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
+  const [editAccountName, setEditAccountName] = useState('');
+  const [editAccountDesc, setEditAccountDesc] = useState('');
+  const [editAccountIcon, setEditAccountIcon] = useState<BankAccountIcon>('building.columns');
+  const [editAccountColor, setEditAccountColor] = useState<BankAccountColor>('green');
   const [refreshing, setRefreshing] = useState(false);
 
   const [currentMonthSummary, setCurrentMonthSummary] = useState({
@@ -78,10 +94,14 @@ export default function FinanceOverviewScreen() {
       createFirst: 'Create your first account to start tracking finances',
       createAccount: 'Create Account',
       newAccount: 'New Account',
+      editAccount: 'Edit Account',
       accountName: 'Account name',
       description: 'Description (optional)',
       cancel: 'Cancel',
       create: 'Create',
+      save: 'Save',
+      icon: 'Icon',
+      color: 'Color',
       currentMonth: 'Current Month',
       income: 'Income',
       expenses: 'Expenses',
@@ -98,10 +118,14 @@ export default function FinanceOverviewScreen() {
       createFirst: 'Crie sua primeira conta para começar a controlar finanças',
       createAccount: 'Criar Conta',
       newAccount: 'Nova Conta',
+      editAccount: 'Editar Conta',
       accountName: 'Nome da conta',
       description: 'Descrição (opcional)',
       cancel: 'Cancelar',
       create: 'Criar',
+      save: 'Salvar',
+      icon: 'Ícone',
+      color: 'Cor',
       currentMonth: 'Mês Atual',
       income: 'Receitas',
       expenses: 'Despesas',
@@ -197,6 +221,33 @@ export default function FinanceOverviewScreen() {
     setShowAccountModal(false);
   };
 
+  const handleOpenEditAccount = (account: BankAccount) => {
+    setEditingAccount(account);
+    setEditAccountName(account.name);
+    setEditAccountDesc(account.description || '');
+    setEditAccountIcon(account.icon || 'building.columns');
+    setEditAccountColor(account.color || 'green');
+    setShowAccountModal(false);
+    setShowEditAccountModal(true);
+  };
+
+  const handleSaveEditAccount = async () => {
+    if (!editingAccount || !editAccountName.trim()) return;
+    try {
+      await updateBankAccount({
+        ...editingAccount,
+        name: editAccountName.trim(),
+        description: editAccountDesc.trim() || undefined,
+        icon: editAccountIcon,
+        color: editAccountColor,
+      });
+      setShowEditAccountModal(false);
+      setEditingAccount(null);
+    } catch (error) {
+      console.error('Error updating account:', error);
+    }
+  };
+
   const now = new Date();
   const currentMonthName = getMonthName(now.getMonth() + 1, settings.language);
   const currentYear = now.getFullYear();
@@ -287,12 +338,12 @@ export default function FinanceOverviewScreen() {
           activeOpacity={0.8}
         >
           <LinearGradient
-            colors={['#10B981', '#059669']}
+            colors={getAccountGradient(activeBankAccount?.color)}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.accountIconContainer}
           >
-            <IconSymbol name="building.columns" size={20} color="#FFFFFF" />
+            <IconSymbol name={activeBankAccount?.icon || 'building.columns'} size={20} color="#FFFFFF" />
           </LinearGradient>
           <View style={styles.accountInfo}>
             <Text style={[styles.accountLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
@@ -627,7 +678,7 @@ export default function FinanceOverviewScreen() {
 
             <ScrollView style={styles.accountList}>
               {bankAccounts.map((account) => (
-                <TouchableOpacity
+                <View
                   key={account.id}
                   style={[
                     styles.accountItem,
@@ -641,35 +692,44 @@ export default function FinanceOverviewScreen() {
                       borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                     },
                   ]}
-                  onPress={() => handleSelectAccount(account)}
-                  activeOpacity={0.8}
                 >
-                  <LinearGradient
-                    colors={['#10B981', '#059669']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.accountAvatar}
+                  <TouchableOpacity
+                    style={styles.accountItemTouchable}
+                    onPress={() => handleSelectAccount(account)}
+                    activeOpacity={0.8}
                   >
-                    <Text style={styles.accountAvatarText}>
-                      {account.name.charAt(0).toUpperCase()}
-                    </Text>
-                  </LinearGradient>
-                  <View style={styles.accountItemInfo}>
-                    <Text
-                      style={[styles.accountItemName, { color: isDark ? '#FFFFFF' : '#111827' }]}
+                    <LinearGradient
+                      colors={getAccountGradient(account.color)}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.accountAvatar}
                     >
-                      {account.name}
-                    </Text>
-                    {account.description && (
-                      <Text style={[styles.accountItemDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
-                        {account.description}
+                      <IconSymbol name={account.icon || 'building.columns'} size={20} color="#FFFFFF" />
+                    </LinearGradient>
+                    <View style={styles.accountItemInfo}>
+                      <Text
+                        style={[styles.accountItemName, { color: isDark ? '#FFFFFF' : '#111827' }]}
+                      >
+                        {account.name}
                       </Text>
+                      {account.description && (
+                        <Text style={[styles.accountItemDesc, { color: isDark ? '#808080' : '#6B7280' }]}>
+                          {account.description}
+                        </Text>
+                      )}
+                    </View>
+                    {activeBankAccount?.id === account.id && (
+                      <IconSymbol name="checkmark.circle.fill" size={20} color="#6366F1" />
                     )}
-                  </View>
-                  {activeBankAccount?.id === account.id && (
-                    <IconSymbol name="checkmark.circle.fill" size={20} color="#6366F1" />
-                  )}
-                </TouchableOpacity>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.accountEditButton}
+                    onPress={() => handleOpenEditAccount(account)}
+                    activeOpacity={0.7}
+                  >
+                    <IconSymbol name="pencil" size={18} color={isDark ? '#808080' : '#6B7280'} />
+                  </TouchableOpacity>
+                </View>
               ))}
             </ScrollView>
 
@@ -790,6 +850,190 @@ export default function FinanceOverviewScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Account Modal */}
+      <Modal
+        visible={showEditAccountModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowEditAccountModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t.editAccount}
+              </Text>
+              <TouchableOpacity onPress={() => setShowEditAccountModal(false)}>
+                <IconSymbol name="xmark" size={24} color={isDark ? '#808080' : '#6B7280'} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.editAccountScroll} showsVerticalScrollIndicator={false}>
+              <View style={styles.form}>
+                <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
+                  {t.accountName}
+                </Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
+                      color: isDark ? '#FFFFFF' : '#111827',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                    },
+                  ]}
+                  value={editAccountName}
+                  onChangeText={setEditAccountName}
+                  placeholder={t.accountName}
+                  placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                />
+
+                <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
+                  {t.description}
+                </Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
+                      color: isDark ? '#FFFFFF' : '#111827',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                    },
+                  ]}
+                  value={editAccountDesc}
+                  onChangeText={setEditAccountDesc}
+                  placeholder={t.description}
+                  placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                />
+
+                {/* Icon Selection */}
+                <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
+                  {t.icon}
+                </Text>
+                <View style={styles.iconGrid}>
+                  {BANK_ACCOUNT_ICONS.map((icon) => (
+                    <TouchableOpacity
+                      key={icon}
+                      style={[
+                        styles.iconOption,
+                        {
+                          backgroundColor: editAccountIcon === icon
+                            ? isDark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.15)'
+                            : isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                          borderColor: editAccountIcon === icon
+                            ? '#6366F1'
+                            : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                        },
+                      ]}
+                      onPress={() => setEditAccountIcon(icon)}
+                      activeOpacity={0.7}
+                    >
+                      <IconSymbol
+                        name={icon}
+                        size={24}
+                        color={editAccountIcon === icon ? '#6366F1' : isDark ? '#808080' : '#6B7280'}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Color Selection */}
+                <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
+                  {t.color}
+                </Text>
+                <View style={styles.colorGrid}>
+                  {BANK_ACCOUNT_COLORS.map((colorOption) => (
+                    <TouchableOpacity
+                      key={colorOption.key}
+                      style={[
+                        styles.colorOption,
+                        {
+                          borderColor: editAccountColor === colorOption.key
+                            ? '#FFFFFF'
+                            : 'transparent',
+                          borderWidth: editAccountColor === colorOption.key ? 3 : 0,
+                        },
+                      ]}
+                      onPress={() => setEditAccountColor(colorOption.key)}
+                      activeOpacity={0.7}
+                    >
+                      <LinearGradient
+                        colors={colorOption.gradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.colorGradient}
+                      >
+                        {editAccountColor === colorOption.key && (
+                          <IconSymbol name="checkmark" size={18} color="#FFFFFF" />
+                        )}
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Preview */}
+                <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280', marginTop: 8 }]}>
+                  Preview
+                </Text>
+                <View style={styles.previewContainer}>
+                  <LinearGradient
+                    colors={getAccountGradient(editAccountColor)}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.previewAvatar}
+                  >
+                    <IconSymbol name={editAccountIcon} size={28} color="#FFFFFF" />
+                  </LinearGradient>
+                  <Text style={[styles.previewName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                    {editAccountName || t.accountName}
+                  </Text>
+                </View>
+
+                <View style={styles.formButtons}>
+                  <TouchableOpacity
+                    style={[
+                      styles.cancelButton,
+                      {
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                      },
+                    ]}
+                    onPress={() => setShowEditAccountModal(false)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.cancelButtonText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                      {t.cancel}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.submitButton,
+                      { opacity: editAccountName.trim() ? 1 : 0.5 },
+                    ]}
+                    onPress={handleSaveEditAccount}
+                    disabled={!editAccountName.trim()}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient
+                      colors={getAccountGradient(editAccountColor)}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.submitButtonGradient}
+                    >
+                      <Text style={styles.submitButtonText}>{t.save}</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -1141,6 +1385,70 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  accountItemTouchable: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  accountEditButton: {
+    padding: 8,
+    marginLeft: 4,
+  },
+  editAccountScroll: {
+    maxHeight: 480,
+  },
+  iconGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 4,
+  },
+  iconOption: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 4,
+  },
+  colorOption: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  colorGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    marginTop: 4,
+  },
+  previewAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewName: {
+    fontSize: 18,
     fontWeight: '600',
   },
 });

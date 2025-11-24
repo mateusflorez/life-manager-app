@@ -87,10 +87,11 @@ export async function scheduleAllPhaseTransitions(
   const scheduledPhases: ScheduledPhase[] = [];
   const focusDurationMs = state.targetMinutes * 60 * 1000;
   const breakDurationMs = state.breakMinutes * 60 * 1000;
+  const now = Date.now();
 
   if (state.mode === 'countdown') {
     // Simple countdown - just one notification at the end
-    if (state.endsAt) {
+    if (state.endsAt && state.endsAt > now) {
       const phase: ScheduledPhase = {
         id: `${PHASE_NOTIFICATION_PREFIX}0`,
         type: 'timer_end',
@@ -100,22 +101,41 @@ export async function scheduleAllPhaseTransitions(
         newEndsAt: null,
       };
       scheduledPhases.push(phase);
-
-      await schedulePhaseNotification(phase, language);
     }
   } else if (state.mode === 'pomodoro') {
-    // Schedule all focus and break transitions
-    let currentTime = state.endsAt || Date.now();
+    // Schedule all focus and break transitions for remaining cycles
+    let currentTime = state.endsAt || now;
     let currentPhase = state.phase;
     let cyclesCompleted = state.cyclesCompleted;
+    let notificationIndex = 0;
 
-    for (let i = 0; i < (state.cyclesTarget - cyclesCompleted) * 2; i++) {
-      const isLastCycle = cyclesCompleted + 1 >= state.cyclesTarget;
+    // Calculate total remaining phases to schedule
+    // Each cycle has: 1 focus phase + 1 break phase (except last cycle which has no break after)
+    const remainingCycles = state.cyclesTarget - cyclesCompleted;
+    const maxPhases = remainingCycles * 2; // Max possible phase transitions
+
+    for (let i = 0; i < maxPhases; i++) {
+      // Skip if this phase already ended
+      if (currentTime <= now) {
+        // Phase already passed, advance to next
+        if (currentPhase === 'focus') {
+          cyclesCompleted++;
+          if (cyclesCompleted >= state.cyclesTarget) break;
+          currentTime = currentTime + breakDurationMs;
+          currentPhase = 'break';
+        } else {
+          currentTime = currentTime + focusDurationMs;
+          currentPhase = 'focus';
+        }
+        continue;
+      }
 
       if (currentPhase === 'focus') {
-        // Focus ending
+        // Focus phase ending
+        const isLastCycle = cyclesCompleted + 1 >= state.cyclesTarget;
+
         const phase: ScheduledPhase = {
-          id: `${PHASE_NOTIFICATION_PREFIX}${i}`,
+          id: `${PHASE_NOTIFICATION_PREFIX}${notificationIndex}`,
           type: isLastCycle ? 'all_cycles_end' : 'focus_end',
           triggerAt: currentTime,
           cycleNumber: cyclesCompleted + 1,
@@ -123,18 +143,18 @@ export async function scheduleAllPhaseTransitions(
           newEndsAt: isLastCycle ? null : currentTime + breakDurationMs,
         };
         scheduledPhases.push(phase);
-        await schedulePhaseNotification(phase, language);
+        notificationIndex++;
 
         if (isLastCycle) break;
 
-        // Move to break phase
-        currentTime = currentTime + breakDurationMs;
-        currentPhase = 'break';
-      } else {
-        // Break ending
+        // Advance to break phase
         cyclesCompleted++;
+        currentPhase = 'break';
+        currentTime = currentTime + breakDurationMs;
+      } else {
+        // Break phase ending
         const phase: ScheduledPhase = {
-          id: `${PHASE_NOTIFICATION_PREFIX}${i}`,
+          id: `${PHASE_NOTIFICATION_PREFIX}${notificationIndex}`,
           type: 'break_end',
           triggerAt: currentTime,
           cycleNumber: cyclesCompleted,
@@ -142,17 +162,30 @@ export async function scheduleAllPhaseTransitions(
           newEndsAt: currentTime + focusDurationMs,
         };
         scheduledPhases.push(phase);
-        await schedulePhaseNotification(phase, language);
+        notificationIndex++;
 
-        // Move to focus phase
-        currentTime = currentTime + focusDurationMs;
+        // Advance to focus phase
         currentPhase = 'focus';
+        currentTime = currentTime + focusDurationMs;
       }
     }
   }
 
+  // Schedule all notifications in parallel for better reliability
+  const schedulePromises = scheduledPhases.map(phase =>
+    schedulePhaseNotification(phase, language)
+  );
+  await Promise.all(schedulePromises);
+
   // Save scheduled phases for sync later
   await AsyncStorage.setItem(SCHEDULED_PHASES_KEY, JSON.stringify(scheduledPhases));
+
+  // Verify scheduling (for debugging)
+  if (__DEV__) {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const phaseNotifs = scheduled.filter(n => n.identifier.startsWith(PHASE_NOTIFICATION_PREFIX));
+    console.log(`[Focus] Scheduled ${phaseNotifs.length} phase notifications for ${scheduledPhases.length} phases`);
+  }
 }
 
 // Schedule a single phase notification
@@ -182,10 +215,16 @@ async function schedulePhaseNotification(
       break;
   }
 
+  const now = Date.now();
   const triggerDate = new Date(phase.triggerAt);
 
-  // Only schedule if in the future
-  if (phase.triggerAt <= Date.now()) return;
+  // Only schedule if in the future (with small buffer for timing)
+  if (phase.triggerAt <= now + 1000) {
+    if (__DEV__) {
+      console.log(`[Focus] Skipping past notification: ${phase.type} at ${triggerDate.toLocaleTimeString()}`);
+    }
+    return;
+  }
 
   try {
     await Notifications.scheduleNotificationAsync({
@@ -195,8 +234,12 @@ async function schedulePhaseNotification(
         body,
         sound: 'default',
         priority: Notifications.AndroidNotificationPriority.MAX,
+        vibrate: [0, 500, 200, 500],
         ...(Platform.OS === 'android' && {
           channelId: FOCUS_CHANNEL_ID,
+          // Android specific options for more reliable delivery
+          sticky: false,
+          autoDismiss: true,
         }),
         data: {
           type: 'focus_phase_transition',
@@ -208,8 +251,13 @@ async function schedulePhaseNotification(
         date: triggerDate,
       },
     });
+
+    if (__DEV__) {
+      const minutesUntil = Math.round((phase.triggerAt - now) / 60000);
+      console.log(`[Focus] Scheduled ${phase.type} notification in ${minutesUntil}min at ${triggerDate.toLocaleTimeString()}`);
+    }
   } catch (error) {
-    console.warn('Failed to schedule phase notification:', error);
+    console.error(`[Focus] Failed to schedule ${phase.type} notification:`, error);
   }
 }
 
@@ -429,4 +477,28 @@ export function calculateCurrentState(
 export async function cleanupAllFocusNotifications(): Promise<void> {
   await dismissOngoingNotification();
   await cancelAllScheduledPhases();
+}
+
+// Debug: Get info about all scheduled phase notifications
+export async function getScheduledPhaseNotifications(): Promise<{
+  count: number;
+  notifications: Array<{ id: string; triggerDate: Date | null }>;
+}> {
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const phaseNotifs = scheduled.filter(n =>
+      n.identifier.startsWith(PHASE_NOTIFICATION_PREFIX)
+    );
+
+    return {
+      count: phaseNotifs.length,
+      notifications: phaseNotifs.map(n => ({
+        id: n.identifier,
+        triggerDate: n.trigger && 'date' in n.trigger ? new Date(n.trigger.date) : null,
+      })),
+    };
+  } catch (error) {
+    console.error('[Focus] Failed to get scheduled notifications:', error);
+    return { count: 0, notifications: [] };
+  }
 }

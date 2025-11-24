@@ -139,7 +139,7 @@ export default function FocusScreen() {
             style={[
               styles.statCard,
               {
-                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
                 borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
               },
             ]}
@@ -163,7 +163,7 @@ export default function FocusScreen() {
             style={[
               styles.statCard,
               {
-                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
                 borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
               },
             ]}
@@ -187,7 +187,7 @@ export default function FocusScreen() {
             style={[
               styles.statCard,
               {
-                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
                 borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
               },
             ]}
@@ -214,7 +214,7 @@ export default function FocusScreen() {
           style={[
             styles.timerCard,
             {
-              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
               borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
             },
           ]}
@@ -469,7 +469,7 @@ export default function FocusScreen() {
           style={[
             styles.section,
             {
-              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
               borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
             },
           ]}
@@ -548,7 +548,7 @@ export default function FocusScreen() {
           style={[
             styles.viewHistoryButton,
             {
-              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
               borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
             },
           ]}
@@ -835,7 +835,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginTop: 4,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#FFFFFF',
   },
   cycleInfo: {
     fontSize: 14,

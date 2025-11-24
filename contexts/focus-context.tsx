@@ -39,6 +39,7 @@ import {
   dismissOngoingNotification,
   calculateCurrentState,
   cleanupAllFocusNotifications,
+  getScheduledPhaseNotifications,
 } from '@/services/focus-background-service';
 import { useAccount } from '@/contexts/account-context';
 import { useSettings } from '@/contexts/settings-context';
@@ -451,7 +452,16 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
         showOngoingNotification(newState, language);
 
         // Schedule all phase transition notifications (will fire even in background)
-        scheduleAllPhaseTransitions(newState, language);
+        scheduleAllPhaseTransitions(newState, language).then(async () => {
+          // Verify notifications were scheduled (in dev mode)
+          if (__DEV__) {
+            const { count, notifications } = await getScheduledPhaseNotifications();
+            console.log(`[Focus] Verified ${count} notifications scheduled:`);
+            notifications.forEach(n => {
+              console.log(`  - ${n.id}: ${n.triggerDate?.toLocaleTimeString() || 'unknown'}`);
+            });
+          }
+        });
       }
     },
     [timerState, notificationsEnabled, language]

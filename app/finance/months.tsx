@@ -32,6 +32,7 @@ export default function MonthsScreen() {
     ensureMonth,
     getFinanceEntries,
     createFinanceEntry,
+    updateFinanceEntry,
     deleteFinanceEntry,
     getMonthSummary,
     categories,
@@ -59,6 +60,7 @@ export default function MonthsScreen() {
   const [entryAmount, setEntryAmount] = useState('');
   const [entryCategory, setEntryCategory] = useState('');
   const [entryTag, setEntryTag] = useState('');
+  const [editingEntry, setEditingEntry] = useState<FinanceEntry | null>(null);
 
   const translations = {
     en: {
@@ -89,6 +91,8 @@ export default function MonthsScreen() {
       month: 'Month',
       monthExists: 'Month already exists',
       add: 'Add',
+      editEntry: 'Edit Entry',
+      update: 'Update',
     },
     pt: {
       noAccount: 'Selecione uma conta primeiro',
@@ -118,6 +122,8 @@ export default function MonthsScreen() {
       month: 'Mês',
       monthExists: 'Mês já existe',
       add: 'Adicionar',
+      editEntry: 'Editar Lançamento',
+      update: 'Atualizar',
     },
   };
 
@@ -203,23 +209,52 @@ export default function MonthsScreen() {
     const amount = currencyToFloat(entryAmount);
     if (!selectedMonth || amount <= 0 || !entryCategory) return;
     try {
-      await createFinanceEntry(
-        selectedMonth.id,
-        entryType,
-        entryCategory,
-        amount,
-        entryTag.trim() || undefined
-      );
+      if (editingEntry) {
+        // Update existing entry
+        await updateFinanceEntry(editingEntry.id, {
+          type: entryType,
+          category: entryCategory,
+          amount,
+          tag: entryTag.trim() || undefined,
+        });
+      } else {
+        // Create new entry
+        await createFinanceEntry(
+          selectedMonth.id,
+          entryType,
+          entryCategory,
+          amount,
+          entryTag.trim() || undefined
+        );
+      }
       const entries = await getFinanceEntries(selectedMonth.id);
       setMonthEntries(entries);
       setEntryAmount('');
       setEntryCategory('');
       setEntryTag('');
+      setEditingEntry(null);
       setShowAddEntry(false);
       await loadMonthsWithSummary();
     } catch (error) {
-      console.error('Error adding entry:', error);
+      console.error('Error saving entry:', error);
     }
+  };
+
+  const handleEditEntry = (entry: FinanceEntry) => {
+    setEditingEntry(entry);
+    setEntryType(entry.type);
+    setEntryAmount(entry.amount.toFixed(2).replace('.', ','));
+    setEntryCategory(entry.category);
+    setEntryTag(entry.tag || '');
+    setShowAddEntry(true);
+  };
+
+  const handleCloseEntryModal = () => {
+    setShowAddEntry(false);
+    setEditingEntry(null);
+    setEntryAmount('');
+    setEntryCategory('');
+    setEntryTag('');
   };
 
   const handleDeleteEntry = async (entryId: string) => {
@@ -526,12 +561,18 @@ export default function MonthsScreen() {
                         </Text>
                         {entry.source === 'manual' && (
                           <TouchableOpacity
-                            style={styles.entryDeleteButton}
-                            onPress={() => handleDeleteEntry(entry.id)}
+                            style={styles.entryEditButton}
+                            onPress={() => handleEditEntry(entry)}
                           >
-                            <IconSymbol name="trash" size={16} color="#EF4444" />
+                            <IconSymbol name="pencil" size={16} color="#6366F1" />
                           </TouchableOpacity>
                         )}
+                        <TouchableOpacity
+                          style={styles.entryDeleteButton}
+                          onPress={() => handleDeleteEntry(entry.id)}
+                        >
+                          <IconSymbol name="trash" size={16} color="#EF4444" />
+                        </TouchableOpacity>
                       </View>
                     </View>
                   ))
@@ -598,12 +639,18 @@ export default function MonthsScreen() {
                         </Text>
                         {entry.source === 'manual' && (
                           <TouchableOpacity
-                            style={styles.entryDeleteButton}
-                            onPress={() => handleDeleteEntry(entry.id)}
+                            style={styles.entryEditButton}
+                            onPress={() => handleEditEntry(entry)}
                           >
-                            <IconSymbol name="trash" size={16} color="#EF4444" />
+                            <IconSymbol name="pencil" size={16} color="#6366F1" />
                           </TouchableOpacity>
                         )}
+                        <TouchableOpacity
+                          style={styles.entryDeleteButton}
+                          onPress={() => handleDeleteEntry(entry.id)}
+                        >
+                          <IconSymbol name="trash" size={16} color="#EF4444" />
+                        </TouchableOpacity>
                       </View>
                     </View>
                   ))
@@ -614,12 +661,12 @@ export default function MonthsScreen() {
         </View>
       </Modal>
 
-      {/* Add Entry Modal */}
+      {/* Add/Edit Entry Modal */}
       <Modal
         visible={showAddEntry}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowAddEntry(false)}
+        onRequestClose={handleCloseEntryModal}
       >
         <View style={styles.modalOverlay}>
           <View
@@ -631,18 +678,18 @@ export default function MonthsScreen() {
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleRow}>
                 <LinearGradient
-                  colors={entryType === 'income' ? ['#10B981', '#059669'] : ['#EF4444', '#DC2626']}
+                  colors={editingEntry ? ['#6366F1', '#8B5CF6'] : entryType === 'income' ? ['#10B981', '#059669'] : ['#EF4444', '#DC2626']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.modalIconContainer}
                 >
-                  <IconSymbol name="plus.circle.fill" size={18} color="#FFFFFF" />
+                  <IconSymbol name={editingEntry ? 'pencil' : 'plus.circle.fill'} size={18} color="#FFFFFF" />
                 </LinearGradient>
                 <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                  {t.newEntry}
+                  {editingEntry ? t.editEntry : t.newEntry}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => setShowAddEntry(false)}>
+              <TouchableOpacity onPress={handleCloseEntryModal}>
                 <IconSymbol name="xmark" size={24} color={isDark ? '#A0A0A0' : '#6B7280'} />
               </TouchableOpacity>
             </View>
@@ -793,7 +840,7 @@ export default function MonthsScreen() {
                 <View style={styles.formButtons}>
                   <TouchableOpacity
                     style={[styles.cancelButton, { borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)' }]}
-                    onPress={() => setShowAddEntry(false)}
+                    onPress={handleCloseEntryModal}
                   >
                     <Text style={[styles.cancelButtonText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                       {t.cancel}
@@ -805,12 +852,12 @@ export default function MonthsScreen() {
                     disabled={currencyToFloat(entryAmount) <= 0 || !entryCategory}
                   >
                     <LinearGradient
-                      colors={entryType === 'income' ? ['#10B981', '#059669'] : ['#EF4444', '#DC2626']}
+                      colors={editingEntry ? ['#6366F1', '#8B5CF6'] : entryType === 'income' ? ['#10B981', '#059669'] : ['#EF4444', '#DC2626']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={styles.submitButton}
                     >
-                      <Text style={styles.submitButtonText}>{t.save}</Text>
+                      <Text style={styles.submitButtonText}>{editingEntry ? t.update : t.save}</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
@@ -1212,6 +1259,14 @@ const styles = StyleSheet.create({
   entryAmount: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  entryEditButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   entryDeleteButton: {
     width: 32,

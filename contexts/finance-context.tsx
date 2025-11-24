@@ -49,6 +49,10 @@ type FinanceContextType = {
     note?: string
   ) => Promise<CardCharge>;
   deleteCardCharge: (chargeId: string) => Promise<void>;
+  updateCardCharge: (
+    chargeId: string,
+    updates: Partial<Omit<CardCharge, 'id' | 'cardId' | 'createdAt'>>
+  ) => Promise<CardCharge | null>;
   getCardSummary: (
     cardId: string
   ) => Promise<{ totalUsed: number; charges: CardCharge[] }>;
@@ -84,6 +88,10 @@ type FinanceContextType = {
     category: string,
     amount: number,
     tag?: string
+  ) => Promise<FinanceEntry>;
+  updateFinanceEntry: (
+    entryId: string,
+    updates: { type?: 'income' | 'expense'; category?: string; amount?: number; tag?: string }
   ) => Promise<FinanceEntry>;
   deleteFinanceEntry: (entryId: string) => Promise<void>;
   getMonthSummary: (
@@ -334,10 +342,18 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     await FinanceStorage.deleteCardCharge(chargeId);
   };
 
+  const updateCardCharge = async (
+    chargeId: string,
+    updates: Partial<Omit<CardCharge, 'id' | 'cardId' | 'createdAt'>>
+  ): Promise<CardCharge | null> => {
+    return FinanceStorage.updateCardCharge(chargeId, updates);
+  };
+
   const getCardSummary = async (
     cardId: string
   ): Promise<{ totalUsed: number; charges: CardCharge[] }> => {
-    return FinanceStorage.getCardSummary(cardId);
+    const card = creditCards.find((c) => c.id === cardId);
+    return FinanceStorage.getCardSummary(cardId, card);
   };
 
   // Recurring Expense operations
@@ -434,7 +450,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       activeBankAccount.id,
       year,
       month,
-      account?.salary
+      activeBankAccount?.salary
     );
 
     // Update local state
@@ -475,6 +491,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       'manual',
       tag
     );
+  };
+
+  const updateFinanceEntry = async (
+    entryId: string,
+    updates: { type?: 'income' | 'expense'; category?: string; amount?: number; tag?: string }
+  ): Promise<FinanceEntry> => {
+    return FinanceStorage.updateFinanceEntry(entryId, updates);
   };
 
   const deleteFinanceEntry = async (entryId: string): Promise<void> => {
@@ -528,6 +551,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         getCardCharges,
         createCardCharge,
         deleteCardCharge,
+        updateCardCharge,
         getCardSummary,
         recurringExpenses,
         createRecurringExpense,
@@ -540,6 +564,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         getMonthsByYear,
         getFinanceEntries,
         createFinanceEntry,
+        updateFinanceEntry,
         deleteFinanceEntry,
         getMonthSummary,
         getYearSummary,

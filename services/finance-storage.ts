@@ -324,6 +324,25 @@ export async function deleteCardCharge(chargeId: string): Promise<void> {
   }
 }
 
+export async function updateCardCharge(
+  chargeId: string,
+  updates: Partial<Omit<CardCharge, 'id' | 'cardId' | 'createdAt'>>
+): Promise<CardCharge | null> {
+  try {
+    const data = await AsyncStorage.getItem(KEYS.CARD_CHARGES);
+    const charges: CardCharge[] = data ? JSON.parse(data) : [];
+    const index = charges.findIndex((c) => c.id === chargeId);
+    if (index === -1) return null;
+
+    charges[index] = { ...charges[index], ...updates };
+    await AsyncStorage.setItem(KEYS.CARD_CHARGES, JSON.stringify(charges));
+    return charges[index];
+  } catch (error) {
+    console.error('Error updating card charge:', error);
+    throw error;
+  }
+}
+
 async function deleteCardChargesByCard(cardId: string): Promise<void> {
   try {
     const data = await AsyncStorage.getItem(KEYS.CARD_CHARGES);
@@ -647,6 +666,28 @@ export async function saveFinanceEntry(
   }
 }
 
+export async function updateFinanceEntry(
+  entryId: string,
+  updates: { type?: 'income' | 'expense'; category?: string; amount?: number; tag?: string }
+): Promise<FinanceEntry> {
+  try {
+    const data = await AsyncStorage.getItem(KEYS.FINANCE_ENTRIES);
+    const entries: FinanceEntry[] = data ? JSON.parse(data) : [];
+    const index = entries.findIndex((e) => e.id === entryId);
+    if (index === -1) throw new Error('Finance entry not found');
+
+    entries[index] = {
+      ...entries[index],
+      ...updates,
+    };
+    await AsyncStorage.setItem(KEYS.FINANCE_ENTRIES, JSON.stringify(entries));
+    return entries[index];
+  } catch (error) {
+    console.error('Error updating finance entry:', error);
+    throw error;
+  }
+}
+
 export async function deleteFinanceEntry(entryId: string): Promise<void> {
   try {
     const data = await AsyncStorage.getItem(KEYS.FINANCE_ENTRIES);
@@ -874,16 +915,22 @@ export async function getYearSummary(
 }
 
 export async function getCardSummary(
-  cardId: string
+  cardId: string,
+  _card?: CreditCard
 ): Promise<{ totalUsed: number; charges: CardCharge[] }> {
   try {
     const charges = await getCardCharges(cardId);
     const now = new Date();
-    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-12
 
-    // Only count unpaid charges (current month and future)
-    const unpaidCharges = charges.filter((c) => c.statementMonth >= currentMonthKey);
-    const totalUsed = unpaidCharges.reduce((sum, c) => sum + c.amount, 0);
+    // Get current month key (YYYY-MM)
+    const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+
+    // Only count charges from FUTURE months (after current month)
+    // Charges from current month and before don't count towards the limit
+    const futureCharges = charges.filter((c) => c.statementMonth > currentMonthKey);
+    const totalUsed = futureCharges.reduce((sum, c) => sum + c.amount, 0);
 
     return { totalUsed, charges };
   } catch (error) {

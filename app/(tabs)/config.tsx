@@ -5,9 +5,11 @@ import { CurrencyInput, currencyToFloat, floatToCurrency } from '@/components/ui
 import { useAlert } from '@/contexts/alert-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useAccount } from '@/contexts/account-context';
+import { useFinance } from '@/contexts/finance-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getDataStats, importData, saveExportedData } from '@/services/data-export';
 import { type Currency, type Language, type ModulesConfig, type ThemeMode } from '@/types/settings';
+import { getAccountGradient } from '@/types/finance';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -48,7 +50,8 @@ export default function ConfigScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { settings, updateSettings } = useSettings();
-  const { account, updateAccount } = useAccount();
+  const { account } = useAccount();
+  const { bankAccounts, updateBankAccount } = useFinance();
   const { showToast, showConfirm } = useAlert();
 
   const [saveStatus, setSaveStatus] = useState<string>('');
@@ -58,18 +61,20 @@ export default function ConfigScreen() {
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
-  const [salaryValue, setSalaryValue] = useState<string>('0');
-  const [isSavingSalary, setIsSavingSalary] = useState(false);
+  const [salaryValues, setSalaryValues] = useState<Record<string, string>>({});
+  const [savingAccountId, setSavingAccountId] = useState<string | null>(null);
 
   useEffect(() => {
     loadDataStats();
   }, []);
 
   useEffect(() => {
-    if (account?.salary !== undefined) {
-      setSalaryValue(floatToCurrency(account.salary));
-    }
-  }, [account?.salary]);
+    const values: Record<string, string> = {};
+    bankAccounts.forEach((acc) => {
+      values[acc.id] = floatToCurrency(acc.salary ?? 0);
+    });
+    setSalaryValues(values);
+  }, [bankAccounts]);
 
   const loadDataStats = async () => {
     const stats = await getDataStats();
@@ -120,15 +125,16 @@ export default function ConfigScreen() {
     }
   };
 
-  const handleSalarySave = async () => {
-    if (!account) return;
+  const handleSalarySave = async (accountId: string) => {
+    const bankAccount = bankAccounts.find((acc) => acc.id === accountId);
+    if (!bankAccount) return;
 
-    const salaryFloat = currencyToFloat(salaryValue);
-    if (salaryFloat === account.salary) return;
+    const salaryFloat = currencyToFloat(salaryValues[accountId] || '0');
+    if (salaryFloat === (bankAccount.salary ?? 0)) return;
 
-    setIsSavingSalary(true);
+    setSavingAccountId(accountId);
     try {
-      await updateAccount({ salary: salaryFloat });
+      await updateBankAccount({ ...bankAccount, salary: salaryFloat });
       setSaveStatus(
         settings.language === 'pt' ? 'Salário atualizado!' : 'Salary updated!'
       );
@@ -139,8 +145,12 @@ export default function ConfigScreen() {
         settings.language === 'pt' ? 'Erro ao salvar' : 'Failed to save'
       );
     } finally {
-      setIsSavingSalary(false);
+      setSavingAccountId(null);
     }
+  };
+
+  const handleSalaryChange = (accountId: string, value: string) => {
+    setSalaryValues((prev) => ({ ...prev, [accountId]: value }));
   };
 
   const handleModuleToggle = async (module: keyof ModulesConfig, enabled: boolean) => {
@@ -281,10 +291,11 @@ export default function ConfigScreen() {
       exporting: 'Exporting...',
       importing: 'Importing...',
       salaryLabel: 'Monthly Salary',
-      salaryHelp: 'Set your salary to auto-add income when creating a new finance month',
+      salaryHelp: 'Set salary per bank account. It will be auto-added as income when creating a new finance month.',
       salaryPlaceholder: 'Enter your monthly salary',
       saveSalary: 'Save',
       saving: 'Saving...',
+      noAccounts: 'No bank accounts yet. Create one in the Finance module.',
     },
     pt: {
       title: 'Configurações',
@@ -337,10 +348,11 @@ export default function ConfigScreen() {
       exporting: 'Exportando...',
       importing: 'Importando...',
       salaryLabel: 'Salário Mensal',
-      salaryHelp: 'Defina seu salário para adicionar automaticamente como receita ao criar um novo mês financeiro',
+      salaryHelp: 'Defina o salário por conta bancária. Será adicionado automaticamente como receita ao criar um novo mês financeiro.',
       salaryPlaceholder: 'Digite seu salário mensal',
       saveSalary: 'Salvar',
       saving: 'Salvando...',
+      noAccounts: 'Nenhuma conta bancária ainda. Crie uma no módulo de Finanças.',
     },
   };
 
@@ -585,45 +597,77 @@ export default function ConfigScreen() {
               </View>
             </View>
 
-            <View style={styles.salaryInputRow}>
-              <CurrencyInput
-                value={salaryValue}
-                onChangeValue={setSalaryValue}
-                currency={settings.currency}
-                containerStyle={[
-                  styles.salaryInput,
-                  {
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
-                  },
-                ]}
-                textColor={isDark ? '#FFFFFF' : '#111827'}
-                prefixColor={isDark ? '#999' : '#666'}
-                placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
-              />
-              <TouchableOpacity
-                style={[
-                  styles.salarySaveButton,
-                  { opacity: isSavingSalary ? 0.7 : 1 },
-                ]}
-                onPress={handleSalarySave}
-                disabled={isSavingSalary}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#8B5CF6', '#7C3AED']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.salarySaveButtonGradient}
+            {bankAccounts.length === 0 ? (
+              <Text style={[styles.cardDesc, { color: isDark ? '#808080' : '#6B7280', textAlign: 'center', paddingVertical: 12 }]}>
+                {t.noAccounts}
+              </Text>
+            ) : (
+              bankAccounts.map((bankAccount, index) => (
+                <View
+                  key={bankAccount.id}
+                  style={[
+                    styles.salaryAccountItem,
+                    index < bankAccounts.length - 1 && {
+                      borderBottomWidth: 1,
+                      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+                    },
+                  ]}
                 >
-                  {isSavingSalary ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.salarySaveButtonText}>{t.saveSalary}</Text>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
+                  <View style={styles.salaryAccountHeader}>
+                    <LinearGradient
+                      colors={getAccountGradient(bankAccount.color)}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.salaryAccountIcon}
+                    >
+                      <IconSymbol name={bankAccount.icon || 'building.columns'} size={14} color="#FFFFFF" />
+                    </LinearGradient>
+                    <Text style={[styles.salaryAccountName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                      {bankAccount.name}
+                    </Text>
+                  </View>
+                  <View style={styles.salaryInputRow}>
+                    <CurrencyInput
+                      value={salaryValues[bankAccount.id] || '0'}
+                      onChangeValue={(value) => handleSalaryChange(bankAccount.id, value)}
+                      currency={settings.currency}
+                      containerStyle={[
+                        styles.salaryInput,
+                        {
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                          borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+                        },
+                      ]}
+                      textColor={isDark ? '#FFFFFF' : '#111827'}
+                      prefixColor={isDark ? '#999' : '#666'}
+                      placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                    />
+                    <TouchableOpacity
+                      style={[
+                        styles.salarySaveButton,
+                        { opacity: savingAccountId === bankAccount.id ? 0.7 : 1 },
+                      ]}
+                      onPress={() => handleSalarySave(bankAccount.id)}
+                      disabled={savingAccountId === bankAccount.id}
+                      activeOpacity={0.8}
+                    >
+                      <LinearGradient
+                        colors={['#8B5CF6', '#7C3AED']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.salarySaveButtonGradient}
+                      >
+                        {savingAccountId === bankAccount.id ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <Text style={styles.salarySaveButtonText}>{t.saveSalary}</Text>
+                        )}
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            )}
           </View>
         )}
 
@@ -1334,6 +1378,26 @@ const styles = StyleSheet.create({
   },
   salarySaveButtonText: {
     color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  salaryAccountItem: {
+    paddingVertical: 14,
+    gap: 10,
+  },
+  salaryAccountHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  salaryAccountIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  salaryAccountName: {
     fontSize: 15,
     fontWeight: '600',
   },
