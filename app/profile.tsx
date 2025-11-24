@@ -186,6 +186,8 @@ export default function ProfileScreen() {
         boldExample: '__text__ or **text**',
         italic: 'Italic',
         italicExample: '_text_ or *text*',
+        boldItalic: 'Bold + Italic',
+        boldItalicExample: '***text*** or ___text___',
         strikethrough: 'Strikethrough',
         strikethroughExample: '~~text~~',
         alignment: 'Alignment',
@@ -204,16 +206,16 @@ export default function ProfileScreen() {
         imageSizeNote: 'Replace ### with width in pixels (e.g., img420)',
         quotes: 'Quotes',
         quoteExample: '> quoted text',
+        nestedQuote: 'Nested quote',
+        nestedQuoteExample: '>> nested',
         code: 'Code',
         inlineCode: 'Inline code',
         inlineCodeExample: '`code`',
         codeBlock: 'Code block',
         codeBlockExample: '```\ncode\n```',
-        special: 'Special',
-        spoiler: 'Spoiler',
-        spoilerExample: '~!hidden text!~',
-        youtube: 'YouTube embed',
-        youtubeExample: 'youtube(video_url)',
+        other: 'Other',
+        horizontalLine: 'Horizontal line',
+        horizontalLineExample: '--- or ***',
       },
     },
     pt: {
@@ -258,6 +260,8 @@ export default function ProfileScreen() {
         boldExample: '__texto__ ou **texto**',
         italic: 'Itálico',
         italicExample: '_texto_ ou *texto*',
+        boldItalic: 'Negrito + Itálico',
+        boldItalicExample: '***texto*** ou ___texto___',
         strikethrough: 'Riscado',
         strikethroughExample: '~~texto~~',
         alignment: 'Alinhamento',
@@ -276,16 +280,16 @@ export default function ProfileScreen() {
         imageSizeNote: 'Substitua ### pela largura em pixels (ex: img420)',
         quotes: 'Citações',
         quoteExample: '> texto citado',
+        nestedQuote: 'Citação aninhada',
+        nestedQuoteExample: '>> aninhada',
         code: 'Código',
         inlineCode: 'Código inline',
         inlineCodeExample: '`código`',
         codeBlock: 'Bloco de código',
         codeBlockExample: '```\ncódigo\n```',
-        special: 'Especial',
-        spoiler: 'Spoiler',
-        spoilerExample: '~!texto oculto!~',
-        youtube: 'Embed do YouTube',
-        youtubeExample: 'youtube(url_do_video)',
+        other: 'Outros',
+        horizontalLine: 'Linha horizontal',
+        horizontalLineExample: '--- ou ***',
       },
     },
   };
@@ -749,6 +753,10 @@ export default function ProfileScreen() {
                   <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.italicExample}</Text>
                 </View>
                 <View style={[styles.helpItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>{t.markdownHelpSections.boldItalic}</Text>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.boldItalicExample}</Text>
+                </View>
+                <View style={[styles.helpItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
                   <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>{t.markdownHelpSections.strikethrough}</Text>
                   <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.strikethroughExample}</Text>
                 </View>
@@ -814,6 +822,10 @@ export default function ProfileScreen() {
                 <View style={[styles.helpItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
                   <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.quoteExample}</Text>
                 </View>
+                <View style={[styles.helpItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>{t.markdownHelpSections.nestedQuote}</Text>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.nestedQuoteExample}</Text>
+                </View>
               </View>
 
               {/* Code */}
@@ -831,17 +843,14 @@ export default function ProfileScreen() {
                 </View>
               </View>
 
+              {/* Other */}
               <View style={[styles.helpSection, { marginBottom: 20 }]}>
                 <Text style={[styles.helpSectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                  {t.markdownHelpSections.special}
+                  {t.markdownHelpSections.other}
                 </Text>
                 <View style={[styles.helpItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>{t.markdownHelpSections.spoiler}</Text>
-                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.spoilerExample}</Text>
-                </View>
-                <View style={[styles.helpItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>{t.markdownHelpSections.youtube}</Text>
-                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.youtubeExample}</Text>
+                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>{t.markdownHelpSections.horizontalLine}</Text>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.horizontalLineExample}</Text>
                 </View>
               </View>
             </ScrollView>
