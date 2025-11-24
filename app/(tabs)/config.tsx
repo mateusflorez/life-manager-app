@@ -12,7 +12,9 @@ import { type Currency, type Language, type ModulesConfig, type ThemeMode } from
 import { getAccountGradient } from '@/types/finance';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Module configuration with icons and gradients
 const MODULE_CONFIG = {
@@ -63,6 +65,7 @@ export default function ConfigScreen() {
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [salaryValues, setSalaryValues] = useState<Record<string, string>>({});
   const [savingAccountId, setSavingAccountId] = useState<string | null>(null);
+  const [showReleaseNotesModal, setShowReleaseNotesModal] = useState(false);
 
   useEffect(() => {
     loadDataStats();
@@ -296,6 +299,8 @@ export default function ConfigScreen() {
       saveSalary: 'Save',
       saving: 'Saving...',
       noAccounts: 'No bank accounts yet. Create one in the Finance module.',
+      releaseNotes: 'Release Notes',
+      version: 'Version',
     },
     pt: {
       title: 'Configurações',
@@ -353,6 +358,8 @@ export default function ConfigScreen() {
       saveSalary: 'Salvar',
       saving: 'Salvando...',
       noAccounts: 'Nenhuma conta bancária ainda. Crie uma no módulo de Finanças.',
+      releaseNotes: 'Notas de Versão',
+      version: 'Versão',
     },
   };
 
@@ -837,6 +844,17 @@ export default function ConfigScreen() {
           </View>
         ) : null}
 
+        {/* Version */}
+        <TouchableOpacity
+          style={styles.versionContainer}
+          onPress={() => setShowReleaseNotesModal(true)}
+          activeOpacity={0.6}
+        >
+          <Text style={[styles.versionText, { color: isDark ? '#666' : '#9CA3AF' }]}>
+            v1.0.2-alpha
+          </Text>
+        </TouchableOpacity>
+
         <View style={{ height: 40 }} />
       </ScrollView>
 
@@ -1109,6 +1127,107 @@ export default function ConfigScreen() {
                 <IconSymbol name="checkmark.circle.fill" size={24} color="#8B5CF6" />
               )}
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Release Notes Modal */}
+      <Modal
+        visible={showReleaseNotesModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowReleaseNotesModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.releaseNotesModalContent, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t.releaseNotes}
+              </Text>
+              <TouchableOpacity onPress={() => setShowReleaseNotesModal(false)}>
+                <IconSymbol name="xmark.circle.fill" size={28} color={isDark ? '#666' : '#9CA3AF'} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={styles.releaseNotesScroll}>
+              {/* v1.0.2-alpha */}
+              <View style={[styles.releaseNoteCard, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' }]}>
+                <View style={styles.releaseNoteHeader}>
+                  <LinearGradient
+                    colors={['#6366F1', '#8B5CF6']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.releaseNoteVersionBadge}
+                  >
+                    <Text style={styles.releaseNoteVersionText}>v1.0.2-alpha</Text>
+                  </LinearGradient>
+                </View>
+                <Text style={[styles.releaseNoteSection, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {settings.language === 'en' ? 'New Features' : 'Novas Funcionalidades'}
+                </Text>
+                <Text style={[styles.releaseNoteItem, { color: isDark ? '#999' : '#6B7280' }]}>
+                  {settings.language === 'en'
+                    ? '• Added markdown help modal with formatting examples (bold, italic, quotes, nested quotes)\n• Enhanced FlavoredMarkdown component with bold+italic and nested quote support'
+                    : '• Modal de ajuda de markdown com exemplos de formatação (negrito, itálico, citações, citações aninhadas)\n• Componente FlavoredMarkdown aprimorado com suporte a negrito+itálico e citações aninhadas'}
+                </Text>
+                <Text style={[styles.releaseNoteSection, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {settings.language === 'en' ? 'Edit Functionality' : 'Funcionalidade de Edição'}
+                </Text>
+                <Text style={[styles.releaseNoteItem, { color: isDark ? '#999' : '#6B7280' }]}>
+                  {settings.language === 'en'
+                    ? '• Added edit functionality for tasks\n• Added edit functionality for books and reviews\n• Added edit functionality for investment movements and investments\n• Added edit functionality for finance entries and recurring expenses\n• Added session editing in Training module'
+                    : '• Edição de tarefas\n• Edição de livros e resenhas\n• Edição de movimentações e investimentos\n• Edição de lançamentos financeiros e despesas recorrentes\n• Edição de sessões no módulo de Treino'}
+                </Text>
+                <Text style={[styles.releaseNoteSection, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {settings.language === 'en' ? 'UI Improvements' : 'Melhorias de Interface'}
+                </Text>
+                <Text style={[styles.releaseNoteItem, { color: isDark ? '#999' : '#6B7280' }]}>
+                  {settings.language === 'en'
+                    ? '• Replaced RippleBackground with ColorWavesBackground for enhanced visuals'
+                    : '• Substituído RippleBackground por ColorWavesBackground para visuais aprimorados'}
+                </Text>
+              </View>
+
+              {/* v1.0.1-alpha */}
+              <View style={[styles.releaseNoteCard, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' }]}>
+                <View style={styles.releaseNoteHeader}>
+                  <LinearGradient
+                    colors={['#10B981', '#059669']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.releaseNoteVersionBadge}
+                  >
+                    <Text style={styles.releaseNoteVersionText}>v1.0.1-alpha</Text>
+                  </LinearGradient>
+                </View>
+                <Text style={[styles.releaseNoteItem, { color: isDark ? '#999' : '#6B7280' }]}>
+                  {settings.language === 'en'
+                    ? '• Added salary on configuration\n• Added optional end month on recurring expense\n• Recurring expenses and card charges added in the current month are automatically added to expenses\n• Added deposit and dividend options on new contribution on investments\n• Improved light mode UI'
+                    : '• Salário adicionado nas configurações\n• Mês final opcional em despesas recorrentes\n• Despesas recorrentes e cobranças de cartão adicionadas no mês atual são automaticamente adicionadas às despesas\n• Opções de depósito e dividendo em novos aportes de investimentos\n• Interface do modo claro aprimorada'}
+                </Text>
+              </View>
+
+              {/* v1.0.0-alpha */}
+              <View style={[styles.releaseNoteCard, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' }]}>
+                <View style={styles.releaseNoteHeader}>
+                  <LinearGradient
+                    colors={['#F59E0B', '#D97706']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.releaseNoteVersionBadge}
+                  >
+                    <Text style={styles.releaseNoteVersionText}>v1.0.0-alpha</Text>
+                  </LinearGradient>
+                </View>
+                <Text style={[styles.releaseNoteItem, { color: isDark ? '#999' : '#6B7280' }]}>
+                  {settings.language === 'en'
+                    ? '• Life Manager now delivers a complete and local experience: accounts with XP/levels, light/dark themes, and language/currency preferences (EN/PT, USD/BRL) without relying on the cloud.\n• Finances: manage bank accounts, cards with limits/bills, recurring expenses, and monthly entries with categories and quick charts.\n• Investments: track portfolios, record contributions via "new total," view deltas and history with tags and a 12-month chart.\n• Tasks: create one-off or recurring tasks (daily/weekly/monthly) with today/overdue reminders, completing them earns XP.\n• Books: track your progress in books/manga, record chapters, write reviews, and mark works as completed or abandoned.\n• Mood: record mood (1–5) with ratings, keep streaks, and view 60-day trends with history search.\n• Training: Register exercises, record sessions (load/reps), track volume, statistics, and a 60-day heatmap.\n• Focus: Use Pomodoro, countdown timer, or stopwatch, with background notifications, completion alerts, and detailed history.\n• Achievements: View automatic milestones by level, chapters read, invested, tasks, workouts, focus minutes, and mood logs.\n• Quick controls: Enable/disable modules without losing data and use native toasts/dialogs for clearer confirmations throughout navigation.'
+                    : '• Life Manager agora oferece uma experiência completa e local: contas com XP/níveis, temas claro/escuro e preferências de idioma/moeda (EN/PT, USD/BRL) sem depender da nuvem.\n• Finanças: gerencie contas bancárias, cartões com limites/faturas, despesas recorrentes e lançamentos mensais com categorias e gráficos rápidos.\n• Investimentos: acompanhe portfólios, registre aportes via "novo total", veja deltas e histórico com tags e gráfico de 12 meses.\n• Tarefas: crie tarefas únicas ou recorrentes (diárias/semanais/mensais) com lembretes de hoje/atrasadas, completá-las ganha XP.\n• Livros: acompanhe seu progresso em livros/mangás, registre capítulos, escreva resenhas e marque obras como concluídas ou abandonadas.\n• Humor: registre humor (1–5) com avaliações, mantenha sequências e veja tendências de 60 dias com busca no histórico.\n• Treino: Registre exercícios, grave sessões (carga/reps), acompanhe volume, estatísticas e heatmap de 60 dias.\n• Foco: Use Pomodoro, timer regressivo ou cronômetro, com notificações em segundo plano, alertas de conclusão e histórico detalhado.\n• Conquistas: Veja marcos automáticos por nível, capítulos lidos, investido, tarefas, treinos, minutos de foco e logs de humor.\n• Controles rápidos: Habilite/desabilite módulos sem perder dados e use toasts/dialogs nativos para confirmações mais claras em toda navegação.'}
+                </Text>
+              </View>
+
+              <View style={{ height: 20 }} />
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -1400,5 +1519,53 @@ const styles = StyleSheet.create({
   salaryAccountName: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  versionContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginTop: 8,
+  },
+  versionText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  releaseNotesModalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 40,
+    maxHeight: SCREEN_HEIGHT * 0.8,
+  },
+  releaseNotesScroll: {
+    maxHeight: SCREEN_HEIGHT * 0.65,
+  },
+  releaseNoteCard: {
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  releaseNoteHeader: {
+    marginBottom: 12,
+  },
+  releaseNoteVersionBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  releaseNoteVersionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  releaseNoteSection: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 6,
+    marginTop: 8,
+  },
+  releaseNoteItem: {
+    fontSize: 14,
+    lineHeight: 22,
   },
 });
