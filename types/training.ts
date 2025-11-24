@@ -6,12 +6,18 @@ export type Exercise = {
   createdAt: string;
 };
 
+export type TrainingSet = {
+  load: number; // weight in kg/lbs
+  reps: number;
+};
+
 export type TrainingSession = {
   id: string;
   exerciseId: string;
   date: string; // "YYYY-MM-DD"
-  load: number; // weight in kg/lbs
-  reps: number;
+  load: number; // weight in kg/lbs (legacy, first set)
+  reps: number; // (legacy, first set)
+  sets?: TrainingSet[]; // array of sets (new format)
   notes?: string;
   createdAt: string;
 };
@@ -43,6 +49,22 @@ export function getTodayKey(): string {
 export function calculateVolume(load: number, reps: number): number {
   return Number((load * reps).toFixed(2));
 }
+
+export function calculateSessionVolume(session: TrainingSession): number {
+  if (session.sets && session.sets.length > 0) {
+    return session.sets.reduce((sum, set) => sum + calculateVolume(set.load, set.reps), 0);
+  }
+  return calculateVolume(session.load, session.reps);
+}
+
+export function getSessionSets(session: TrainingSession): TrainingSet[] {
+  if (session.sets && session.sets.length > 0) {
+    return session.sets;
+  }
+  return [{ load: session.load, reps: session.reps }];
+}
+
+export const MAX_SETS = 10;
 
 export function formatDate(dateStr: string, language: string): string {
   const date = new Date(dateStr + 'T12:00:00');
@@ -151,7 +173,11 @@ type TranslationKey =
   | 'editExercise'
   | 'editSession'
   | 'exerciseUpdated'
-  | 'sessionUpdated';
+  | 'sessionUpdated'
+  | 'sets'
+  | 'addSet'
+  | 'set'
+  | 'removeSet';
 
 const translations: Record<string, Record<TranslationKey, string>> = {
   en: {
@@ -199,6 +225,10 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     editSession: 'Edit Session',
     exerciseUpdated: 'Exercise updated!',
     sessionUpdated: 'Session updated!',
+    sets: 'Sets',
+    addSet: '+ Add set',
+    set: 'Set',
+    removeSet: 'Remove set',
   },
   pt: {
     training: 'Treino',
@@ -245,6 +275,10 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     editSession: 'Editar Treino',
     exerciseUpdated: 'Exercício atualizado!',
     sessionUpdated: 'Treino atualizado!',
+    sets: 'Séries',
+    addSet: '+ Adicionar série',
+    set: 'Série',
+    removeSet: 'Remover série',
   },
 };
 

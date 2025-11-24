@@ -20,8 +20,8 @@ import { RippleBackground } from '@/components/ui/ripple-background';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSettings } from '@/contexts/settings-context';
 import { useTraining } from '@/contexts/training-context';
-import { t, formatDate, calculateVolume } from '@/types/training';
-import type { TrainingSession } from '@/types/training';
+import { t, formatDate, calculateSessionVolume, getSessionSets, MAX_SETS } from '@/types/training';
+import type { TrainingSession, TrainingSet } from '@/types/training';
 import { LineChart } from 'react-native-chart-kit';
 import { useAlert } from '@/contexts/alert-context';
 
@@ -41,8 +41,7 @@ export default function ExerciseDetailScreen() {
 
   // Edit session state
   const [editingSession, setEditingSession] = useState<TrainingSession | null>(null);
-  const [editLoad, setEditLoad] = useState('');
-  const [editReps, setEditReps] = useState('');
+  const [editSets, setEditSets] = useState<Array<{ load: string; reps: string }>>([{ load: '', reps: '' }]);
   const [editDate, setEditDate] = useState<Date>(new Date());
   const [editNotes, setEditNotes] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -85,16 +84,15 @@ export default function ExerciseDetailScreen() {
 
   const handleEditSession = (session: TrainingSession) => {
     setEditingSession(session);
-    setEditLoad(session.load.toString());
-    setEditReps(session.reps.toString());
+    const sets = getSessionSets(session);
+    setEditSets(sets.map(s => ({ load: s.load.toString(), reps: s.reps.toString() })));
     setEditDate(new Date(session.date + 'T12:00:00'));
     setEditNotes(session.notes || '');
   };
 
   const handleCloseEdit = () => {
     setEditingSession(null);
-    setEditLoad('');
-    setEditReps('');
+    setEditSets([{ load: '', reps: '' }]);
     setEditDate(new Date());
     setEditNotes('');
     setShowDatePicker(false);
@@ -126,16 +124,24 @@ export default function ExerciseDetailScreen() {
   const handleSaveSession = async () => {
     if (!editingSession) return;
 
-    const loadNum = parseFloat(editLoad);
-    const repsNum = parseInt(editReps, 10);
+    // Validate all sets
+    const validSets: TrainingSet[] = [];
+    for (const set of editSets) {
+      const loadNum = parseFloat(set.load);
+      const repsNum = parseInt(set.reps, 10);
 
-    if (isNaN(loadNum) || loadNum <= 0) return;
-    if (isNaN(repsNum) || repsNum <= 0) return;
+      if (isNaN(loadNum) || loadNum <= 0 || isNaN(repsNum) || repsNum <= 0) {
+        return;
+      }
+      validSets.push({ load: loadNum, reps: repsNum });
+    }
+
+    if (validSets.length === 0) return;
 
     setSaving(true);
     try {
       const dateStr = formatDateForStorage(editDate);
-      await updateSession(editingSession.id, loadNum, repsNum, dateStr, editNotes);
+      await updateSession(editingSession.id, validSets[0].load, validSets[0].reps, dateStr, editNotes, validSets);
       showToast({ message: t('sessionUpdated', language), type: 'success' });
       handleCloseEdit();
     } catch (error) {
@@ -143,6 +149,25 @@ export default function ExerciseDetailScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Set management functions for edit modal
+  const handleAddEditSet = () => {
+    if (editSets.length < MAX_SETS) {
+      setEditSets([...editSets, { load: '', reps: '' }]);
+    }
+  };
+
+  const handleRemoveEditSet = (index: number) => {
+    if (editSets.length > 1) {
+      setEditSets(editSets.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleUpdateEditSet = (index: number, field: 'load' | 'reps', value: string) => {
+    const newSets = [...editSets];
+    newSets[index][field] = value;
+    setEditSets(newSets);
   };
 
   const formatNumber = (num: number) => {
@@ -202,7 +227,7 @@ export default function ExerciseDetailScreen() {
         labels: chartSessions.map((s, i) => (i % 3 === 0 ? s.date.slice(5) : '')),
         datasets: [
           {
-            data: chartSessions.map((s) => calculateVolume(s.load, s.reps)),
+            data: chartSessions.map((s) => calculateSessionVolume(s)),
             strokeWidth: 2,
           },
         ],
@@ -365,7 +390,8 @@ export default function ExerciseDetailScreen() {
             </View>
           ) : (
             exercise.sessions.map((session, index) => {
-              const volume = calculateVolume(session.load, session.reps);
+              const volume = calculateSessionVolume(session);
+              const sets = getSessionSets(session);
               return (
                 <View
                   key={session.id}
@@ -386,9 +412,16 @@ export default function ExerciseDetailScreen() {
                         <Text style={styles.volumeBadgeText}>{formatNumber(volume)}</Text>
                       </View>
                     </View>
-                    <Text style={[styles.sessionDetails, { color: isDark ? '#808080' : '#6B7280' }]}>
-                      {session.load}kg × {session.reps} {t('reps', language).toLowerCase()}
-                    </Text>
+                    <View style={styles.setsContainer}>
+                      {sets.map((set, setIndex) => (
+                        <Text
+                          key={setIndex}
+                          style={[styles.sessionDetails, { color: isDark ? '#808080' : '#6B7280' }]}
+                        >
+                          {sets.length > 1 ? `${setIndex + 1}. ` : ''}{set.load}kg × {set.reps} {t('reps', language).toLowerCase()}
+                        </Text>
+                      ))}
+                    </View>
                     {session.notes && (
                       <Text style={[styles.sessionNotes, { color: isDark ? '#666' : '#9CA3AF' }]}>
                         "{session.notes}"
@@ -453,47 +486,80 @@ export default function ExerciseDetailScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Load & Reps */}
-              <View style={styles.inputRow}>
-                <View style={styles.inputHalf}>
-                  <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                    {t('load', language)} (kg)
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                        color: isDark ? '#FFFFFF' : '#111827',
-                      },
-                    ]}
-                    placeholder="0"
-                    placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
-                    value={editLoad}
-                    onChangeText={setEditLoad}
-                    keyboardType="decimal-pad"
-                  />
+              {/* Sets Section */}
+              <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t('sets', language)}
+              </Text>
+
+              {editSets.map((set, index) => (
+                <View key={index} style={styles.setRow}>
+                  <View style={styles.setNumber}>
+                    <Text style={[styles.setNumberText, { color: isDark ? '#808080' : '#6B7280' }]}>
+                      {index + 1}
+                    </Text>
+                  </View>
+                  <View style={styles.setInputContainer}>
+                    <TextInput
+                      style={[
+                        styles.setInput,
+                        {
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                          color: isDark ? '#FFFFFF' : '#111827',
+                        },
+                      ]}
+                      placeholder={t('load', language)}
+                      placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                      value={set.load}
+                      onChangeText={(value) => handleUpdateEditSet(index, 'load', value)}
+                      keyboardType="decimal-pad"
+                    />
+                    <Text style={[styles.setUnit, { color: isDark ? '#808080' : '#6B7280' }]}>kg</Text>
+                  </View>
+                  <Text style={[styles.setMultiplier, { color: isDark ? '#808080' : '#6B7280' }]}>×</Text>
+                  <View style={styles.setInputContainer}>
+                    <TextInput
+                      style={[
+                        styles.setInput,
+                        {
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                          color: isDark ? '#FFFFFF' : '#111827',
+                        },
+                      ]}
+                      placeholder={t('reps', language)}
+                      placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                      value={set.reps}
+                      onChangeText={(value) => handleUpdateEditSet(index, 'reps', value)}
+                      keyboardType="number-pad"
+                    />
+                    <Text style={[styles.setUnit, { color: isDark ? '#808080' : '#6B7280' }]}>rep</Text>
+                  </View>
+                  {editSets.length > 1 && (
+                    <TouchableOpacity
+                      style={styles.removeSetButton}
+                      onPress={() => handleRemoveEditSet(index)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <IconSymbol name="minus.circle.fill" size={22} color="#EF4444" />
+                    </TouchableOpacity>
+                  )}
                 </View>
-                <View style={styles.inputHalf}>
-                  <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                    {t('reps', language)}
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                        color: isDark ? '#FFFFFF' : '#111827',
-                      },
-                    ]}
-                    placeholder="0"
-                    placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
-                    value={editReps}
-                    onChangeText={setEditReps}
-                    keyboardType="number-pad"
-                  />
-                </View>
-              </View>
+              ))}
+
+              {editSets.length < MAX_SETS && (
+                <TouchableOpacity
+                  style={[
+                    styles.addSetButton,
+                    {
+                      backgroundColor: isDark ? 'rgba(76, 175, 80, 0.1)' : 'rgba(76, 175, 80, 0.08)',
+                    },
+                  ]}
+                  onPress={handleAddEditSet}
+                  activeOpacity={0.7}
+                >
+                  <IconSymbol name="plus.circle.fill" size={18} color="#4CAF50" />
+                  <Text style={styles.addSetButtonText}>{t('addSet', language)}</Text>
+                </TouchableOpacity>
+              )}
 
               {/* Date Picker */}
               <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
@@ -537,14 +603,14 @@ export default function ExerciseDetailScreen() {
               <TouchableOpacity
                 style={[
                   styles.modalButton,
-                  (!editLoad || !editReps || saving) && styles.modalButtonDisabled,
+                  (editSets.some(s => !s.load || !s.reps) || saving) && styles.modalButtonDisabled,
                 ]}
                 onPress={handleSaveSession}
                 activeOpacity={0.8}
-                disabled={!editLoad || !editReps || saving}
+                disabled={editSets.some(s => !s.load || !s.reps) || saving}
               >
                 <LinearGradient
-                  colors={(!editLoad || !editReps || saving) ? ['#888', '#777'] : ['#4CAF50', '#45A049']}
+                  colors={(editSets.some(s => !s.load || !s.reps) || saving) ? ['#888', '#777'] : ['#4CAF50', '#45A049']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.modalButtonGradient}
@@ -843,6 +909,66 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  // Sets container for session display
+  setsContainer: {
+    gap: 2,
+  },
+  // Set styles
+  setRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  setNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  setNumberText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  setInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  setInput: {
+    flex: 1,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 15,
+  },
+  setUnit: {
+    fontSize: 12,
+    marginLeft: 4,
+    minWidth: 24,
+  },
+  setMultiplier: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  removeSetButton: {
+    padding: 2,
+  },
+  addSetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  addSetButtonText: {
+    color: '#4CAF50',
+    fontSize: 14,
     fontWeight: '600',
   },
 });

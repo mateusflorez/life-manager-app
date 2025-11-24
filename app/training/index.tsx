@@ -24,7 +24,9 @@ import {
   t,
   formatShortDate,
   TRAINING_XP,
+  MAX_SETS,
 } from '@/types/training';
+import type { TrainingSet } from '@/types/training';
 
 export default function TrainingScreen() {
   const router = useRouter();
@@ -60,8 +62,7 @@ export default function TrainingScreen() {
   // Session form
   const [selectedExerciseId, setSelectedExerciseId] = useState('');
   const [exerciseSearch, setExerciseSearch] = useState('');
-  const [load, setLoad] = useState('');
-  const [reps, setReps] = useState('');
+  const [sessionSets, setSessionSets] = useState<Array<{ load: string; reps: string }>>([{ load: '', reps: '' }]);
   const [sessionDate, setSessionDate] = useState<Date>(new Date());
   const [notes, setNotes] = useState('');
 
@@ -95,6 +96,25 @@ export default function TrainingScreen() {
 
   // Get selected exercise name
   const selectedExercise = exercisesWithStats.find((e) => e.id === selectedExerciseId);
+
+  // Set management functions
+  const handleAddSet = () => {
+    if (sessionSets.length < MAX_SETS) {
+      setSessionSets([...sessionSets, { load: '', reps: '' }]);
+    }
+  };
+
+  const handleRemoveSet = (index: number) => {
+    if (sessionSets.length > 1) {
+      setSessionSets(sessionSets.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleUpdateSet = (index: number, field: 'load' | 'reps', value: string) => {
+    const newSets = [...sessionSets];
+    newSets[index][field] = value;
+    setSessionSets(newSets);
+  };
 
   const handleCreateExercise = async () => {
     if (!exerciseName.trim()) {
@@ -138,27 +158,32 @@ export default function TrainingScreen() {
       return;
     }
 
-    const loadNum = parseFloat(load);
-    const repsNum = parseInt(reps, 10);
+    // Validate all sets
+    const validSets: TrainingSet[] = [];
+    for (const set of sessionSets) {
+      const loadNum = parseFloat(set.load);
+      const repsNum = parseInt(set.reps, 10);
 
-    if (isNaN(loadNum) || loadNum <= 0) {
-      return;
+      if (isNaN(loadNum) || loadNum <= 0 || isNaN(repsNum) || repsNum <= 0) {
+        return;
+      }
+      validSets.push({ load: loadNum, reps: repsNum });
     }
 
-    if (isNaN(repsNum) || repsNum <= 0) {
+    if (validSets.length === 0) {
       return;
     }
 
     try {
       const dateStr = formatDateForStorage(sessionDate);
-      await logSession(selectedExerciseId, loadNum, repsNum, dateStr, notes);
+      // Use first set for legacy fields
+      await logSession(selectedExerciseId, validSets[0].load, validSets[0].reps, dateStr, notes, validSets);
       await addXp(TRAINING_XP);
 
       // Reset form
       setSelectedExerciseId('');
       setExerciseSearch('');
-      setLoad('');
-      setReps('');
+      setSessionSets([{ load: '', reps: '' }]);
       setNotes('');
       setSessionDate(new Date());
       setShowSessionModal(false);
@@ -176,8 +201,7 @@ export default function TrainingScreen() {
   const handleOpenSessionModal = () => {
     setSelectedExerciseId('');
     setExerciseSearch('');
-    setLoad('');
-    setReps('');
+    setSessionSets([{ load: '', reps: '' }]);
     setNotes('');
     setSessionDate(new Date());
     setShowSessionModal(true);
@@ -639,47 +663,80 @@ export default function TrainingScreen() {
                   </ScrollView>
                 )}
 
-                {/* Load & Reps */}
-                <View style={styles.inputRow}>
-                  <View style={styles.inputHalf}>
-                    <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                      {t('load', language)} (kg)
-                    </Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        {
-                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                          color: isDark ? '#FFFFFF' : '#111827',
-                        },
-                      ]}
-                      placeholder="0"
-                      placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
-                      value={load}
-                      onChangeText={setLoad}
-                      keyboardType="decimal-pad"
-                    />
+                {/* Sets Section */}
+                <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t('sets', language)}
+                </Text>
+
+                {sessionSets.map((set, index) => (
+                  <View key={index} style={styles.setRow}>
+                    <View style={styles.setNumber}>
+                      <Text style={[styles.setNumberText, { color: isDark ? '#808080' : '#6B7280' }]}>
+                        {index + 1}
+                      </Text>
+                    </View>
+                    <View style={styles.setInputContainer}>
+                      <TextInput
+                        style={[
+                          styles.setInput,
+                          {
+                            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                            color: isDark ? '#FFFFFF' : '#111827',
+                          },
+                        ]}
+                        placeholder={t('load', language)}
+                        placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                        value={set.load}
+                        onChangeText={(value) => handleUpdateSet(index, 'load', value)}
+                        keyboardType="decimal-pad"
+                      />
+                      <Text style={[styles.setUnit, { color: isDark ? '#808080' : '#6B7280' }]}>kg</Text>
+                    </View>
+                    <Text style={[styles.setMultiplier, { color: isDark ? '#808080' : '#6B7280' }]}>×</Text>
+                    <View style={styles.setInputContainer}>
+                      <TextInput
+                        style={[
+                          styles.setInput,
+                          {
+                            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                            color: isDark ? '#FFFFFF' : '#111827',
+                          },
+                        ]}
+                        placeholder={t('reps', language)}
+                        placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                        value={set.reps}
+                        onChangeText={(value) => handleUpdateSet(index, 'reps', value)}
+                        keyboardType="number-pad"
+                      />
+                      <Text style={[styles.setUnit, { color: isDark ? '#808080' : '#6B7280' }]}>rep</Text>
+                    </View>
+                    {sessionSets.length > 1 && (
+                      <TouchableOpacity
+                        style={styles.removeSetButton}
+                        onPress={() => handleRemoveSet(index)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      >
+                        <IconSymbol name="minus.circle.fill" size={22} color="#EF4444" />
+                      </TouchableOpacity>
+                    )}
                   </View>
-                  <View style={styles.inputHalf}>
-                    <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                      {t('reps', language)}
-                    </Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        {
-                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                          color: isDark ? '#FFFFFF' : '#111827',
-                        },
-                      ]}
-                      placeholder="0"
-                      placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
-                      value={reps}
-                      onChangeText={setReps}
-                      keyboardType="number-pad"
-                    />
-                  </View>
-                </View>
+                ))}
+
+                {sessionSets.length < MAX_SETS && (
+                  <TouchableOpacity
+                    style={[
+                      styles.addSetButton,
+                      {
+                        backgroundColor: isDark ? 'rgba(76, 175, 80, 0.1)' : 'rgba(76, 175, 80, 0.08)',
+                      },
+                    ]}
+                    onPress={handleAddSet}
+                    activeOpacity={0.7}
+                  >
+                    <IconSymbol name="plus.circle.fill" size={18} color="#4CAF50" />
+                    <Text style={styles.addSetButtonText}>{t('addSet', language)}</Text>
+                  </TouchableOpacity>
+                )}
 
                 {/* Date Picker */}
                 <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
@@ -723,14 +780,14 @@ export default function TrainingScreen() {
                 <TouchableOpacity
                   style={[
                     styles.modalButton,
-                    (!selectedExerciseId || !load || !reps) && styles.modalButtonDisabled,
+                    (!selectedExerciseId || sessionSets.some(s => !s.load || !s.reps)) && styles.modalButtonDisabled,
                   ]}
                   onPress={handleLogSession}
                   activeOpacity={0.8}
-                  disabled={!selectedExerciseId || !load || !reps}
+                  disabled={!selectedExerciseId || sessionSets.some(s => !s.load || !s.reps)}
                 >
                   <LinearGradient
-                    colors={(!selectedExerciseId || !load || !reps) ? ['#888', '#777'] : ['#4CAF50', '#45A049']}
+                    colors={(!selectedExerciseId || sessionSets.some(s => !s.load || !s.reps)) ? ['#888', '#777'] : ['#4CAF50', '#45A049']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.modalButtonGradient}
@@ -1047,6 +1104,62 @@ const styles = StyleSheet.create({
   notesInput: {
     minHeight: 80,
     textAlignVertical: 'top',
+  },
+  // Set styles
+  setRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  setNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  setNumberText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  setInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  setInput: {
+    flex: 1,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 15,
+  },
+  setUnit: {
+    fontSize: 12,
+    marginLeft: 4,
+    minWidth: 24,
+  },
+  setMultiplier: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  removeSetButton: {
+    padding: 2,
+  },
+  addSetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  addSetButtonText: {
+    color: '#4CAF50',
+    fontSize: 14,
+    fontWeight: '600',
   },
   modalButton: {
     borderRadius: 16,

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import type { Exercise, TrainingSession, ExerciseWithStats, SessionWithExercise } from '@/types/training';
-import { generateId, calculateVolume, getTodayKey, getWeekStart } from '@/types/training';
+import type { Exercise, TrainingSession, ExerciseWithStats, SessionWithExercise, TrainingSet } from '@/types/training';
+import { generateId, calculateVolume, calculateSessionVolume, getTodayKey, getWeekStart } from '@/types/training';
 import {
   loadExercises,
   saveExercises,
@@ -22,8 +22,8 @@ type TrainingContextType = {
   createExercise: (name: string) => Promise<Exercise>;
   updateExercise: (exerciseId: string, name: string) => Promise<void>;
   deleteExercise: (exerciseId: string) => Promise<void>;
-  logSession: (exerciseId: string, load: number, reps: number, date: string, notes?: string) => Promise<TrainingSession>;
-  updateSession: (sessionId: string, load: number, reps: number, date: string, notes?: string) => Promise<void>;
+  logSession: (exerciseId: string, load: number, reps: number, date: string, notes?: string, sets?: TrainingSet[]) => Promise<TrainingSession>;
+  updateSession: (sessionId: string, load: number, reps: number, date: string, notes?: string, sets?: TrainingSet[]) => Promise<void>;
   deleteSession: (sessionId: string) => Promise<void>;
   getExerciseById: (exerciseId: string) => ExerciseWithStats | undefined;
   getSessionsByDate: () => Record<string, number>;
@@ -62,7 +62,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
       .filter((s) => s.exerciseId === exercise.id)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     const totalVolume = exerciseSessions.reduce(
-      (sum, s) => sum + calculateVolume(s.load, s.reps),
+      (sum, s) => sum + calculateSessionVolume(s),
       0
     );
     return {
@@ -79,7 +79,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
       return {
         ...session,
         exerciseName: exercise?.name ?? 'Unknown',
-        volume: calculateVolume(session.load, session.reps),
+        volume: calculateSessionVolume(session),
       };
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -94,12 +94,12 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
 
   const weekVolume = sessions
     .filter((s) => s.date >= weekStart)
-    .reduce((sum, s) => sum + calculateVolume(s.load, s.reps), 0);
+    .reduce((sum, s) => sum + calculateSessionVolume(s), 0);
 
   const totalSessions = sessions.length;
 
   const totalVolume = sessions.reduce(
-    (sum, s) => sum + calculateVolume(s.load, s.reps),
+    (sum, s) => sum + calculateSessionVolume(s),
     0
   );
 
@@ -158,7 +158,8 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     load: number,
     reps: number,
     date: string,
-    notes?: string
+    notes?: string,
+    sets?: TrainingSet[]
   ): Promise<TrainingSession> => {
     const newSession: TrainingSession = {
       id: generateId(),
@@ -166,6 +167,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
       date,
       load,
       reps,
+      sets: sets && sets.length > 0 ? sets : undefined,
       notes: notes?.trim() || undefined,
       createdAt: new Date().toISOString(),
     };
@@ -181,11 +183,12 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     load: number,
     reps: number,
     date: string,
-    notes?: string
+    notes?: string,
+    sets?: TrainingSet[]
   ): Promise<void> => {
     const updatedSessions = sessions.map((s) =>
       s.id === sessionId
-        ? { ...s, load, reps, date, notes: notes?.trim() || undefined }
+        ? { ...s, load, reps, date, notes: notes?.trim() || undefined, sets: sets && sets.length > 0 ? sets : undefined }
         : s
     );
     await saveSessions(updatedSessions);

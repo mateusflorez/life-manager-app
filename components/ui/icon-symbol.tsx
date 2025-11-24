@@ -30,6 +30,7 @@ const MAPPING = {
   'calendar': 'calendar-today',
   'plus': 'add',
   'plus.circle.fill': 'add-circle',
+  'minus.circle.fill': 'remove-circle',
   'xmark': 'close',
   'checkmark': 'check',
   'trash': 'delete',
