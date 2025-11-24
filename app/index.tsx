@@ -9,7 +9,6 @@ import {
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ThemedView } from '@/components/themed-view';
 import { AccountForm } from '@/components/account-form';
 import { useRouter } from 'expo-router';
 import { accountStorage } from '@/services/account-storage';
@@ -18,7 +17,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccount } from '@/contexts/account-context';
 import { useSettings } from '@/contexts/settings-context';
 import { useAlert } from '@/contexts/alert-context';
-import { RippleBackground } from '@/components/ui/ripple-background';
+import { ColorWavesBackground } from '@/components/ui/color-waves-background';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function WelcomeScreen() {
@@ -133,8 +132,8 @@ export default function WelcomeScreen() {
 
   if (loading) {
     return (
-      <ThemedView style={styles.container}>
-        <RippleBackground isDark={isDark} rippleCount={6} />
+      <View style={styles.container}>
+        <ColorWavesBackground theme={isDark ? 'dark' : 'light'} />
         <View style={styles.loadingContainer}>
           <LinearGradient
             colors={['#6366F1', '#8B5CF6']}
@@ -145,14 +144,14 @@ export default function WelcomeScreen() {
             <ActivityIndicator size="large" color="#FFFFFF" />
           </LinearGradient>
         </View>
-      </ThemedView>
+      </View>
     );
   }
 
   if (showCreateForm || accounts.length === 0) {
     return (
-      <ThemedView style={styles.container}>
-        <RippleBackground isDark={isDark} rippleCount={6} />
+      <View style={styles.container}>
+        <ColorWavesBackground theme={isDark ? 'dark' : 'light'} />
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
@@ -181,8 +180,8 @@ export default function WelcomeScreen() {
             style={[
               styles.formCard,
               {
-                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+                backgroundColor: isDark ? 'rgba(30, 30, 30, 0.85)' : 'rgba(255, 255, 255, 0.9)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
               },
             ]}
           >
@@ -192,13 +191,13 @@ export default function WelcomeScreen() {
             />
           </View>
         </ScrollView>
-      </ThemedView>
+      </View>
     );
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <RippleBackground isDark={isDark} rippleCount={8} />
+    <View style={styles.container}>
+      <ColorWavesBackground theme={isDark ? 'dark' : 'light'} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -231,8 +230,8 @@ export default function WelcomeScreen() {
                 style={[
                   styles.accountCard,
                   {
-                    backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+                    backgroundColor: isDark ? 'rgba(30, 30, 30, 0.85)' : 'rgba(255, 255, 255, 0.9)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                   },
                 ]}
                 onPress={() => handleSelectAccount(account)}
@@ -302,7 +301,7 @@ export default function WelcomeScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </ThemedView>
+    </View>
   );
 }
 
