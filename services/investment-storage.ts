@@ -208,6 +208,28 @@ export async function deleteMovement(movementId: string): Promise<void> {
   }
 }
 
+export async function updateMovement(
+  movementId: string,
+  updates: { amount?: number; date?: string; tags?: string[]; movementType?: MovementType }
+): Promise<InvestmentMovement> {
+  try {
+    const data = await AsyncStorage.getItem(KEYS.MOVEMENTS);
+    const movements: InvestmentMovement[] = data ? JSON.parse(data) : [];
+    const index = movements.findIndex((m) => m.id === movementId);
+    if (index === -1) throw new Error('Movement not found');
+
+    movements[index] = {
+      ...movements[index],
+      ...updates,
+    };
+    await AsyncStorage.setItem(KEYS.MOVEMENTS, JSON.stringify(movements));
+    return movements[index];
+  } catch (error) {
+    console.error('Error updating movement:', error);
+    throw error;
+  }
+}
+
 async function deleteMovementsByInvestment(investmentId: string): Promise<void> {
   try {
     const data = await AsyncStorage.getItem(KEYS.MOVEMENTS);

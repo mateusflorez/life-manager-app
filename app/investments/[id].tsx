@@ -8,8 +8,12 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
 import { useInvestment } from '@/contexts/investment-context';
@@ -27,12 +31,13 @@ import {
   InvestmentWithTotal,
   InvestmentMovement,
   MovementType,
+  INVESTMENT_COLORS,
 } from '@/types/investment';
 
 export default function InvestmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { getInvestment, addContribution, deleteInvestment, deleteMovement, refreshData } =
+  const { getInvestment, addContribution, deleteInvestment, deleteMovement, updateMovement, updateInvestment, refreshData } =
     useInvestment();
   const { settings } = useSettings();
   const colorScheme = useColorScheme();
@@ -46,6 +51,22 @@ export default function InvestmentDetailScreen() {
   const [newTag, setNewTag] = useState('');
   const [movementType, setMovementType] = useState<MovementType>('deposit');
   const [saving, setSaving] = useState(false);
+
+  // Edit modal state
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingMovement, setEditingMovement] = useState<InvestmentMovement | null>(null);
+  const [editAmount, setEditAmount] = useState('0');
+  const [editDate, setEditDate] = useState(new Date());
+  const [showEditDatePicker, setShowEditDatePicker] = useState(false);
+  const [editTag, setEditTag] = useState('');
+  const [editMovementType, setEditMovementType] = useState<MovementType>('deposit');
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Edit investment modal state
+  const [editInvestmentModalVisible, setEditInvestmentModalVisible] = useState(false);
+  const [editInvestmentName, setEditInvestmentName] = useState('');
+  const [editInvestmentColor, setEditInvestmentColor] = useState(INVESTMENT_COLORS[0]);
+  const [editInvestmentSaving, setEditInvestmentSaving] = useState(false);
 
   const lang = settings.language;
 
@@ -157,6 +178,93 @@ export default function InvestmentDetailScreen() {
     });
   };
 
+  const handleEditMovement = (movement: InvestmentMovement) => {
+    setEditingMovement(movement);
+    setEditAmount(floatToCurrency(Math.abs(movement.amount)));
+    // Parse date string (YYYY-MM-DD) to Date object
+    const [year, month, day] = movement.date.split('-').map(Number);
+    setEditDate(new Date(year, month - 1, day));
+    setEditTag(movement.tags.join(', '));
+    setEditMovementType(movement.movementType || 'deposit');
+    setEditModalVisible(true);
+  };
+
+  const handleEditDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowEditDatePicker(false);
+    }
+    if (event.type === 'set' && selectedDate) {
+      setEditDate(selectedDate);
+    }
+  };
+
+  const formatEditDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMovement) return;
+
+    setEditSaving(true);
+    try {
+      const amountFloat = currencyToFloat(editAmount);
+      const finalAmount = editingMovement.amount >= 0 ? amountFloat : -amountFloat;
+      const tags = editTag
+        .split(',')
+        .map((t) => t.trim().toLowerCase().replace(/\s+/g, '-'))
+        .filter((t) => t.length > 0);
+
+      await updateMovement(editingMovement.id, {
+        amount: finalAmount,
+        date: formatEditDate(editDate),
+        tags,
+        movementType: editMovementType,
+      });
+
+      setEditModalVisible(false);
+      setEditingMovement(null);
+      await loadInvestment();
+      showToast({ message: t('movementUpdated', lang), type: 'success' });
+    } catch (error) {
+      console.error('Error updating movement:', error);
+      showToast({ message: t('errorUpdating', lang), type: 'error' });
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const handleOpenEditInvestment = () => {
+    if (!investment) return;
+    setEditInvestmentName(investment.name);
+    setEditInvestmentColor(investment.color || INVESTMENT_COLORS[0]);
+    setEditInvestmentModalVisible(true);
+  };
+
+  const handleSaveEditInvestment = async () => {
+    if (!investment || !editInvestmentName.trim()) return;
+
+    setEditInvestmentSaving(true);
+    try {
+      await updateInvestment({
+        ...investment,
+        name: editInvestmentName.trim(),
+        color: editInvestmentColor,
+      });
+
+      setEditInvestmentModalVisible(false);
+      await loadInvestment();
+      showToast({ message: t('investmentUpdated', lang), type: 'success' });
+    } catch (error) {
+      console.error('Error updating investment:', error);
+      showToast({ message: t('errorUpdatingInvestment', lang), type: 'error' });
+    } finally {
+      setEditInvestmentSaving(false);
+    }
+  };
+
   // Calculate movements with running totals for display
   const getMovementsWithTotals = () => {
     if (!investment) return [];
@@ -226,9 +334,14 @@ export default function InvestmentDetailScreen() {
         options={{
           title: investment.name,
           headerRight: () => (
-            <TouchableOpacity onPress={handleDeleteInvestment} style={styles.headerButton}>
-              <IconSymbol name="trash" size={20} color="#EF4444" />
-            </TouchableOpacity>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity onPress={handleOpenEditInvestment} style={styles.headerButton}>
+                <IconSymbol name="pencil" size={20} color={isDark ? '#ECEDEE' : '#11181C'} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleDeleteInvestment} style={styles.headerButton}>
+                <IconSymbol name="trash" size={20} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
           ),
         }}
       />
@@ -488,6 +601,7 @@ export default function InvestmentDetailScreen() {
                     borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
                   },
                 ]}
+                onPress={() => handleEditMovement(movement)}
                 onLongPress={() => handleDeleteMovement(movement)}
                 activeOpacity={0.8}
               >
@@ -577,6 +691,333 @@ export default function InvestmentDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Edit Movement Modal */}
+      <Modal
+        visible={editModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View
+            style={[
+              styles.modalContent,
+              {
+                backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+              },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <LinearGradient
+                colors={['#6366F1', '#8B5CF6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.cardIconContainer}
+              >
+                <IconSymbol name="pencil" size={18} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t('editMovement', lang)}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setEditModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <IconSymbol name="xmark" size={20} color={isDark ? '#808080' : '#6B7280'} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
+              {t('amount', lang)}
+            </Text>
+            <CurrencyInput
+              value={editAmount}
+              onChangeValue={setEditAmount}
+              currency={settings.currency}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
+                  color: isDark ? '#FFFFFF' : '#111827',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                },
+              ]}
+              placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+            />
+
+            <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
+              {t('date', lang)}
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.datePickerButton,
+                {
+                  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                },
+              ]}
+              onPress={() => setShowEditDatePicker(true)}
+              activeOpacity={0.8}
+            >
+              <IconSymbol name="calendar" size={18} color={isDark ? '#808080' : '#6B7280'} />
+              <Text style={[styles.datePickerText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {formatDate(formatEditDate(editDate), lang)}
+              </Text>
+            </TouchableOpacity>
+            {showEditDatePicker && (
+              <DateTimePicker
+                value={editDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleEditDateChange}
+              />
+            )}
+
+            <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
+              {t('movementType', lang)}
+            </Text>
+            <View style={styles.typeSelector}>
+              <TouchableOpacity
+                style={[
+                  styles.typeOption,
+                  {
+                    backgroundColor: editMovementType === 'deposit'
+                      ? 'rgba(16, 185, 129, 0.15)'
+                      : isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
+                    borderColor: editMovementType === 'deposit'
+                      ? '#10B981'
+                      : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                  },
+                ]}
+                onPress={() => setEditMovementType('deposit')}
+                activeOpacity={0.8}
+              >
+                <IconSymbol
+                  name="arrow.down.circle.fill"
+                  size={18}
+                  color={editMovementType === 'deposit' ? '#10B981' : isDark ? '#666' : '#9CA3AF'}
+                />
+                <Text
+                  style={[
+                    styles.typeOptionText,
+                    { color: editMovementType === 'deposit' ? '#10B981' : isDark ? '#FFFFFF' : '#111827' },
+                  ]}
+                >
+                  {t('deposit', lang)}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.typeOption,
+                  {
+                    backgroundColor: editMovementType === 'dividend'
+                      ? 'rgba(99, 102, 241, 0.15)'
+                      : isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
+                    borderColor: editMovementType === 'dividend'
+                      ? '#6366F1'
+                      : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                  },
+                ]}
+                onPress={() => setEditMovementType('dividend')}
+                activeOpacity={0.8}
+              >
+                <IconSymbol
+                  name="sparkles"
+                  size={18}
+                  color={editMovementType === 'dividend' ? '#6366F1' : isDark ? '#666' : '#9CA3AF'}
+                />
+                <Text
+                  style={[
+                    styles.typeOptionText,
+                    { color: editMovementType === 'dividend' ? '#6366F1' : isDark ? '#FFFFFF' : '#111827' },
+                  ]}
+                >
+                  {t('dividend', lang)}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
+              {t('optionalTag', lang)}
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
+                  color: isDark ? '#FFFFFF' : '#111827',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                },
+              ]}
+              value={editTag}
+              onChangeText={setEditTag}
+              placeholder="bonus, dividends..."
+              placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.modalCancelButton,
+                  {
+                    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                  },
+                ]}
+                onPress={() => setEditModalVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.modalCancelButtonText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t('cancel', lang)}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalSaveButton, { opacity: editSaving ? 0.5 : 1 }]}
+                onPress={handleSaveEdit}
+                disabled={editSaving}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#6366F1', '#8B5CF6']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.modalSaveButtonGradient}
+                >
+                  <Text style={styles.modalSaveButtonText}>
+                    {editSaving ? t('saving', lang) : t('save', lang)}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Edit Investment Modal */}
+      <Modal
+        visible={editInvestmentModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setEditInvestmentModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View
+            style={[
+              styles.modalContent,
+              {
+                backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+              },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <LinearGradient
+                colors={['#6366F1', '#8B5CF6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.cardIconContainer}
+              >
+                <IconSymbol name="pencil" size={18} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t('editInvestment', lang)}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setEditInvestmentModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <IconSymbol name="xmark" size={20} color={isDark ? '#808080' : '#6B7280'} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
+              {t('investmentName', lang)}
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
+                  color: isDark ? '#FFFFFF' : '#111827',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                },
+              ]}
+              value={editInvestmentName}
+              onChangeText={setEditInvestmentName}
+              placeholder={t('investmentName', lang)}
+              placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+            />
+
+            <Text style={[styles.inputLabel, { color: isDark ? '#808080' : '#6B7280' }]}>
+              {t('color', lang)}
+            </Text>
+            <View style={styles.colorPickerContainer}>
+              {INVESTMENT_COLORS.map((color) => (
+                <TouchableOpacity
+                  key={color}
+                  style={[
+                    styles.colorOption,
+                    { backgroundColor: color },
+                    editInvestmentColor === color && styles.colorOptionSelected,
+                  ]}
+                  onPress={() => setEditInvestmentColor(color)}
+                  activeOpacity={0.8}
+                >
+                  {editInvestmentColor === color && (
+                    <IconSymbol name="checkmark" size={16} color="#FFFFFF" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.modalCancelButton,
+                  {
+                    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                  },
+                ]}
+                onPress={() => setEditInvestmentModalVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.modalCancelButtonText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t('cancel', lang)}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalSaveButton, { opacity: editInvestmentName.trim() && !editInvestmentSaving ? 1 : 0.5 }]}
+                onPress={handleSaveEditInvestment}
+                disabled={!editInvestmentName.trim() || editInvestmentSaving}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#6366F1', '#8B5CF6']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.modalSaveButtonGradient}
+                >
+                  <Text style={styles.modalSaveButtonText}>
+                    {editInvestmentSaving ? t('saving', lang) : t('save', lang)}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </ThemedView>
   );
 }
@@ -605,6 +1046,11 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     gap: 16,
     paddingBottom: 40,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   headerButton: {
     padding: 8,
@@ -836,5 +1282,95 @@ const styles = StyleSheet.create({
   typeBadgeText: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    padding: 24,
+    gap: 14,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    flex: 1,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+  },
+  datePickerText: {
+    fontSize: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalCancelButton: {
+    flex: 1,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 16,
+    alignItems: 'center',
+  },
+  modalCancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalSaveButton: {
+    flex: 1,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  modalSaveButtonGradient: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  modalSaveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  colorPickerContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  colorOption: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  colorOptionSelected: {
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });

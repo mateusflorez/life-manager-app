@@ -13,7 +13,12 @@
     "build:apk:local": "./scripts/build-apk.sh local",
     "build:apk:prod": "./scripts/build-apk.sh production",
     "build:apk:prod:local": "./scripts/build-apk.sh local production",
-    "build:apk:dev": "./scripts/build-apk.sh dev"
+    "build:apk:dev": "./scripts/build-apk.sh dev",
+    "build:ios": "./scripts/build-ios.sh local",
+    "build:ios:local": "./scripts/build-ios.sh local",
+    "build:ios:prod": "./scripts/build-ios.sh production",
+    "build:ios:prod:local": "./scripts/build-ios.sh local production",
+    "build:ios:dev": "./scripts/build-ios.sh dev"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

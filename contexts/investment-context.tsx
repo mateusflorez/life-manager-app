@@ -39,6 +39,10 @@ type InvestmentContextType = {
     tag?: string,
     movementType?: MovementType
   ) => Promise<InvestmentMovement>;
+  updateMovement: (
+    movementId: string,
+    updates: { amount?: number; date?: string; tags?: string[]; movementType?: MovementType }
+  ) => Promise<InvestmentMovement>;
   deleteMovement: (movementId: string) => Promise<void>;
 
   // Chart data
@@ -161,6 +165,15 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
     return movement;
   };
 
+  const updateMovement = async (
+    movementId: string,
+    updates: { amount?: number; date?: string; tags?: string[]; movementType?: MovementType }
+  ): Promise<InvestmentMovement> => {
+    const movement = await InvestmentStorage.updateMovement(movementId, updates);
+    await loadData();
+    return movement;
+  };
+
   const deleteMovement = async (movementId: string): Promise<void> => {
     await InvestmentStorage.deleteMovement(movementId);
     await loadData();
@@ -181,6 +194,7 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
         deleteInvestment,
         getInvestment,
         addContribution,
+        updateMovement,
         deleteMovement,
         chartData,
         loading,
