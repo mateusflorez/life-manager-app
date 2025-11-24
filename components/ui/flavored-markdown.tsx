@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export type FlavoredMarkdownProps = {
   content: string;
@@ -10,10 +10,19 @@ type ParsedNode =
   | { type: 'text'; content: string }
   | { type: 'bold'; content: string }
   | { type: 'italic'; content: string }
+  | { type: 'bold-italic'; content: string }
   | { type: 'strikethrough'; content: string }
-  | { type: 'image'; url: string; height: number | null }
+  | { type: 'code'; content: string }
+  | { type: 'link'; text: string; url: string }
+  | { type: 'image'; url: string; height: number | null; alt?: string }
   | { type: 'center'; children: ParsedNode[] }
-  | { type: 'line'; children: ParsedNode[] };
+  | { type: 'line'; children: ParsedNode[] }
+  | { type: 'header'; level: number; children: ParsedNode[] }
+  | { type: 'blockquote'; level: number; children: ParsedNode[] }
+  | { type: 'bullet-list'; items: ParsedNode[][] }
+  | { type: 'numbered-list'; items: ParsedNode[][] }
+  | { type: 'code-block'; content: string }
+  | { type: 'horizontal-line' };
 
 function parseInlineMarkdown(text: string): ParsedNode[] {
   const nodes: ParsedNode[] = [];
@@ -32,32 +41,73 @@ function parseInlineMarkdown(text: string): ParsedNode[] {
       continue;
     }
 
-    // Check for bold: __text__
-    const boldMatch = remaining.match(/^__([^_]+)__/);
+    // Check for markdown image: ![alt](url)
+    const mdImgMatch = remaining.match(/^!\[([^\]]*)\]\(([^)]+)\)/);
+    if (mdImgMatch) {
+      nodes.push({
+        type: 'image',
+        height: null,
+        url: mdImgMatch[2],
+        alt: mdImgMatch[1],
+      });
+      remaining = remaining.slice(mdImgMatch[0].length);
+      continue;
+    }
+
+    // Check for link: [text](url)
+    const linkMatch = remaining.match(/^\[([^\]]+)\]\(([^)]+)\)/);
+    if (linkMatch) {
+      nodes.push({
+        type: 'link',
+        text: linkMatch[1],
+        url: linkMatch[2],
+      });
+      remaining = remaining.slice(linkMatch[0].length);
+      continue;
+    }
+
+    // Check for inline code: `code`
+    const codeMatch = remaining.match(/^`([^`]+)`/);
+    if (codeMatch) {
+      nodes.push({ type: 'code', content: codeMatch[1] });
+      remaining = remaining.slice(codeMatch[0].length);
+      continue;
+    }
+
+    // Check for bold+italic: ***text*** or ___text___
+    const boldItalicMatch = remaining.match(/^(\*\*\*|___)(.+?)\1/);
+    if (boldItalicMatch) {
+      nodes.push({ type: 'bold-italic', content: boldItalicMatch[2] });
+      remaining = remaining.slice(boldItalicMatch[0].length);
+      continue;
+    }
+
+    // Check for bold: __text__ or **text**
+    const boldMatch = remaining.match(/^(__|\*\*)(.+?)\1/);
     if (boldMatch) {
-      nodes.push({ type: 'bold', content: boldMatch[1] });
+      nodes.push({ type: 'bold', content: boldMatch[2] });
       remaining = remaining.slice(boldMatch[0].length);
       continue;
     }
 
-    // Check for italic: _text_
-    const italicMatch = remaining.match(/^_([^_]+)_/);
-    if (italicMatch) {
-      nodes.push({ type: 'italic', content: italicMatch[1] });
-      remaining = remaining.slice(italicMatch[0].length);
-      continue;
-    }
-
     // Check for strikethrough: ~~text~~
-    const strikeMatch = remaining.match(/^~~([^~]+)~~/);
+    const strikeMatch = remaining.match(/^~~(.+?)~~/);
     if (strikeMatch) {
       nodes.push({ type: 'strikethrough', content: strikeMatch[1] });
       remaining = remaining.slice(strikeMatch[0].length);
       continue;
     }
 
+    // Check for italic: _text_ or *text* (but not __ or **)
+    const italicMatch = remaining.match(/^([_*])(?!\1)(.+?)\1(?!\1)/);
+    if (italicMatch) {
+      nodes.push({ type: 'italic', content: italicMatch[2] });
+      remaining = remaining.slice(italicMatch[0].length);
+      continue;
+    }
+
     // Find next special character
-    const nextSpecial = remaining.search(/__|_|~~|img\d*\(/);
+    const nextSpecial = remaining.search(/\*\*\*|___|__|\*\*|~~|_(?!_)|\*(?!\*)|`|\[|!\[|img\d*\(/);
     if (nextSpecial === -1) {
       nodes.push({ type: 'text', content: remaining });
       break;
@@ -76,41 +126,155 @@ function parseInlineMarkdown(text: string): ParsedNode[] {
 
 function parseContent(content: string): ParsedNode[] {
   const nodes: ParsedNode[] = [];
+  const lines = content.split('\n');
+  let i = 0;
 
-  // Split by center tags
-  const centerRegex = /<center>([\s\S]*?)<\/center>/g;
-  let lastIndex = 0;
-  let match;
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
 
-  while ((match = centerRegex.exec(content)) !== null) {
-    // Add content before center tag
-    if (match.index > lastIndex) {
-      const beforeContent = content.slice(lastIndex, match.index);
-      const lines = beforeContent.split('\n');
-      for (const line of lines) {
-        nodes.push({ type: 'line', children: parseInlineMarkdown(line) });
+    // Check for code block: ```...```
+    if (trimmedLine.startsWith('```')) {
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+        codeLines.push(lines[i]);
+        i++;
       }
+      nodes.push({ type: 'code-block', content: codeLines.join('\n') });
+      i++; // Skip closing ```
+      continue;
     }
 
-    // Parse center content
-    const centerContent = match[1];
-    const centerLines = centerContent.split('\n');
-    const centerChildren: ParsedNode[] = [];
-    for (const line of centerLines) {
-      centerChildren.push({ type: 'line', children: parseInlineMarkdown(line) });
+    // Check for horizontal line: ---, ***, - - -, * * *
+    if (/^[-*](\s*[-*]){2,}$/.test(trimmedLine) && trimmedLine.length >= 3) {
+      nodes.push({ type: 'horizontal-line' });
+      i++;
+      continue;
     }
-    nodes.push({ type: 'center', children: centerChildren });
 
-    lastIndex = match.index + match[0].length;
-  }
-
-  // Add remaining content after last center tag
-  if (lastIndex < content.length) {
-    const afterContent = content.slice(lastIndex);
-    const lines = afterContent.split('\n');
-    for (const line of lines) {
-      nodes.push({ type: 'line', children: parseInlineMarkdown(line) });
+    // Check for center with ~~~text~~~
+    const centerTildeMatch = trimmedLine.match(/^~~~(.+?)~~~$/);
+    if (centerTildeMatch) {
+      nodes.push({
+        type: 'center',
+        children: [{ type: 'line', children: parseInlineMarkdown(centerTildeMatch[1]) }],
+      });
+      i++;
+      continue;
     }
+
+    // Check for center with <center>...</center> (single line)
+    const centerTagMatch = trimmedLine.match(/^<center>(.*?)<\/center>$/i);
+    if (centerTagMatch) {
+      nodes.push({
+        type: 'center',
+        children: [{ type: 'line', children: parseInlineMarkdown(centerTagMatch[1]) }],
+      });
+      i++;
+      continue;
+    }
+
+    // Check for multiline <center>...</center>
+    if (trimmedLine.toLowerCase() === '<center>') {
+      const centerLines: string[] = [];
+      i++;
+      while (i < lines.length && lines[i].trim().toLowerCase() !== '</center>') {
+        centerLines.push(lines[i]);
+        i++;
+      }
+      const centerChildren: ParsedNode[] = [];
+      for (const centerLine of centerLines) {
+        centerChildren.push({ type: 'line', children: parseInlineMarkdown(centerLine) });
+      }
+      nodes.push({ type: 'center', children: centerChildren });
+      i++; // Skip </center>
+      continue;
+    }
+
+    // Check for header: # text, ## text, etc.
+    const headerMatch = line.match(/^(#{1,5})\s+(.+)$/);
+    if (headerMatch) {
+      nodes.push({
+        type: 'header',
+        level: headerMatch[1].length,
+        children: parseInlineMarkdown(headerMatch[2]),
+      });
+      i++;
+      continue;
+    }
+
+    // Check for blockquote: > text, >> text, etc.
+    if (trimmedLine.startsWith('>')) {
+      const quoteLines: { level: number; content: string }[] = [];
+      while (i < lines.length && lines[i].trim().startsWith('>')) {
+        const quoteLine = lines[i].trim();
+        const levelMatch = quoteLine.match(/^(>+)\s*(.*)/);
+        if (levelMatch) {
+          quoteLines.push({
+            level: levelMatch[1].length,
+            content: levelMatch[2],
+          });
+        }
+        i++;
+      }
+
+      // Group by level and create nested blockquotes
+      for (const quoteLine of quoteLines) {
+        nodes.push({
+          type: 'blockquote',
+          level: quoteLine.level,
+          children: parseInlineMarkdown(quoteLine.content),
+        });
+      }
+      continue;
+    }
+
+    // Check for bullet list: - item, * item, + item
+    const bulletMatch = line.match(/^(\s*)([-*+])\s+(.+)$/);
+    if (bulletMatch) {
+      const items: ParsedNode[][] = [];
+      const baseIndent = bulletMatch[1].length;
+
+      while (i < lines.length) {
+        const listLine = lines[i];
+        const listMatch = listLine.match(/^(\s*)([-*+])\s+(.+)$/);
+        if (listMatch && listMatch[1].length === baseIndent) {
+          items.push(parseInlineMarkdown(listMatch[3]));
+          i++;
+        } else {
+          break;
+        }
+      }
+
+      nodes.push({ type: 'bullet-list', items });
+      continue;
+    }
+
+    // Check for numbered list: 1. item, 2. item, etc.
+    const numberedMatch = line.match(/^(\s*)(\d+)\.\s+(.+)$/);
+    if (numberedMatch) {
+      const items: ParsedNode[][] = [];
+      const baseIndent = numberedMatch[1].length;
+
+      while (i < lines.length) {
+        const listLine = lines[i];
+        const listMatch = listLine.match(/^(\s*)(\d+)\.\s+(.+)$/);
+        if (listMatch && listMatch[1].length === baseIndent) {
+          items.push(parseInlineMarkdown(listMatch[3]));
+          i++;
+        } else {
+          break;
+        }
+      }
+
+      nodes.push({ type: 'numbered-list', items });
+      continue;
+    }
+
+    // Regular line
+    nodes.push({ type: 'line', children: parseInlineMarkdown(line) });
+    i++;
   }
 
   return nodes;
@@ -222,11 +386,37 @@ function RenderInlineNode({
           {node.content}
         </Text>
       );
+    case 'bold-italic':
+      return (
+        <Text style={[styles.text, styles.bold, styles.italic, textAlignStyle, { color: textColor }]}>
+          {node.content}
+        </Text>
+      );
     case 'strikethrough':
       return (
         <Text style={[styles.text, styles.strikethrough, textAlignStyle, { color: textColor }]}>
           {node.content}
         </Text>
+      );
+    case 'code':
+      return (
+        <Text
+          style={[
+            styles.inlineCode,
+            {
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              color: isDark ? '#E879F9' : '#9333EA',
+            },
+          ]}
+        >
+          {node.content}
+        </Text>
+      );
+    case 'link':
+      return (
+        <TouchableOpacity onPress={() => Linking.openURL(node.url)}>
+          <Text style={[styles.text, styles.link]}>{node.text}</Text>
+        </TouchableOpacity>
       );
     case 'image':
       if (node.height) {
@@ -287,6 +477,8 @@ function RenderNode({
   isDark: boolean;
   centered?: boolean;
 }) {
+  const textColor = isDark ? '#ECEDEE' : '#11181C';
+
   switch (node.type) {
     case 'center':
       return (
@@ -298,6 +490,102 @@ function RenderNode({
       );
     case 'line':
       return <RenderLine node={node} isDark={isDark} centered={centered} />;
+    case 'header':
+      const headerSizes = [28, 24, 20, 18, 16];
+      const headerSize = headerSizes[node.level - 1] || 16;
+      return (
+        <View style={styles.headerContainer}>
+          <Text
+            style={[
+              styles.header,
+              { fontSize: headerSize, color: textColor },
+              centered && styles.centeredText,
+            ]}
+          >
+            {node.children.map((child, index) => (
+              <RenderInlineNode key={index} node={child} isDark={isDark} centered={centered} />
+            ))}
+          </Text>
+        </View>
+      );
+    case 'blockquote':
+      return (
+        <View
+          style={[
+            styles.blockquote,
+            {
+              marginLeft: (node.level - 1) * 12,
+              borderLeftColor: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)',
+            },
+          ]}
+        >
+          <Text style={[styles.text, styles.italic, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>
+            {node.children.map((child, index) => (
+              <RenderInlineNode key={index} node={child} isDark={isDark} />
+            ))}
+          </Text>
+        </View>
+      );
+    case 'bullet-list':
+      return (
+        <View style={styles.listContainer}>
+          {node.items.map((item, index) => (
+            <View key={index} style={styles.listItem}>
+              <Text style={[styles.bullet, { color: textColor }]}>•</Text>
+              <Text style={[styles.listItemText, { color: textColor }]}>
+                {item.map((child, childIndex) => (
+                  <RenderInlineNode key={childIndex} node={child} isDark={isDark} />
+                ))}
+              </Text>
+            </View>
+          ))}
+        </View>
+      );
+    case 'numbered-list':
+      return (
+        <View style={styles.listContainer}>
+          {node.items.map((item, index) => (
+            <View key={index} style={styles.listItem}>
+              <Text style={[styles.number, { color: textColor }]}>{index + 1}.</Text>
+              <Text style={[styles.listItemText, { color: textColor }]}>
+                {item.map((child, childIndex) => (
+                  <RenderInlineNode key={childIndex} node={child} isDark={isDark} />
+                ))}
+              </Text>
+            </View>
+          ))}
+        </View>
+      );
+    case 'code-block':
+      return (
+        <View
+          style={[
+            styles.codeBlock,
+            {
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.codeBlockText,
+              { color: isDark ? '#E879F9' : '#9333EA' },
+            ]}
+          >
+            {node.content}
+          </Text>
+        </View>
+      );
+    case 'horizontal-line':
+      return (
+        <View
+          style={[
+            styles.horizontalLine,
+            { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)' },
+          ]}
+        />
+      );
     default:
       return <RenderInlineNode node={node} isDark={isDark} centered={centered} />;
   }
@@ -349,6 +637,17 @@ const styles = StyleSheet.create({
   strikethrough: {
     textDecorationLine: 'line-through',
   },
+  link: {
+    color: '#6366F1',
+    textDecorationLine: 'underline',
+  },
+  inlineCode: {
+    fontFamily: 'monospace',
+    fontSize: 13,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
   imageWrapper: {
     width: '100%',
     alignItems: 'center',
@@ -359,5 +658,57 @@ const styles = StyleSheet.create({
   },
   fullWidthImage: {
     width: '100%',
+  },
+  headerContainer: {
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  header: {
+    fontWeight: '700',
+  },
+  blockquote: {
+    borderLeftWidth: 3,
+    paddingLeft: 12,
+    paddingVertical: 4,
+    marginVertical: 4,
+  },
+  listContainer: {
+    marginVertical: 4,
+  },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginVertical: 2,
+  },
+  bullet: {
+    width: 16,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  number: {
+    width: 20,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  listItemText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  codeBlock: {
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 12,
+    marginVertical: 8,
+  },
+  codeBlockText: {
+    fontFamily: 'monospace',
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  horizontalLine: {
+    height: 1,
+    width: '100%',
+    marginVertical: 12,
   },
 });

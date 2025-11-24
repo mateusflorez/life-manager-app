@@ -57,6 +57,7 @@ export default function ProfileScreen() {
   const [editBirthDate, setEditBirthDate] = useState<Date | null>(null);
   const [editBio, setEditBio] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showMarkdownHelp, setShowMarkdownHelp] = useState(false);
 
   const loadBalance = useCallback(async () => {
     if (!activeBankAccount) {
@@ -172,11 +173,48 @@ export default function ProfileScreen() {
       birthDatePlaceholder: 'Select your birth date (optional)',
       bio: 'Bio',
       bioPlaceholder: 'Write something about yourself...',
-      bioHelp: 'Supports Anilist-style markdown: __bold__, _italic_, ~~strikethrough~~, <center>, img(url), img500(url)',
+      bioHelp: 'Supports flavored markdown',
+      bioHelpLink: 'View formatting guide',
       save: 'Save',
       cancel: 'Cancel',
       yearsOld: 'years old',
       clearDate: 'Clear',
+      markdownHelpTitle: 'Formatting Guide',
+      markdownHelpSections: {
+        basicFormatting: 'Basic Formatting',
+        bold: 'Bold',
+        boldExample: '__text__ or **text**',
+        italic: 'Italic',
+        italicExample: '_text_ or *text*',
+        strikethrough: 'Strikethrough',
+        strikethroughExample: '~~text~~',
+        alignment: 'Alignment',
+        center: 'Center text',
+        centerExample: '~~~text~~~ or <center>text</center>',
+        headers: 'Headers',
+        headersExample: '# Large\n## Medium\n### Small',
+        lists: 'Lists',
+        bulletList: 'Bullet list',
+        bulletExample: '- item 1\n- item 2',
+        numberedList: 'Numbered list',
+        numberedExample: '1. item 1\n2. item 2',
+        links: 'Links & Images',
+        linkExample: '[text](url)',
+        imageExample: '![alt](url) or img###(url)',
+        imageSizeNote: 'Replace ### with width in pixels (e.g., img420)',
+        quotes: 'Quotes',
+        quoteExample: '> quoted text',
+        code: 'Code',
+        inlineCode: 'Inline code',
+        inlineCodeExample: '`code`',
+        codeBlock: 'Code block',
+        codeBlockExample: '```\ncode\n```',
+        special: 'Special',
+        spoiler: 'Spoiler',
+        spoilerExample: '~!hidden text!~',
+        youtube: 'YouTube embed',
+        youtubeExample: 'youtube(video_url)',
+      },
     },
     pt: {
       level: 'Nível',
@@ -207,11 +245,48 @@ export default function ProfileScreen() {
       birthDatePlaceholder: 'Selecione sua data de nascimento (opcional)',
       bio: 'Bio',
       bioPlaceholder: 'Escreva algo sobre você...',
-      bioHelp: 'Suporta markdown estilo Anilist: __negrito__, _itálico_, ~~riscado~~, <center>, img(url), img500(url)',
+      bioHelp: 'Suporta markdown flavored',
+      bioHelpLink: 'Ver guia de formatação',
       save: 'Salvar',
       cancel: 'Cancelar',
       yearsOld: 'anos',
       clearDate: 'Limpar',
+      markdownHelpTitle: 'Guia de Formatação',
+      markdownHelpSections: {
+        basicFormatting: 'Formatação Básica',
+        bold: 'Negrito',
+        boldExample: '__texto__ ou **texto**',
+        italic: 'Itálico',
+        italicExample: '_texto_ ou *texto*',
+        strikethrough: 'Riscado',
+        strikethroughExample: '~~texto~~',
+        alignment: 'Alinhamento',
+        center: 'Centralizar texto',
+        centerExample: '~~~texto~~~ ou <center>texto</center>',
+        headers: 'Títulos',
+        headersExample: '# Grande\n## Médio\n### Pequeno',
+        lists: 'Listas',
+        bulletList: 'Lista com marcadores',
+        bulletExample: '- item 1\n- item 2',
+        numberedList: 'Lista numerada',
+        numberedExample: '1. item 1\n2. item 2',
+        links: 'Links e Imagens',
+        linkExample: '[texto](url)',
+        imageExample: '![alt](url) ou img###(url)',
+        imageSizeNote: 'Substitua ### pela largura em pixels (ex: img420)',
+        quotes: 'Citações',
+        quoteExample: '> texto citado',
+        code: 'Código',
+        inlineCode: 'Código inline',
+        inlineCodeExample: '`código`',
+        codeBlock: 'Bloco de código',
+        codeBlockExample: '```\ncódigo\n```',
+        special: 'Especial',
+        spoiler: 'Spoiler',
+        spoilerExample: '~!texto oculto!~',
+        youtube: 'Embed do YouTube',
+        youtubeExample: 'youtube(url_do_video)',
+      },
     },
   };
 
@@ -595,9 +670,14 @@ export default function ProfileScreen() {
                   numberOfLines={6}
                   textAlignVertical="top"
                 />
-                <Text style={[styles.inputHint, { color: isDark ? '#666' : '#9CA3AF' }]}>
-                  {t.bioHelp}
-                </Text>
+                <View style={styles.bioHelpRow}>
+                  <Text style={[styles.inputHint, { color: isDark ? '#666' : '#9CA3AF' }]}>
+                    {t.bioHelp}
+                  </Text>
+                  <TouchableOpacity onPress={() => setShowMarkdownHelp(true)} activeOpacity={0.7}>
+                    <Text style={styles.bioHelpLink}>{t.bioHelpLink}</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </ScrollView>
 
@@ -628,6 +708,143 @@ export default function ProfileScreen() {
                 </LinearGradient>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Markdown Help Modal */}
+      <Modal
+        visible={showMarkdownHelp}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowMarkdownHelp(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, styles.helpModalContent, { backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {t.markdownHelpTitle}
+              </Text>
+              <TouchableOpacity onPress={() => setShowMarkdownHelp(false)}>
+                <IconSymbol name="xmark.circle.fill" size={28} color={isDark ? '#666' : '#9CA3AF'} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.helpScroll}
+              contentContainerStyle={styles.helpScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Basic Formatting */}
+              <View style={styles.helpSection}>
+                <Text style={[styles.helpSectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.markdownHelpSections.basicFormatting}
+                </Text>
+                <View style={[styles.helpItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>{t.markdownHelpSections.bold}</Text>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.boldExample}</Text>
+                </View>
+                <View style={[styles.helpItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>{t.markdownHelpSections.italic}</Text>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.italicExample}</Text>
+                </View>
+                <View style={[styles.helpItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>{t.markdownHelpSections.strikethrough}</Text>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.strikethroughExample}</Text>
+                </View>
+              </View>
+
+              {/* Alignment */}
+              <View style={styles.helpSection}>
+                <Text style={[styles.helpSectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.markdownHelpSections.alignment}
+                </Text>
+                <View style={[styles.helpItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>{t.markdownHelpSections.center}</Text>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.centerExample}</Text>
+                </View>
+              </View>
+
+              {/* Headers */}
+              <View style={styles.helpSection}>
+                <Text style={[styles.helpSectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.markdownHelpSections.headers}
+                </Text>
+                <View style={[styles.helpItem, styles.helpItemMultiline, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.headersExample}</Text>
+                </View>
+              </View>
+
+              {/* Lists */}
+              <View style={styles.helpSection}>
+                <Text style={[styles.helpSectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.markdownHelpSections.lists}
+                </Text>
+                <View style={[styles.helpItem, styles.helpItemMultiline, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>{t.markdownHelpSections.bulletList}</Text>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.bulletExample}</Text>
+                </View>
+                <View style={[styles.helpItem, styles.helpItemMultiline, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>{t.markdownHelpSections.numberedList}</Text>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.numberedExample}</Text>
+                </View>
+              </View>
+
+              {/* Links & Images */}
+              <View style={styles.helpSection}>
+                <Text style={[styles.helpSectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.markdownHelpSections.links}
+                </Text>
+                <View style={[styles.helpItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>Link</Text>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.linkExample}</Text>
+                </View>
+                <View style={[styles.helpItem, styles.helpItemMultiline, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>Image</Text>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.imageExample}</Text>
+                  <Text style={[styles.helpNote, { color: isDark ? '#666' : '#9CA3AF' }]}>{t.markdownHelpSections.imageSizeNote}</Text>
+                </View>
+              </View>
+
+              {/* Quotes */}
+              <View style={styles.helpSection}>
+                <Text style={[styles.helpSectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.markdownHelpSections.quotes}
+                </Text>
+                <View style={[styles.helpItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.quoteExample}</Text>
+                </View>
+              </View>
+
+              {/* Code */}
+              <View style={styles.helpSection}>
+                <Text style={[styles.helpSectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.markdownHelpSections.code}
+                </Text>
+                <View style={[styles.helpItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>{t.markdownHelpSections.inlineCode}</Text>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.inlineCodeExample}</Text>
+                </View>
+                <View style={[styles.helpItem, styles.helpItemMultiline, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>{t.markdownHelpSections.codeBlock}</Text>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.codeBlockExample}</Text>
+                </View>
+              </View>
+
+              <View style={[styles.helpSection, { marginBottom: 20 }]}>
+                <Text style={[styles.helpSectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {t.markdownHelpSections.special}
+                </Text>
+                <View style={[styles.helpItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>{t.markdownHelpSections.spoiler}</Text>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.spoilerExample}</Text>
+                </View>
+                <View style={[styles.helpItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.helpLabel, { color: isDark ? '#A0A0A0' : '#6B7280' }]}>{t.markdownHelpSections.youtube}</Text>
+                  <Text style={[styles.helpCode, { color: isDark ? '#8B5CF6' : '#6366F1' }]}>{t.markdownHelpSections.youtubeExample}</Text>
+                </View>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -960,5 +1177,60 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  bioHelpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  bioHelpLink: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6366F1',
+  },
+  helpModalContent: {
+    height: '75%',
+  },
+  helpScroll: {
+    flex: 1,
+  },
+  helpScrollContent: {
+    paddingBottom: 20,
+  },
+  helpSection: {
+    marginBottom: 16,
+  },
+  helpSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  helpItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginBottom: 6,
+  },
+  helpItemMultiline: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 4,
+  },
+  helpLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  helpCode: {
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: 'monospace',
+  },
+  helpNote: {
+    fontSize: 11,
+    marginTop: 2,
   },
 });
