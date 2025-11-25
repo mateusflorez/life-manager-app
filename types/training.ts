@@ -33,6 +33,19 @@ export type SessionWithExercise = TrainingSession & {
   volume: number;
 };
 
+// Workout Routine types
+export type WorkoutRoutine = {
+  id: string;
+  name: string;
+  exerciseIds: string[];
+  createdAt: string;
+};
+
+export type WorkoutRoutineWithExercises = WorkoutRoutine & {
+  exercises: Exercise[];
+  timesUsed: number;
+};
+
 // Constants
 export const TRAINING_XP = 10;
 
@@ -177,7 +190,29 @@ type TranslationKey =
   | 'sets'
   | 'addSet'
   | 'set'
-  | 'removeSet';
+  | 'removeSet'
+  | 'routine'
+  | 'routines'
+  | 'workoutRoutines'
+  | 'viewAllRoutines'
+  | 'newRoutine'
+  | 'routineName'
+  | 'selectRoutine'
+  | 'exercisesInRoutine'
+  | 'addExerciseToRoutine'
+  | 'removeFromRoutine'
+  | 'logFullRoutine'
+  | 'deleteRoutine'
+  | 'deleteRoutineConfirm'
+  | 'routineCreated'
+  | 'routineUpdated'
+  | 'routineDeleted'
+  | 'noRoutines'
+  | 'timesUsed'
+  | 'singleExercise'
+  | 'fullRoutine'
+  | 'selectExercises'
+  | 'routineLogged';
 
 const translations: Record<string, Record<TranslationKey, string>> = {
   en: {
@@ -229,6 +264,28 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     addSet: '+ Add set',
     set: 'Set',
     removeSet: 'Remove set',
+    routine: 'Routine',
+    routines: 'Routines',
+    workoutRoutines: 'Workout Routines',
+    viewAllRoutines: 'View All Routines',
+    newRoutine: 'New Routine',
+    routineName: 'Routine name',
+    selectRoutine: 'Select routine',
+    exercisesInRoutine: 'Exercises in routine',
+    addExerciseToRoutine: 'Add exercise',
+    removeFromRoutine: 'Remove',
+    logFullRoutine: 'Log Full Routine',
+    deleteRoutine: 'Delete Routine',
+    deleteRoutineConfirm: 'Delete this routine? Exercises will not be affected.',
+    routineCreated: 'Routine created!',
+    routineUpdated: 'Routine updated!',
+    routineDeleted: 'Routine deleted',
+    noRoutines: 'No routines yet. Create one to group exercises!',
+    timesUsed: 'times used',
+    singleExercise: 'Exercise',
+    fullRoutine: 'Routine',
+    selectExercises: 'Select exercises',
+    routineLogged: 'Routine logged!',
   },
   pt: {
     training: 'Treino',
@@ -279,6 +336,28 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     addSet: '+ Adicionar série',
     set: 'Série',
     removeSet: 'Remover série',
+    routine: 'Ficha',
+    routines: 'Fichas',
+    workoutRoutines: 'Fichas de Treino',
+    viewAllRoutines: 'Ver Todas as Fichas',
+    newRoutine: 'Nova Ficha',
+    routineName: 'Nome da ficha',
+    selectRoutine: 'Selecionar ficha',
+    exercisesInRoutine: 'Exercícios da ficha',
+    addExerciseToRoutine: 'Adicionar exercício',
+    removeFromRoutine: 'Remover',
+    logFullRoutine: 'Registrar Ficha Completa',
+    deleteRoutine: 'Excluir Ficha',
+    deleteRoutineConfirm: 'Excluir esta ficha? Os exercícios não serão afetados.',
+    routineCreated: 'Ficha criada!',
+    routineUpdated: 'Ficha atualizada!',
+    routineDeleted: 'Ficha excluída',
+    noRoutines: 'Nenhuma ficha ainda. Crie uma para agrupar exercícios!',
+    timesUsed: 'vezes usada',
+    singleExercise: 'Exercício',
+    fullRoutine: 'Ficha',
+    selectExercises: 'Selecionar exercícios',
+    routineLogged: 'Ficha registrada!',
   },
 };
 

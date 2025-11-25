@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Exercise, TrainingSession } from '@/types/training';
+import type { Exercise, TrainingSession, WorkoutRoutine } from '@/types/training';
 
 const EXERCISES_KEY = '@life_manager_exercises';
 const SESSIONS_KEY = '@life_manager_training_sessions';
+const ROUTINES_KEY = '@life_manager_workout_routines';
 
 // Exercise operations
 export async function loadExercises(): Promise<Exercise[]> {
@@ -78,4 +79,45 @@ export async function getSessionsByExercise(exerciseId: string): Promise<Trainin
   return sessions
     .filter((s) => s.exerciseId === exerciseId)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+// Routine operations
+export async function loadRoutines(): Promise<WorkoutRoutine[]> {
+  try {
+    const data = await AsyncStorage.getItem(ROUTINES_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Failed to load routines:', error);
+    return [];
+  }
+}
+
+export async function saveRoutines(routines: WorkoutRoutine[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(ROUTINES_KEY, JSON.stringify(routines));
+  } catch (error) {
+    console.error('Failed to save routines:', error);
+    throw error;
+  }
+}
+
+export async function addRoutine(routine: WorkoutRoutine): Promise<void> {
+  const routines = await loadRoutines();
+  routines.push(routine);
+  await saveRoutines(routines);
+}
+
+export async function updateRoutine(routine: WorkoutRoutine): Promise<void> {
+  const routines = await loadRoutines();
+  const index = routines.findIndex((r) => r.id === routine.id);
+  if (index !== -1) {
+    routines[index] = routine;
+    await saveRoutines(routines);
+  }
+}
+
+export async function deleteRoutine(routineId: string): Promise<void> {
+  const routines = await loadRoutines();
+  const filtered = routines.filter((r) => r.id !== routineId);
+  await saveRoutines(filtered);
 }

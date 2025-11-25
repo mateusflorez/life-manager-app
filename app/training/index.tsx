@@ -39,6 +39,7 @@ export default function TrainingScreen() {
   const {
     exercises,
     exercisesWithStats,
+    routinesWithExercises,
     recentSessions,
     totalSessions,
     totalVolume,
@@ -48,6 +49,7 @@ export default function TrainingScreen() {
     getSessionsByDate,
     createExercise,
     logSession,
+    logRoutine,
     isLoading,
   } = useTraining();
 
@@ -60,11 +62,17 @@ export default function TrainingScreen() {
   const [exerciseName, setExerciseName] = useState('');
 
   // Session form
+  const [logType, setLogType] = useState<'exercise' | 'routine'>('exercise');
   const [selectedExerciseId, setSelectedExerciseId] = useState('');
   const [exerciseSearch, setExerciseSearch] = useState('');
   const [sessionSets, setSessionSets] = useState<Array<{ load: string; reps: string }>>([{ load: '', reps: '' }]);
   const [sessionDate, setSessionDate] = useState<Date>(new Date());
   const [notes, setNotes] = useState('');
+
+  // Routine form
+  const [selectedRoutineId, setSelectedRoutineId] = useState('');
+  const [routineSearch, setRoutineSearch] = useState('');
+  const [routineExerciseSets, setRoutineExerciseSets] = useState<Record<string, Array<{ load: string; reps: string }>>>({});
 
   const sessionsByDate = getSessionsByDate();
 
@@ -94,8 +102,22 @@ export default function TrainingScreen() {
     );
   }, [exercisesWithStats, exerciseSearch]);
 
+  // Filter routines based on search
+  const filteredRoutines = useMemo(() => {
+    if (!routineSearch.trim()) {
+      return routinesWithExercises;
+    }
+    const searchLower = routineSearch.toLowerCase();
+    return routinesWithExercises.filter((routine) =>
+      routine.name.toLowerCase().includes(searchLower)
+    );
+  }, [routinesWithExercises, routineSearch]);
+
   // Get selected exercise name
   const selectedExercise = exercisesWithStats.find((e) => e.id === selectedExerciseId);
+
+  // Get selected routine
+  const selectedRoutine = routinesWithExercises.find((r) => r.id === selectedRoutineId);
 
   // Set management functions
   const handleAddSet = () => {
@@ -114,6 +136,53 @@ export default function TrainingScreen() {
     const newSets = [...sessionSets];
     newSets[index][field] = value;
     setSessionSets(newSets);
+  };
+
+  // Routine exercise set management
+  const handleRoutineAddSet = (exerciseId: string) => {
+    const currentSets = routineExerciseSets[exerciseId] || [{ load: '', reps: '' }];
+    if (currentSets.length < MAX_SETS) {
+      setRoutineExerciseSets({
+        ...routineExerciseSets,
+        [exerciseId]: [...currentSets, { load: '', reps: '' }],
+      });
+    }
+  };
+
+  const handleRoutineRemoveSet = (exerciseId: string, index: number) => {
+    const currentSets = routineExerciseSets[exerciseId] || [];
+    if (currentSets.length > 1) {
+      setRoutineExerciseSets({
+        ...routineExerciseSets,
+        [exerciseId]: currentSets.filter((_, i) => i !== index),
+      });
+    }
+  };
+
+  const handleRoutineUpdateSet = (exerciseId: string, index: number, field: 'load' | 'reps', value: string) => {
+    const currentSets = routineExerciseSets[exerciseId] || [{ load: '', reps: '' }];
+    const newSets = [...currentSets];
+    if (newSets[index]) {
+      newSets[index][field] = value;
+      setRoutineExerciseSets({
+        ...routineExerciseSets,
+        [exerciseId]: newSets,
+      });
+    }
+  };
+
+  // Initialize routine exercise sets when a routine is selected
+  const handleSelectRoutine = (routineId: string) => {
+    setSelectedRoutineId(routineId);
+    setRoutineSearch('');
+    const routine = routinesWithExercises.find((r) => r.id === routineId);
+    if (routine) {
+      const initialSets: Record<string, Array<{ load: string; reps: string }>> = {};
+      routine.exerciseIds.forEach((exerciseId) => {
+        initialSets[exerciseId] = [{ load: '', reps: '' }];
+      });
+      setRoutineExerciseSets(initialSets);
+    }
   };
 
   const handleCreateExercise = async () => {
@@ -192,6 +261,55 @@ export default function TrainingScreen() {
     }
   };
 
+  const handleLogRoutine = async () => {
+    if (!selectedRoutineId || !selectedRoutine) {
+      return;
+    }
+
+    // Validate all exercise sets
+    const exerciseSets: Record<string, TrainingSet[]> = {};
+    for (const exerciseId of Object.keys(routineExerciseSets)) {
+      const sets = routineExerciseSets[exerciseId];
+      const validSets: TrainingSet[] = [];
+
+      for (const set of sets) {
+        const loadNum = parseFloat(set.load);
+        const repsNum = parseInt(set.reps, 10);
+
+        if (isNaN(loadNum) || loadNum <= 0 || isNaN(repsNum) || repsNum <= 0) {
+          return; // Invalid set found
+        }
+        validSets.push({ load: loadNum, reps: repsNum });
+      }
+
+      if (validSets.length > 0) {
+        exerciseSets[exerciseId] = validSets;
+      }
+    }
+
+    if (Object.keys(exerciseSets).length === 0) {
+      return;
+    }
+
+    try {
+      const dateStr = formatDateForStorage(sessionDate);
+      const newSessions = await logRoutine(selectedRoutineId, exerciseSets, dateStr, notes);
+      // Award XP for each exercise logged
+      await addXp(TRAINING_XP * newSessions.length);
+
+      // Reset form
+      setLogType('exercise');
+      setSelectedRoutineId('');
+      setRoutineSearch('');
+      setRoutineExerciseSets({});
+      setNotes('');
+      setSessionDate(new Date());
+      setShowSessionModal(false);
+    } catch (error) {
+      console.error('Failed to log routine:', error);
+    }
+  };
+
   const formatNumber = (num: number) => {
     return num.toLocaleString(language === 'pt' ? 'pt-BR' : 'en-US', {
       maximumFractionDigits: 0,
@@ -199,9 +317,13 @@ export default function TrainingScreen() {
   };
 
   const handleOpenSessionModal = () => {
+    setLogType('exercise');
     setSelectedExerciseId('');
     setExerciseSearch('');
     setSessionSets([{ load: '', reps: '' }]);
+    setSelectedRoutineId('');
+    setRoutineSearch('');
+    setRoutineExerciseSets({});
     setNotes('');
     setSessionDate(new Date());
     setShowSessionModal(true);
@@ -489,6 +611,35 @@ export default function TrainingScreen() {
           </View>
           <IconSymbol name="chevron.right" size={20} color={isDark ? '#808080' : '#6B7280'} />
         </TouchableOpacity>
+
+        {/* View All Routines */}
+        <TouchableOpacity
+          style={[
+            styles.viewAllButton,
+            {
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+              marginTop: 12,
+            },
+          ]}
+          onPress={() => router.push('/training/routines')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.viewAllLeft}>
+            <LinearGradient
+              colors={['#4CAF50', '#45A049']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cardIcon}
+            >
+              <IconSymbol name="list.bullet.clipboard" size={14} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={[styles.viewAllText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {t('viewAllRoutines', language)}
+            </Text>
+          </View>
+          <IconSymbol name="chevron.right" size={20} color={isDark ? '#808080' : '#6B7280'} />
+        </TouchableOpacity>
       </ScrollView>
 
       {/* New Exercise Modal */}
@@ -560,7 +711,7 @@ export default function TrainingScreen() {
               </TouchableOpacity>
             </View>
 
-            {exercises.length === 0 ? (
+            {exercises.length === 0 && routinesWithExercises.length === 0 ? (
               <View style={styles.emptyExercises}>
                 <Text style={[styles.emptyText, { color: isDark ? '#666' : '#9CA3AF' }]}>
                   {t('createExerciseFirst', language)}
@@ -585,157 +736,386 @@ export default function TrainingScreen() {
               </View>
             ) : (
               <ScrollView style={styles.sessionFormContainer} showsVerticalScrollIndicator={false}>
-                {/* Exercise Search */}
-                <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                  {t('selectExercise', language)}
-                </Text>
-                <View
-                  style={[
-                    styles.searchContainer,
-                    {
-                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                    },
-                  ]}
-                >
-                  <IconSymbol name="magnifyingglass" size={18} color={isDark ? '#666' : '#9CA3AF'} />
-                  <TextInput
-                    style={[styles.searchInput, { color: isDark ? '#FFFFFF' : '#111827' }]}
-                    placeholder={language === 'pt' ? 'Buscar exercício...' : 'Search exercise...'}
-                    placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
-                    value={exerciseSearch}
-                    onChangeText={setExerciseSearch}
-                    autoCapitalize="none"
-                  />
-                  {exerciseSearch.length > 0 && (
-                    <TouchableOpacity onPress={() => setExerciseSearch('')}>
-                      <IconSymbol name="xmark.circle.fill" size={18} color={isDark ? '#666' : '#9CA3AF'} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {/* Selected Exercise Display */}
-                {selectedExercise && (
-                  <View style={[styles.selectedExercise, { backgroundColor: 'rgba(76, 175, 80, 0.15)' }]}>
-                    <Text style={styles.selectedExerciseText}>
-                      {selectedExercise.name}
-                    </Text>
-                    <TouchableOpacity onPress={() => setSelectedExerciseId('')}>
-                      <IconSymbol name="xmark.circle.fill" size={20} color="#4CAF50" />
-                    </TouchableOpacity>
-                  </View>
-                )}
-
-                {/* Exercise List - Scrollable */}
-                {!selectedExercise && (
-                  <ScrollView
-                    style={styles.exerciseListScroll}
-                    nestedScrollEnabled
-                    showsVerticalScrollIndicator
-                  >
-                    {filteredExercises.length === 0 ? (
-                      <Text style={[styles.noResultsText, { color: isDark ? '#666' : '#9CA3AF' }]}>
-                        {language === 'pt' ? 'Nenhum exercício encontrado' : 'No exercises found'}
-                      </Text>
-                    ) : (
-                      filteredExercises.map((exercise) => (
-                        <TouchableOpacity
-                          key={exercise.id}
-                          style={[
-                            styles.exerciseItem,
-                            {
-                              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                            },
-                          ]}
-                          onPress={() => {
-                            setSelectedExerciseId(exercise.id);
-                            setExerciseSearch('');
-                          }}
-                        >
-                          <Text style={[styles.exerciseItemName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                            {exercise.name}
-                          </Text>
-                          <Text style={[styles.exerciseItemStats, { color: isDark ? '#808080' : '#6B7280' }]}>
-                            {exercise.totalSessions} {t('sessions', language).toLowerCase()}
-                          </Text>
-                        </TouchableOpacity>
-                      ))
-                    )}
-                  </ScrollView>
-                )}
-
-                {/* Sets Section */}
-                <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                  {t('sets', language)}
-                </Text>
-
-                {sessionSets.map((set, index) => (
-                  <View key={index} style={styles.setRow}>
-                    <View style={styles.setNumber}>
-                      <Text style={[styles.setNumberText, { color: isDark ? '#808080' : '#6B7280' }]}>
-                        {index + 1}
-                      </Text>
-                    </View>
-                    <View style={styles.setInputContainer}>
-                      <TextInput
-                        style={[
-                          styles.setInput,
-                          {
-                            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                            color: isDark ? '#FFFFFF' : '#111827',
-                          },
-                        ]}
-                        placeholder={t('load', language)}
-                        placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
-                        value={set.load}
-                        onChangeText={(value) => handleUpdateSet(index, 'load', value)}
-                        keyboardType="decimal-pad"
-                      />
-                      <Text style={[styles.setUnit, { color: isDark ? '#808080' : '#6B7280' }]}>kg</Text>
-                    </View>
-                    <Text style={[styles.setMultiplier, { color: isDark ? '#808080' : '#6B7280' }]}>×</Text>
-                    <View style={styles.setInputContainer}>
-                      <TextInput
-                        style={[
-                          styles.setInput,
-                          {
-                            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                            color: isDark ? '#FFFFFF' : '#111827',
-                          },
-                        ]}
-                        placeholder={t('reps', language)}
-                        placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
-                        value={set.reps}
-                        onChangeText={(value) => handleUpdateSet(index, 'reps', value)}
-                        keyboardType="number-pad"
-                      />
-                      <Text style={[styles.setUnit, { color: isDark ? '#808080' : '#6B7280' }]}>rep</Text>
-                    </View>
-                    {sessionSets.length > 1 && (
-                      <TouchableOpacity
-                        style={styles.removeSetButton}
-                        onPress={() => handleRemoveSet(index)}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                      >
-                        <IconSymbol name="minus.circle.fill" size={22} color="#EF4444" />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                ))}
-
-                {sessionSets.length < MAX_SETS && (
+                {/* Type Selector */}
+                <View style={styles.typeSelector}>
                   <TouchableOpacity
                     style={[
-                      styles.addSetButton,
+                      styles.typeOption,
                       {
-                        backgroundColor: isDark ? 'rgba(76, 175, 80, 0.1)' : 'rgba(76, 175, 80, 0.08)',
+                        backgroundColor: logType === 'exercise'
+                          ? 'rgba(76, 175, 80, 0.15)'
+                          : isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
+                        borderColor: logType === 'exercise'
+                          ? '#4CAF50'
+                          : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
                       },
                     ]}
-                    onPress={handleAddSet}
-                    activeOpacity={0.7}
+                    onPress={() => setLogType('exercise')}
+                    activeOpacity={0.8}
                   >
-                    <IconSymbol name="plus.circle.fill" size={18} color="#4CAF50" />
-                    <Text style={styles.addSetButtonText}>{t('addSet', language)}</Text>
+                    <IconSymbol
+                      name="dumbbell.fill"
+                      size={18}
+                      color={logType === 'exercise' ? '#4CAF50' : isDark ? '#666' : '#9CA3AF'}
+                    />
+                    <Text
+                      style={[
+                        styles.typeOptionText,
+                        { color: logType === 'exercise' ? '#4CAF50' : isDark ? '#FFFFFF' : '#111827' },
+                      ]}
+                    >
+                      {t('singleExercise', language)}
+                    </Text>
                   </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.typeOption,
+                      {
+                        backgroundColor: logType === 'routine'
+                          ? 'rgba(99, 102, 241, 0.15)'
+                          : isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.08)',
+                        borderColor: logType === 'routine'
+                          ? '#6366F1'
+                          : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                      },
+                    ]}
+                    onPress={() => setLogType('routine')}
+                    activeOpacity={0.8}
+                  >
+                    <IconSymbol
+                      name="list.bullet.clipboard"
+                      size={18}
+                      color={logType === 'routine' ? '#6366F1' : isDark ? '#666' : '#9CA3AF'}
+                    />
+                    <Text
+                      style={[
+                        styles.typeOptionText,
+                        { color: logType === 'routine' ? '#6366F1' : isDark ? '#FFFFFF' : '#111827' },
+                      ]}
+                    >
+                      {t('fullRoutine', language)}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {logType === 'exercise' ? (
+                  <>
+                    {/* Exercise Search */}
+                    <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                      {t('selectExercise', language)}
+                    </Text>
+                    <View
+                      style={[
+                        styles.searchContainer,
+                        {
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                        },
+                      ]}
+                    >
+                      <IconSymbol name="magnifyingglass" size={18} color={isDark ? '#666' : '#9CA3AF'} />
+                      <TextInput
+                        style={[styles.searchInput, { color: isDark ? '#FFFFFF' : '#111827' }]}
+                        placeholder={language === 'pt' ? 'Buscar exercício...' : 'Search exercise...'}
+                        placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                        value={exerciseSearch}
+                        onChangeText={setExerciseSearch}
+                        autoCapitalize="none"
+                      />
+                      {exerciseSearch.length > 0 && (
+                        <TouchableOpacity onPress={() => setExerciseSearch('')}>
+                          <IconSymbol name="xmark.circle.fill" size={18} color={isDark ? '#666' : '#9CA3AF'} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    {/* Selected Exercise Display */}
+                    {selectedExercise && (
+                      <View style={[styles.selectedExercise, { backgroundColor: 'rgba(76, 175, 80, 0.15)' }]}>
+                        <Text style={styles.selectedExerciseText}>
+                          {selectedExercise.name}
+                        </Text>
+                        <TouchableOpacity onPress={() => setSelectedExerciseId('')}>
+                          <IconSymbol name="xmark.circle.fill" size={20} color="#4CAF50" />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+
+                    {/* Exercise List - Scrollable */}
+                    {!selectedExercise && (
+                      <ScrollView
+                        style={styles.exerciseListScroll}
+                        nestedScrollEnabled
+                        showsVerticalScrollIndicator
+                      >
+                        {filteredExercises.length === 0 ? (
+                          <Text style={[styles.noResultsText, { color: isDark ? '#666' : '#9CA3AF' }]}>
+                            {language === 'pt' ? 'Nenhum exercício encontrado' : 'No exercises found'}
+                          </Text>
+                        ) : (
+                          filteredExercises.map((exercise) => (
+                            <TouchableOpacity
+                              key={exercise.id}
+                              style={[
+                                styles.exerciseItem,
+                                {
+                                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                                },
+                              ]}
+                              onPress={() => {
+                                setSelectedExerciseId(exercise.id);
+                                setExerciseSearch('');
+                              }}
+                            >
+                              <Text style={[styles.exerciseItemName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                                {exercise.name}
+                              </Text>
+                              <Text style={[styles.exerciseItemStats, { color: isDark ? '#808080' : '#6B7280' }]}>
+                                {exercise.totalSessions} {t('sessions', language).toLowerCase()}
+                              </Text>
+                            </TouchableOpacity>
+                          ))
+                        )}
+                      </ScrollView>
+                    )}
+
+                    {/* Sets Section */}
+                    <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                      {t('sets', language)}
+                    </Text>
+
+                    {sessionSets.map((set, index) => (
+                      <View key={index} style={styles.setRow}>
+                        <View style={styles.setNumber}>
+                          <Text style={[styles.setNumberText, { color: isDark ? '#808080' : '#6B7280' }]}>
+                            {index + 1}
+                          </Text>
+                        </View>
+                        <View style={styles.setInputContainer}>
+                          <TextInput
+                            style={[
+                              styles.setInput,
+                              {
+                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                                color: isDark ? '#FFFFFF' : '#111827',
+                              },
+                            ]}
+                            placeholder={t('load', language)}
+                            placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                            value={set.load}
+                            onChangeText={(value) => handleUpdateSet(index, 'load', value)}
+                            keyboardType="decimal-pad"
+                          />
+                          <Text style={[styles.setUnit, { color: isDark ? '#808080' : '#6B7280' }]}>kg</Text>
+                        </View>
+                        <Text style={[styles.setMultiplier, { color: isDark ? '#808080' : '#6B7280' }]}>×</Text>
+                        <View style={styles.setInputContainer}>
+                          <TextInput
+                            style={[
+                              styles.setInput,
+                              {
+                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                                color: isDark ? '#FFFFFF' : '#111827',
+                              },
+                            ]}
+                            placeholder={t('reps', language)}
+                            placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                            value={set.reps}
+                            onChangeText={(value) => handleUpdateSet(index, 'reps', value)}
+                            keyboardType="number-pad"
+                          />
+                          <Text style={[styles.setUnit, { color: isDark ? '#808080' : '#6B7280' }]}>rep</Text>
+                        </View>
+                        {sessionSets.length > 1 && (
+                          <TouchableOpacity
+                            style={styles.removeSetButton}
+                            onPress={() => handleRemoveSet(index)}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          >
+                            <IconSymbol name="minus.circle.fill" size={22} color="#EF4444" />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    ))}
+
+                    {sessionSets.length < MAX_SETS && (
+                      <TouchableOpacity
+                        style={[
+                          styles.addSetButton,
+                          {
+                            backgroundColor: isDark ? 'rgba(76, 175, 80, 0.1)' : 'rgba(76, 175, 80, 0.08)',
+                          },
+                        ]}
+                        onPress={handleAddSet}
+                        activeOpacity={0.7}
+                      >
+                        <IconSymbol name="plus.circle.fill" size={18} color="#4CAF50" />
+                        <Text style={styles.addSetButtonText}>{t('addSet', language)}</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* Routine Search */}
+                    <Text style={[styles.inputLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                      {t('selectRoutine', language)}
+                    </Text>
+                    <View
+                      style={[
+                        styles.searchContainer,
+                        {
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                        },
+                      ]}
+                    >
+                      <IconSymbol name="magnifyingglass" size={18} color={isDark ? '#666' : '#9CA3AF'} />
+                      <TextInput
+                        style={[styles.searchInput, { color: isDark ? '#FFFFFF' : '#111827' }]}
+                        placeholder={language === 'pt' ? 'Buscar ficha...' : 'Search routine...'}
+                        placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                        value={routineSearch}
+                        onChangeText={setRoutineSearch}
+                        autoCapitalize="none"
+                      />
+                      {routineSearch.length > 0 && (
+                        <TouchableOpacity onPress={() => setRoutineSearch('')}>
+                          <IconSymbol name="xmark.circle.fill" size={18} color={isDark ? '#666' : '#9CA3AF'} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    {/* Selected Routine Display */}
+                    {selectedRoutine && (
+                      <View style={[styles.selectedExercise, { backgroundColor: 'rgba(99, 102, 241, 0.15)' }]}>
+                        <Text style={[styles.selectedExerciseText, { color: '#6366F1' }]}>
+                          {selectedRoutine.name}
+                        </Text>
+                        <TouchableOpacity onPress={() => {
+                          setSelectedRoutineId('');
+                          setRoutineExerciseSets({});
+                        }}>
+                          <IconSymbol name="xmark.circle.fill" size={20} color="#6366F1" />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+
+                    {/* Routine List - Scrollable */}
+                    {!selectedRoutine && (
+                      <ScrollView
+                        style={styles.exerciseListScroll}
+                        nestedScrollEnabled
+                        showsVerticalScrollIndicator
+                      >
+                        {filteredRoutines.length === 0 ? (
+                          <Text style={[styles.noResultsText, { color: isDark ? '#666' : '#9CA3AF' }]}>
+                            {t('noRoutines', language)}
+                          </Text>
+                        ) : (
+                          filteredRoutines.map((routine) => (
+                            <TouchableOpacity
+                              key={routine.id}
+                              style={[
+                                styles.exerciseItem,
+                                {
+                                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                                },
+                              ]}
+                              onPress={() => handleSelectRoutine(routine.id)}
+                            >
+                              <Text style={[styles.exerciseItemName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                                {routine.name}
+                              </Text>
+                              <Text style={[styles.exerciseItemStats, { color: isDark ? '#808080' : '#6B7280' }]}>
+                                {routine.exercises.length} {t('exercises', language).toLowerCase()}
+                              </Text>
+                            </TouchableOpacity>
+                          ))
+                        )}
+                      </ScrollView>
+                    )}
+
+                    {/* Exercise Sets for Selected Routine */}
+                    {selectedRoutine && selectedRoutine.exercises.map((exercise) => {
+                      const exerciseSets = routineExerciseSets[exercise.id] || [{ load: '', reps: '' }];
+                      return (
+                        <View key={exercise.id} style={styles.routineExerciseSection}>
+                          <Text style={[styles.routineExerciseName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                            {exercise.name}
+                          </Text>
+
+                          {exerciseSets.map((set, index) => (
+                            <View key={index} style={styles.setRow}>
+                              <View style={styles.setNumber}>
+                                <Text style={[styles.setNumberText, { color: isDark ? '#808080' : '#6B7280' }]}>
+                                  {index + 1}
+                                </Text>
+                              </View>
+                              <View style={styles.setInputContainer}>
+                                <TextInput
+                                  style={[
+                                    styles.setInput,
+                                    {
+                                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                                      color: isDark ? '#FFFFFF' : '#111827',
+                                    },
+                                  ]}
+                                  placeholder={t('load', language)}
+                                  placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                                  value={set.load}
+                                  onChangeText={(value) => handleRoutineUpdateSet(exercise.id, index, 'load', value)}
+                                  keyboardType="decimal-pad"
+                                />
+                                <Text style={[styles.setUnit, { color: isDark ? '#808080' : '#6B7280' }]}>kg</Text>
+                              </View>
+                              <Text style={[styles.setMultiplier, { color: isDark ? '#808080' : '#6B7280' }]}>×</Text>
+                              <View style={styles.setInputContainer}>
+                                <TextInput
+                                  style={[
+                                    styles.setInput,
+                                    {
+                                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                                      color: isDark ? '#FFFFFF' : '#111827',
+                                    },
+                                  ]}
+                                  placeholder={t('reps', language)}
+                                  placeholderTextColor={isDark ? '#666' : '#9CA3AF'}
+                                  value={set.reps}
+                                  onChangeText={(value) => handleRoutineUpdateSet(exercise.id, index, 'reps', value)}
+                                  keyboardType="number-pad"
+                                />
+                                <Text style={[styles.setUnit, { color: isDark ? '#808080' : '#6B7280' }]}>rep</Text>
+                              </View>
+                              {exerciseSets.length > 1 && (
+                                <TouchableOpacity
+                                  style={styles.removeSetButton}
+                                  onPress={() => handleRoutineRemoveSet(exercise.id, index)}
+                                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
+                                  <IconSymbol name="minus.circle.fill" size={22} color="#EF4444" />
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          ))}
+
+                          {exerciseSets.length < MAX_SETS && (
+                            <TouchableOpacity
+                              style={[
+                                styles.addSetButton,
+                                {
+                                  backgroundColor: isDark ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.08)',
+                                },
+                              ]}
+                              onPress={() => handleRoutineAddSet(exercise.id)}
+                              activeOpacity={0.7}
+                            >
+                              <IconSymbol name="plus.circle.fill" size={18} color="#6366F1" />
+                              <Text style={[styles.addSetButtonText, { color: '#6366F1' }]}>{t('addSet', language)}</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </>
                 )}
 
                 {/* Date Picker */}
@@ -777,24 +1157,45 @@ export default function TrainingScreen() {
                   multiline
                 />
 
-                <TouchableOpacity
-                  style={[
-                    styles.modalButton,
-                    (!selectedExerciseId || sessionSets.some(s => !s.load || !s.reps)) && styles.modalButtonDisabled,
-                  ]}
-                  onPress={handleLogSession}
-                  activeOpacity={0.8}
-                  disabled={!selectedExerciseId || sessionSets.some(s => !s.load || !s.reps)}
-                >
-                  <LinearGradient
-                    colors={(!selectedExerciseId || sessionSets.some(s => !s.load || !s.reps)) ? ['#888', '#777'] : ['#4CAF50', '#45A049']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.modalButtonGradient}
+                {logType === 'exercise' ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.modalButton,
+                      (!selectedExerciseId || sessionSets.some(s => !s.load || !s.reps)) && styles.modalButtonDisabled,
+                    ]}
+                    onPress={handleLogSession}
+                    activeOpacity={0.8}
+                    disabled={!selectedExerciseId || sessionSets.some(s => !s.load || !s.reps)}
                   >
-                    <Text style={styles.modalButtonText}>{t('addSession', language)}</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
+                    <LinearGradient
+                      colors={(!selectedExerciseId || sessionSets.some(s => !s.load || !s.reps)) ? ['#888', '#777'] : ['#4CAF50', '#45A049']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.modalButtonGradient}
+                    >
+                      <Text style={styles.modalButtonText}>{t('addSession', language)}</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={[
+                      styles.modalButton,
+                      (!selectedRoutineId || Object.values(routineExerciseSets).some(sets => sets.some(s => !s.load || !s.reps))) && styles.modalButtonDisabled,
+                    ]}
+                    onPress={handleLogRoutine}
+                    activeOpacity={0.8}
+                    disabled={!selectedRoutineId || Object.values(routineExerciseSets).some(sets => sets.some(s => !s.load || !s.reps))}
+                  >
+                    <LinearGradient
+                      colors={(!selectedRoutineId || Object.values(routineExerciseSets).some(sets => sets.some(s => !s.load || !s.reps))) ? ['#888', '#777'] : ['#6366F1', '#8B5CF6']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.modalButtonGradient}
+                    >
+                      <Text style={styles.modalButtonText}>{t('logFullRoutine', language)}</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             )}
           </View>
@@ -1254,5 +1655,38 @@ const styles = StyleSheet.create({
   datePickerText: {
     fontSize: 16,
     flex: 1,
+  },
+  // Type selector styles
+  typeSelector: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  typeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  typeOptionText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  // Routine exercise section styles
+  routineExerciseSection: {
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  routineExerciseName: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 10,
   },
 });

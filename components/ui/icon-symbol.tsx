@@ -56,6 +56,7 @@ const MAPPING = {
   'target': 'gps-fixed',
   // Training icons
   'dumbbell.fill': 'fitness-center',
+  'list.bullet.clipboard': 'assignment',
   // Focus icons
   'clock.fill': 'schedule',
   'clock': 'schedule',
